@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { doc, setDoc, getDocFromServer } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 const AuthContext = createContext(null);
@@ -12,10 +12,11 @@ async function hashPassword(password) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Rol hiyerarşisi: master > admin > viewer
+// Rol hiyerarşisi: master(4) > admin(3) > editor(2) > viewer(1)
 const ROLE_PRIORITY = { master: 4, admin: 3, editor: 2, viewer: 1 };
+const ROLE_NAMES = { master: "Master Yönetici", admin: "Yönetici", editor: "Editör", viewer: "Görüntüleyici" };
 
-// Önceden hash'lenmiş şifreler
+// Kullanıcılar
 const USERS = [
   {
     username: "master",
@@ -81,6 +82,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (username, password) => {
+    // 1. Kullanıcı doğrulama
     const users = await getUsers();
     const pwHash = await hashPassword(password);
     const found = users.find(
@@ -93,10 +95,10 @@ export function AuthProvider({ children }) {
     const myPriority = ROLE_PRIORITY[found.role] || 0;
     const sessionId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-    // Firestore'da mevcut oturum var mı kontrol et
+    // 2. Hiyerarşik oturum kontrolü (Firestore)
     try {
       const sessionDocRef = doc(db, "arge", "_active_session");
-      const snap = await getDocFromServer(sessionDocRef);
+      const snap = await getDoc(sessionDocRef);
 
       if (snap.exists()) {
         const s = snap.data();
@@ -105,19 +107,20 @@ export function AuthProvider({ children }) {
 
         // Oturum hâlâ aktif mi? (60sn heartbeat timeout)
         if (elapsed < 60000) {
-          // Üst hiyerarşi veya aynı/üst seviye → öncekini at
-          if (myPriority >= existingPriority) {
-            // Oturumu al
-          } else {
-            // Alt hiyerarşi girmeye çalışıyor — reddet
-            const roleNames = { master: "Master Yönetici", admin: "Yönetici", editor: "Editör", viewer: "Görüntüleyici" };
-            return { success: false, error: `${roleNames[s.role] || s.role} (${s.user}) şu anda aktif. Daha düşük yetkiyle giriş yapılamaz.` };
+          if (myPriority < existingPriority) {
+            // Alt hiyerarşi — GİRİŞ REDDEDİLDİ
+            const roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
+            return {
+              success: false,
+              error: `⚠️ Şu anda ${roleName}, uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün.`
+            };
           }
+          // Aynı veya üst hiyerarşi → öncekini at, oturumu al
         }
-        // else: heartbeat eski, oturum ölü → al
+        // else: heartbeat eski (>60sn), oturum ölü → al
       }
 
-      // Oturumu kaydet
+      // 3. Oturumu Firestore'a kaydet
       await setDoc(sessionDocRef, {
         sessionId,
         user: found.displayName,
@@ -131,6 +134,7 @@ export function AuthProvider({ children }) {
       // Firestore hatası olsa bile login'e izin ver
     }
 
+    // 4. Local session oluştur
     const session = {
       username: found.username,
       role: found.role,
