@@ -8,7 +8,7 @@ import {
   Globe, Phone, Mail, GraduationCap, Building2, Wrench, Award,
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
-  Table2, Download
+  Table2, Download, Upload, DatabaseBackup
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -2307,9 +2307,11 @@ const SettingsModal = ({
   categoryOptions, onCategoryOptionsChange,
   eduDegreeOptions, onEduDegreeOptionsChange,
   eduStatusOptions, onEduStatusOptionsChange,
-  onResetDefaults, onClose
+  onResetDefaults, onClose,
+  onExportData, onImportData, onResetAllData
 }) => {
   const [activeTab, setActiveTab] = useState("roles");
+  const fileInputRef = useRef(null);
   const tabs = [
     { key: "roles", label: "Roller", icon: UserCheck },
     { key: "projectTypes", label: "Proje Türleri", icon: FolderKanban },
@@ -2317,6 +2319,7 @@ const SettingsModal = ({
     { key: "priorities", label: "Öncelik", icon: Target },
     { key: "categories", label: "Kategoriler", icon: Tag },
     { key: "education", label: "Eğitim", icon: GraduationCap },
+    { key: "data", label: "Veri", icon: DatabaseBackup },
   ];
 
   const PALETTE = [
@@ -2613,9 +2616,54 @@ const SettingsModal = ({
           {activeTab === "priorities" && <ObjectConfigTab config={priorityConfig} onChange={onPriorityConfigChange} description="Öncelik seviyelerini ve renklerini düzenleyin." />}
           {activeTab === "categories" && <ListTab items={categoryOptions} onChange={onCategoryOptionsChange} itemLabel="Kategori" placeholder="Yeni kategori ekle..." />}
           {activeTab === "education" && <EducationTab />}
+          {activeTab === "data" && (
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500">Tüm verileri (araştırmacılar, konular, projeler, ayarlar) dışa aktarıp başka bir cihaza veya tarayıcıya aktarabilirsiniz.</p>
+
+              {/* Export */}
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                <h4 className="text-sm font-semibold text-emerald-800 flex items-center gap-2 mb-2"><Download size={15} />Veriyi Dışa Aktar</h4>
+                <p className="text-xs text-emerald-600 mb-3">Tüm verileriniz bir JSON dosyası olarak indirilir. Bu dosyayı başka bir cihazda "İçe Aktar" ile yükleyebilirsiniz.</p>
+                <button onClick={onExportData} className="px-4 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2">
+                  <Download size={14} />JSON Olarak İndir
+                </button>
+              </div>
+
+              {/* Import */}
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-2 mb-2"><Upload size={15} />Veriyi İçe Aktar</h4>
+                <p className="text-xs text-blue-600 mb-3">Daha önce dışa aktardığınız JSON dosyasını yükleyerek tüm verileri bu cihaza aktarın. Mevcut veriler değiştirilecektir!</p>
+                <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const data = JSON.parse(ev.target.result);
+                      onImportData(data);
+                    } catch { alert("Geçersiz dosya formatı!"); }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = "";
+                }} />
+                <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                  <Upload size={14} />JSON Dosyası Seç
+                </button>
+              </div>
+
+              {/* Reset All */}
+              <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+                <h4 className="text-sm font-semibold text-red-800 flex items-center gap-2 mb-2"><Trash2 size={15} />Tüm Verileri Sıfırla</h4>
+                <p className="text-xs text-red-600 mb-3">Tüm araştırmacı, konu ve proje verilerini başlangıç haline döndürür. Ayarlar da varsayılana sıfırlanır. Bu işlem geri alınamaz!</p>
+                <button onClick={onResetAllData} className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
+                  <Trash2 size={14} />Her Şeyi Sıfırla
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <div className="p-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between flex-shrink-0">
-          <button onClick={onResetDefaults} className="px-4 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-500" />Varsayılana Sıfırla</button>
+          <button onClick={onResetDefaults} className="px-4 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-500" />Ayarları Varsayılana Sıfırla</button>
           <button onClick={onClose} className="px-5 py-2 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600">Kapat</button>
         </div>
       </div>
@@ -4251,6 +4299,54 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             setCategoryOptions(DEFAULT_CATEGORY_OPTIONS); setEduDegreeOptions(DEFAULT_EDU_DEGREES);
             setEduStatusOptions(DEFAULT_EDU_STATUSES);
           }
+        }}
+        onExportData={() => {
+          const data = {
+            version: 1,
+            exportDate: new Date().toISOString(),
+            researchers, topics, projects, quickLinks,
+            config: {
+              roles: roleConfigSt, statuses: statusConfigSt, priorities: priorityConfigSt,
+              projectTypes: projectTypeOptionsSt, categories: categoryOptionsSt,
+              eduDegrees: eduDegreeOptionsSt, eduStatuses: eduStatusOptionsSt,
+            }
+          };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = `arge-dashboard-veri-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click(); URL.revokeObjectURL(url);
+          showToast("Veriler dışa aktarıldı!");
+        }}
+        onImportData={(data) => {
+          if (!data.researchers || !data.topics) { alert("Geçersiz veri dosyası!"); return; }
+          if (!confirm(`Bu dosyada ${data.researchers?.length || 0} araştırmacı, ${data.topics?.length || 0} konu, ${data.projects?.length || 0} proje var.\n\nMevcut tüm veriler bu dosyadakiyle değiştirilecek. Devam etmek istiyor musunuz?`)) return;
+          setResearchers(data.researchers || []);
+          setTopics(data.topics || []);
+          setProjects(data.projects || []);
+          if (data.quickLinks) setQuickLinks(data.quickLinks);
+          if (data.config) {
+            if (data.config.roles) setRoleConfig(data.config.roles);
+            if (data.config.statuses) setStatusConfig(data.config.statuses);
+            if (data.config.priorities) setPriorityConfig(data.config.priorities);
+            if (data.config.projectTypes) setProjectTypeOptions(data.config.projectTypes);
+            if (data.config.categories) setCategoryOptions(data.config.categories);
+            if (data.config.eduDegrees) setEduDegreeOptions(data.config.eduDegrees);
+            if (data.config.eduStatuses) setEduStatusOptions(data.config.eduStatuses);
+          }
+          showToast(`Veriler içe aktarıldı: ${data.researchers.length} araştırmacı, ${data.topics.length} konu, ${(data.projects || []).length} proje`);
+        }}
+        onResetAllData={() => {
+          if (!confirm("⚠️ DİKKAT: Tüm araştırmacılar, konular, projeler ve ayarlar başlangıç haline döndürülecek.\n\nBu işlem geri alınamaz! Devam etmek istiyor musunuz?")) return;
+          setResearchers(initialResearchers);
+          setTopics(initialTopics);
+          setProjects(initialProjects);
+          setQuickLinks([]);
+          setRoleConfig(DEFAULT_ROLE_CONFIG); setStatusConfig(DEFAULT_STATUS_CONFIG);
+          setPriorityConfig(DEFAULT_PRIORITY_CONFIG); setProjectTypeOptions(DEFAULT_PROJECT_TYPES);
+          setCategoryOptions(DEFAULT_CATEGORY_OPTIONS); setEduDegreeOptions(DEFAULT_EDU_DEGREES);
+          setEduStatusOptions(DEFAULT_EDU_STATUSES);
+          showToast("Tüm veriler sıfırlandı", "warning");
         }}
         onClose={() => setShowSettings(false)}
       />}
