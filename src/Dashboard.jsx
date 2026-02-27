@@ -5932,70 +5932,94 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const sessionId = useRef(user?.sessionId || Math.random().toString(36).slice(2, 10));
   const heartbeatRef = useRef(null);
   const inactivityRef = useRef(null);
+  const kickedRef = useRef(false); // heartbeat'i durdurmak için ref
   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 dakika
   const forcePublishRef = useRef(null);
-
-  // ─── Heartbeat: Her 10sn oturumu yenile ───
   const myPriority = role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1;
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    const sessionDocRef = doc(db, "arge", "_active_session");
-    heartbeatRef.current = setInterval(async () => {
-      try {
-        // Önce mevcut session'ı kontrol et
-        var snap = await getDoc(sessionDocRef);
-        if (snap.exists()) {
-          var s = snap.data();
-          if (s.sessionId !== sessionId.current) {
-            // Session başkasına ait — ben artık yazmıyorum, onSnapshot kick'i halledecek
-            if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-            return;
-          }
-        }
-        // Session benim — heartbeat'i yenile
-        await setDoc(sessionDocRef, {
-          sessionId: sessionId.current,
-          user: user?.displayName || "Kullanıcı",
-          role: role,
-          priority: myPriority,
-          heartbeat: Date.now()
-        });
-      } catch (e) { console.warn("Heartbeat error:", e); }
-    }, 10000);
+
+  // ─── Session verisini oluştur ───
+  const buildSessionData = useCallback(() => {
+    return {
+      sessionId: sessionId.current,
+      user: user?.displayName || "Kullanıcı",
+      role: role,
+      priority: myPriority,
+      heartbeat: Date.now()
+    };
   }, [user, role, myPriority]);
 
   // ─── Tek Oturum Sistemi (Hiyerarşik) ───
+  //
+  // KURALLAR:
+  // - AuthContext login sırasında hiyerarşiyi kontrol eder:
+  //     alt → REDDEDİLİR (login olmaz)
+  //     eşit/üst → session yazılır, login olur
+  // - Dashboard mount olduğunda: KOŞULSUZ session yaz
+  //   (AuthContext kontrolü geçtiysen hakkın var)
+  // - Heartbeat her 10sn: kickedRef false ise yaz
+  // - onSnapshot: sessionId değişirse ve yeni gelen >= ben → kicked
+  //
   useEffect(() => {
     const sessionDocRef = doc(db, "arge", "_active_session");
 
-    // NOT: İlk session yazımı AuthContext login() içinde yapılıyor.
-    // Dashboard sadece heartbeat ile devam ettiriyor.
-    startHeartbeat();
+    // 1) ANINDA session'ı Firestore'a yaz — okuma yok, direkt yaz
+    //    AuthContext login() hiyerarşiyi zaten kontrol etti.
+    //    Buraya geldiysen HAKKIN VAR.
+    setDoc(sessionDocRef, buildSessionData()).catch(function(e) {
+      console.warn("İlk session yazma hatası:", e);
+    });
 
-    // Sayfa kapanırken session temizle
-    const cleanup = () => { deleteDoc(sessionDocRef).catch(() => {}); };
-    window.addEventListener("beforeunload", cleanup);
+    // 2) Heartbeat: her 10sn session'ı yenile (kicked değilse)
+    heartbeatRef.current = setInterval(function() {
+      if (kickedRef.current) return; // Atıldım, yazma
+      setDoc(sessionDocRef, buildSessionData()).catch(function(e) {
+        console.warn("Heartbeat hatası:", e);
+      });
+    }, 10000);
 
-    // Oturum değişikliklerini dinle — başkası gelirse atıl
-    const unsub = onSnapshot(sessionDocRef, (snap) => {
-      if (!snap.exists()) return; // Silinmiş, sorun yok
-      const s = snap.data();
-      if (s.sessionId !== sessionId.current) {
-        // Başka biri oturumu aldı — ben atıldım!
+    // 3) onSnapshot: başkası session'ı aldığında kick kontrolü
+    const unsub = onSnapshot(sessionDocRef, function(snap) {
+      if (!snap.exists()) return;
+      var s = snap.data();
+      // Session benim mi?
+      if (s.sessionId === sessionId.current) return; // Benim, sorun yok
+
+      // ─── MASTER ÖZEL KORUMA ───
+      // Master SADECE başka bir master tarafından kick edilebilir.
+      // Alt roller master'ı ASLA kick edemez.
+      if (role === "master" && s.role !== "master") {
+        // Alt rol master'ın session'ına yazmaya çalışmış → görmezden gel
+        // Heartbeat 10sn içinde ezecek.
+        return;
+      }
+
+      // Başkasının session'ı — hiyerarşi kontrolü:
+      var otherPriority = s.priority || 0;
+
+      if (otherPriority >= myPriority) {
+        // Gelen benden ÜST veya EŞİT → ben atıldım!
+        kickedRef.current = true;
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         setKickedOut(true);
         setKickedByUser(s.user || "Bilinmeyen");
         setKickedByRole(s.role || "viewer");
       }
+      // Gelen benden ALT → görmezden gel.
+      // Benim heartbeat onu 10sn içinde ezecek.
+      // Onun onSnapshot benim session'ı görecek ve KICK olacak.
     });
 
-    return () => {
+    // 4) Sayfa kapanırken session temizle
+    var cleanup = function() { deleteDoc(sessionDocRef).catch(function() {}); };
+    window.addEventListener("beforeunload", cleanup);
+
+    return function() {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       window.removeEventListener("beforeunload", cleanup);
       unsub();
-      deleteDoc(sessionDocRef).catch(() => {});
+      deleteDoc(sessionDocRef).catch(function() {});
     };
-  }, [user, role, startHeartbeat]);
+  }, [user, role, myPriority, buildSessionData]);
 
   // ─── 30 Dakika İnaktivite → Sync + Logout ───
   useEffect(() => {
