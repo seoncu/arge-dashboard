@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, GraduationCap, Building2, Wrench, Award,
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
-  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw
+  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw, CloudUpload
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -5923,20 +5923,19 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 export default function ArGeDashboard({ role, user, onLogout }) {
   const isMaster = role === "master";
   const isAdmin = role === "admin" || isMaster;
-  const [sessionBlocked, setSessionBlocked] = useState(false);
-  const [activeSessionUser, setActiveSessionUser] = useState(null);
-  const [activeSessionRole, setActiveSessionRole] = useState(null);
-  const [viewOnlyMode, setViewOnlyMode] = useState(false);
-  const viewOnlyRef = useRef(false);
+  const isEditor = role === "editor";
+  const canEdit = isAdmin || isEditor; // araştırmacı/konu/proje düzenleyebilir
+  const [kickedOut, setKickedOut] = useState(false);
+  const [kickedByUser, setKickedByUser] = useState("");
+  const [kickedByRole, setKickedByRole] = useState("");
   const [forceReloading, setForceReloading] = useState(false);
-  const [masterTakeoverAlert, setMasterTakeoverAlert] = useState(false);
-  const sessionId = useRef(Math.random().toString(36).slice(2, 10));
+  const sessionId = useRef(user?.sessionId || Math.random().toString(36).slice(2, 10));
   const heartbeatRef = useRef(null);
+  const inactivityRef = useRef(null);
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 dakika
+  const forcePublishRef = useRef(null);
 
-  // viewOnlyMode ref'i senkronize et
-  useEffect(() => { viewOnlyRef.current = viewOnlyMode; }, [viewOnlyMode]);
-
-  // Heartbeat başlatan yardımcı
+  // ─── Heartbeat: Her 10sn oturumu yenile ───
   const startHeartbeat = useCallback(() => {
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     const sessionDocRef = doc(db, "arge", "_active_session");
@@ -5944,107 +5943,44 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       try {
         await setDoc(sessionDocRef, {
           sessionId: sessionId.current,
-          user: user?.displayName || "Admin",
+          user: user?.displayName || "Kullanıcı",
           role: role,
+          priority: role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1,
           heartbeat: Date.now()
         });
       } catch (e) { console.warn("Heartbeat error:", e); }
-    }, 15000);
+    }, 10000);
   }, [user, role]);
 
-  // Session'ı al ve heartbeat başlat
-  const claimAndStart = useCallback(async () => {
-    const sessionDocRef = doc(db, "arge", "_active_session");
-    await setDoc(sessionDocRef, {
-      sessionId: sessionId.current,
-      user: user?.displayName || "Admin",
-      role: role,
-      heartbeat: Date.now()
-    });
-    setSessionBlocked(false);
-    setActiveSessionUser(null);
-    setActiveSessionRole(null);
-    startHeartbeat();
-  }, [user, role, startHeartbeat]);
-
-  // ─── Aktif Oturum Kilidi (Presence Lock) ───
+  // ─── Tek Oturum Sistemi (Hiyerarşik) ───
   useEffect(() => {
-    if (!isAdmin) return;
     const sessionDocRef = doc(db, "arge", "_active_session");
 
-    const checkAndClaim = async () => {
-      try {
-        const snap = await getDocFromServer(sessionDocRef);
-        if (snap.exists()) {
-          const s = snap.data();
-          const elapsed = Date.now() - (s.heartbeat || 0);
-          if (s.sessionId !== sessionId.current && elapsed < 60000) {
-            // Master her zaman session'ı alır
-            if (isMaster) {
-              await claimAndStart();
-              return;
-            }
-            // Master aktifse diğer admin doğrudan view-only
-            if (s.role === "master") {
-              setSessionBlocked(false);
-              setActiveSessionUser(s.user || "Master Yönetici");
-              setActiveSessionRole("master");
-              setViewOnlyMode(true);
-              return;
-            }
-            setSessionBlocked(true);
-            setActiveSessionUser(s.user || "Bilinmeyen");
-            setActiveSessionRole(s.role || "admin");
-            return;
-          }
-        }
-        await claimAndStart();
-      } catch (e) { console.warn("Session claim error:", e); }
-    };
+    // İlk heartbeat'i hemen yaz
+    setDoc(sessionDocRef, {
+      sessionId: sessionId.current,
+      user: user?.displayName || "Kullanıcı",
+      role: role,
+      priority: role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1,
+      heartbeat: Date.now()
+    }).catch(() => {});
 
-    checkAndClaim();
+    startHeartbeat();
 
     // Sayfa kapanırken session temizle
     const cleanup = () => { deleteDoc(sessionDocRef).catch(() => {}); };
     window.addEventListener("beforeunload", cleanup);
 
-    // Diğer admin'in session durumunu dinle
+    // Oturum değişikliklerini dinle — başkası gelirse atıl
     const unsub = onSnapshot(sessionDocRef, (snap) => {
-      if (!snap.exists()) {
-        // Session boş — otomatik al!
-        setSessionBlocked(false);
-        setActiveSessionUser(null);
-        setActiveSessionRole(null);
-        setMasterTakeoverAlert(false);
-        claimAndStart().catch(() => {});
-        return;
-      }
+      if (!snap.exists()) return; // Silinmiş, sorun yok
       const s = snap.data();
-      if (s.sessionId === sessionId.current) {
-        setSessionBlocked(false);
-      } else {
-        const elapsed = Date.now() - (s.heartbeat || 0);
-        if (elapsed < 60000) {
-          // Master giriş yaptıysa — diğer adminler otomatik view-only
-          if (s.role === "master" && !isMaster) {
-            setSessionBlocked(false);
-            setActiveSessionUser(s.user || "Master Yönetici");
-            setActiveSessionRole("master");
-            setViewOnlyMode(true);
-            setMasterTakeoverAlert(true);
-            setTimeout(() => setMasterTakeoverAlert(false), 5000);
-            return;
-          }
-          setSessionBlocked(true);
-          setActiveSessionUser(s.user || "Bilinmeyen");
-          setActiveSessionRole(s.role || "admin");
-        } else {
-          // Heartbeat eski — session'ı al
-          setSessionBlocked(false);
-          setActiveSessionUser(null);
-          setActiveSessionRole(null);
-          claimAndStart().catch(() => {});
-        }
+      if (s.sessionId !== sessionId.current) {
+        // Başka biri oturumu aldı — ben atıldım!
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+        setKickedOut(true);
+        setKickedByUser(s.user || "Bilinmeyen");
+        setKickedByRole(s.role || "viewer");
       }
     });
 
@@ -6054,12 +5990,34 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       unsub();
       deleteDoc(sessionDocRef).catch(() => {});
     };
-  }, [isAdmin, isMaster, user, claimAndStart]);
+  }, [user, role, startHeartbeat]);
 
-  // Zorla oturumu al (kullanıcı "Yine de Devam Et" tıkladığında)
-  const forceClaimSession = useCallback(async () => {
-    await claimAndStart();
-  }, [claimAndStart]);
+  // ─── 30 Dakika İnaktivite → Sync + Logout ───
+  useEffect(() => {
+    const resetTimer = () => {
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      inactivityRef.current = setTimeout(async () => {
+        // Önce verileri Firestore'a kaydet
+        try {
+          if (forcePublishRef.current) await forcePublishRef.current();
+        } catch (e) { console.warn("Auto-sync before logout error:", e); }
+        // Sonra session'ı sil ve logout
+        try {
+          await deleteDoc(doc(db, "arge", "_active_session"));
+        } catch (e) {}
+        onLogout();
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    events.forEach(ev => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer(); // İlk timer'ı başlat
+
+    return () => {
+      if (inactivityRef.current) clearTimeout(inactivityRef.current);
+      events.forEach(ev => window.removeEventListener(ev, resetTimer));
+    };
+  }, [onLogout]);
 
   // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
   const firestoreReady = useRef(false);
@@ -6067,21 +6025,31 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
-    if (viewOnlyRef.current) return; // ref-based guard — asla stale olmaz
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
+    setSaveIndicator("saving");
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
+      .then(() => {
+        setLastSavedAt(new Date());
+        setSaveIndicator("saved");
+        setTimeout(() => setSaveIndicator("idle"), 2000);
+      })
       .catch(err => console.warn("Firestore yazma hatası:", docId, err));
   }, []); // dependency yok — ref kullanıyor, stale olmaz
 
   const writeConfigToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
-    if (viewOnlyRef.current) return; // ref-based guard
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
+    setSaveIndicator("saving");
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
+      .then(() => {
+        setLastSavedAt(new Date());
+        setSaveIndicator("saved");
+        setTimeout(() => setSaveIndicator("idle"), 2000);
+      })
       .catch(err => console.warn("Firestore config yazma hatası:", docId, err));
   }, []); // dependency yok — ref kullanıyor
 
@@ -6130,6 +6098,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [eduStatusOptionsSt, setEduStatusOptions] = useState(DEFAULT_EDU_STATUSES);
   const [showSettings, setShowSettings] = useState(false);
   const [syncStatus, setSyncStatus] = useState("idle"); // "idle" | "syncing" | "done"
+  const [lastSavedAt, setLastSavedAt] = useState(null); // Son kayıt zamanı
+  const [saveIndicator, setSaveIndicator] = useState("idle"); // "idle" | "saving" | "saved"
 
   // ─── Manuel Senkronizasyon (Yayınla/Güncelle) ───
   const forceSync = useCallback(async () => {
@@ -6196,6 +6166,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         timestamp: Date.now()
       });
       setSyncStatus("done");
+      setLastSavedAt(new Date());
       setToast({ type: "success", message: "Veriler yayınlandı! Tüm ekranlar güncelleniyor..." });
       setTimeout(() => setSyncStatus("idle"), 3000);
     } catch (err) {
@@ -6203,6 +6174,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       setToast({ type: "error", message: "Yayınlama hatası: " + err.message });
     }
   }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+  forcePublishRef.current = forcePublish;
 
   // Otomatik senkronizasyon — her 10 saniyede Firestore SUNUCUSUNDAN güncelle
   useEffect(() => {
@@ -6239,6 +6211,23 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       } catch (err) { console.warn("Auto-sync error:", err); }
     }, 10000); // 10 saniyede bir otomatik güncelle
     return () => clearInterval(interval);
+  }, []);
+
+  // ─── 5 Dakikada Bir Otomatik Kaydet ───
+  useEffect(() => {
+    const autoSaveInterval = setInterval(async () => {
+      if (!firestoreReady.current) return;
+      try {
+        if (forcePublishRef.current) {
+          setSaveIndicator("saving");
+          await forcePublishRef.current();
+          setLastSavedAt(new Date());
+          setSaveIndicator("saved");
+          setTimeout(() => setSaveIndicator("idle"), 2000);
+        }
+      } catch (e) { console.warn("Auto-save error:", e); }
+    }, 5 * 60 * 1000); // 5 dakika
+    return () => clearInterval(autoSaveInterval);
   }, []);
 
   // ─── Firestore'dan gerçek zamanlı okuma (onSnapshot) ───
@@ -6310,17 +6299,17 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   }, []);
 
   // ─── Firestore'a yazma (state değiştiğinde, sadece kullanıcı eylemi sonrası) ───
-  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("researchers", researchers); }, [researchers, writeToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("topics", topics); }, [topics, writeToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("projects", projects); }, [projects, writeToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("quicklinks", quickLinks); }, [quickLinks, writeToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt, writeConfigToFirestore]);
-  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { writeToFirestore("researchers", researchers); }, [researchers, writeToFirestore]);
+  useEffect(() => { writeToFirestore("topics", topics); }, [topics, writeToFirestore]);
+  useEffect(() => { writeToFirestore("projects", projects); }, [projects, writeToFirestore]);
+  useEffect(() => { writeToFirestore("quicklinks", quickLinks); }, [quickLinks, writeToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt, writeConfigToFirestore]);
 
   // Sync module-level config refs for sub-components
   roleConfig = roleConfigSt;
@@ -6664,7 +6653,22 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
           {/* Sync Button */}
-          {isAdmin && <button onClick={forceSync} disabled={syncStatus === "syncing"}
+          {/* Save Indicator */}
+          {canEdit && saveIndicator !== "idle" && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
+              saveIndicator === "saving" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+            }`}>
+              <CloudUpload size={12} className={saveIndicator === "saving" ? "animate-pulse" : ""} />
+              {saveIndicator === "saving" ? "Kaydediliyor..." : "Kaydedildi"}
+            </div>
+          )}
+          {canEdit && lastSavedAt && saveIndicator === "idle" && (
+            <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400" title={`Son kayıt: ${lastSavedAt.toLocaleTimeString("tr-TR")}`}>
+              <CloudUpload size={11} />
+              {lastSavedAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+            </div>
+          )}
+          {canEdit && <button onClick={forceSync} disabled={syncStatus === "syncing"}
             className={`p-2 rounded-lg transition-all ${syncStatus === "done" ? "bg-emerald-100 text-emerald-600" : syncStatus === "syncing" ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-500"}`}
             title="Senkronize Et">
             <RefreshCw size={18} className={syncStatus === "syncing" ? "animate-spin" : ""} />
@@ -6676,49 +6680,35 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             <Wrench size={18} />
           </button>}
           {/* Session Status Indicator */}
-          {isAdmin && (
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              viewOnlyMode && activeSessionRole === "master"
-                ? "bg-red-50 text-red-700 border border-red-200"
-                : viewOnlyMode
-                  ? "bg-amber-50 text-amber-700 border border-amber-200"
-                  : isMaster
-                    ? "bg-gradient-to-r from-red-50 to-amber-50 text-red-700 border border-red-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-            }`}>
-              {isMaster && !viewOnlyMode ? (
-                <span className="text-sm">👑</span>
-              ) : (
-                <div className={`w-2 h-2 rounded-full ${
-                  viewOnlyMode && activeSessionRole === "master" ? "bg-red-400" : viewOnlyMode ? "bg-amber-400" : "bg-emerald-400 animate-pulse"
-                }`} />
-              )}
-              {viewOnlyMode ? (
-                activeSessionRole === "master" ? (
-                  <span>👑 <strong>{activeSessionUser}</strong> aktif — Görüntüleme Modu</span>
-                ) : (
-                  <span>Görüntüleme — <strong>{activeSessionUser}</strong> düzenliyor</span>
-                )
-              ) : isMaster ? (
-                <span>Master Yönetici</span>
-              ) : (
-                <span>Düzenleme Modu</span>
-              )}
-            </div>
-          )}
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            isMaster
+              ? "bg-gradient-to-r from-red-50 to-amber-50 text-red-700 border border-red-200"
+              : isAdmin
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : isEditor
+                  ? "bg-violet-50 text-violet-700 border border-violet-200"
+                  : "bg-blue-50 text-blue-700 border border-blue-200"
+          }`}>
+            {isMaster ? (
+              <span className="text-sm">👑</span>
+            ) : (
+              <div className={`w-2 h-2 rounded-full animate-pulse ${isAdmin ? "bg-emerald-400" : isEditor ? "bg-violet-400" : "bg-blue-400"}`} />
+            )}
+            <span>{isMaster ? "Master Yönetici" : isAdmin ? "Yönetici Modu" : isEditor ? "Editör Modu" : "Görüntüleyici"}</span>
+          </div>
           <div className="w-px h-6 bg-slate-200" />
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
-              <p className="text-[10px] text-slate-400">{role === "master" ? "Master Yönetici" : role === "admin" ? "Yönetici" : "Görüntüleyici"}</p>
+              <p className="text-[10px] text-slate-400">{role === "master" ? "Master Yönetici" : role === "admin" ? "Yönetici" : role === "editor" ? "Editör" : "Görüntüleyici"}</p>
             </div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs ${
-              isMaster && !viewOnlyMode
+              isMaster
                 ? "bg-red-100 text-red-600 ring-2 ring-red-300"
-                : isAdmin && !viewOnlyMode
+                : isAdmin
                   ? "bg-emerald-100 text-emerald-600 ring-2 ring-emerald-300"
-                  : isAdmin && viewOnlyMode
-                    ? "bg-amber-100 text-amber-600 ring-2 ring-amber-300"
+                  : isEditor
+                    ? "bg-violet-100 text-violet-600 ring-2 ring-violet-300"
                     : "bg-indigo-100 text-indigo-600"
             }`}>
               {(user?.displayName || "K")[0]}
@@ -6730,41 +6720,22 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         </div>
       </header>
 
-      {/* SESSION LOCK OVERLAY */}
-      {sessionBlocked && isAdmin && !viewOnlyMode && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      {/* KICKED OUT OVERLAY — Başka biri oturumu aldığında */}
+      {kickedOut && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${activeSessionRole === "master" ? "bg-red-100" : "bg-amber-100"}`}>
-              <AlertTriangle size={32} className={activeSessionRole === "master" ? "text-red-500" : "text-amber-500"} />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${kickedByRole === "master" ? "bg-red-100" : "bg-amber-100"}`}>
+              {kickedByRole === "master" ? <span className="text-3xl">👑</span> : <AlertTriangle size={32} className="text-amber-500" />}
             </div>
-            <h2 className="text-lg font-bold text-slate-800">{activeSessionRole === "master" ? "Master Yönetici Aktif" : "Oturum Meşgul"}</h2>
+            <h2 className="text-lg font-bold text-slate-800">Oturumunuz Sonlandırıldı</h2>
             <p className="text-sm text-slate-600">
-              <strong className={activeSessionRole === "master" ? "text-red-600" : "text-indigo-600"}>{activeSessionUser}</strong> şu anda dashboard üzerinde çalışıyor.
-              {activeSessionRole === "master" && <span className="block mt-1 text-red-500 font-medium text-xs">Master yönetici aktifken düzenleme yapılamaz.</span>}
-              {activeSessionRole !== "master" && " Aynı anda iki kişinin düzenleme yapması veri çakışmasına neden olabilir."}
+              <strong className={kickedByRole === "master" ? "text-red-600" : "text-indigo-600"}>{kickedByUser}</strong>
+              {kickedByRole === "master" ? " (Master Yönetici)" : kickedByRole === "admin" ? " (Yönetici)" : ""} giriş yaptı.
+              <span className="block mt-1 text-slate-400 text-xs">Aynı anda yalnızca bir kullanıcı oturum açabilir.</span>
             </p>
-            <div className="flex gap-3 justify-center">
-              <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-                Çıkış Yap
-              </button>
-              <button onClick={() => { setViewOnlyMode(true); setSessionBlocked(false); }} className="px-4 py-2 text-sm font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors flex items-center gap-2">
-                <Eye size={14} /> Görüntüleme Modunda Devam Et
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400">Görüntüleme modunda verileri görebilir ancak düzenleyemezsiniz. Yapılan değişiklikleri görmek için üstteki Sync butonuna basabilirsiniz.</p>
-          </div>
-        </div>
-      )}
-
-      {/* MASTER TAKEOVER ALERT */}
-      {masterTakeoverAlert && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[55] animate-bounce">
-          <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg">👑</div>
-            <div>
-              <p className="font-bold text-sm">Master Yönetici Giriş Yaptı</p>
-              <p className="text-[11px] text-white/80">Görüntüleme moduna geçirildiniz. Sync butonu ile değişiklikleri görebilirsiniz.</p>
-            </div>
+            <button onClick={onLogout} className="w-full px-4 py-2.5 text-sm font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors">
+              Giriş Ekranına Dön
+            </button>
           </div>
         </div>
       )}
@@ -6782,23 +6753,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         </div>
       )}
 
-      {/* VIEW-ONLY BANNER */}
-      {viewOnlyMode && (
-        <div className={`border-b px-5 py-2.5 flex items-center justify-center gap-3 flex-shrink-0 ${
-          activeSessionRole === "master" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
-        }`}>
-          {activeSessionRole === "master" ? <span className="text-sm">👑</span> : <Eye size={14} className="text-amber-600" />}
-          <span className={`text-xs font-medium ${activeSessionRole === "master" ? "text-red-700" : "text-amber-700"}`}>
-            {activeSessionRole === "master"
-              ? <>Master Yönetici <strong>{activeSessionUser}</strong> aktif — Görüntüleme modundasınız.</>
-              : <>Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor.</>
-            }
-          </span>
-          <span className="text-[10px] bg-white/70 border border-current/20 px-2 py-0.5 rounded-full font-medium animate-pulse" style={{color: activeSessionRole === "master" ? "#b91c1c" : "#92400e"}}>
-            Yapılan işlemleri görmek için ↑ Sync butonuna basınız!
-          </span>
-        </div>
-      )}
+
 
       {/* STATS BAR */}
       <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center gap-3 flex-shrink-0 overflow-x-auto">
@@ -6872,7 +6827,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <div className="flex items-center gap-1">
                 <button onClick={() => setMaximizedCol(maximizedCol === "researchers" ? null : "researchers")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "researchers" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "researchers" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvRes(!showAdvRes)} className={`p-1.5 rounded-lg transition-colors ${showAdvRes ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>}
+                {canEdit && <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -6913,7 +6868,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "researchers" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "researchers" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={isAdmin} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} />)}
+            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={canEdit} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} />)}
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
             </div>
           </div>
@@ -6929,7 +6884,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <div className="flex items-center gap-1">
                 <button onClick={() => setMaximizedCol(maximizedCol === "topics" ? null : "topics")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "topics" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "topics" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvTopic(!showAdvTopic)} className={`p-1.5 rounded-lg transition-colors ${showAdvTopic ? "bg-emerald-100 text-emerald-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("topic")} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 transition-colors" title="Yeni Konu"><Plus size={16} /></button>}
+                {canEdit && <button onClick={() => setAddModal("topic")} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 transition-colors" title="Yeni Konu"><Plus size={16} /></button>}
               </div>
             </div>
             <div className="flex gap-2">
@@ -6969,7 +6924,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "topics" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "topics" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={isAdmin} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} />)}
+            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={canEdit} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} />)}
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
             </div>
           </div>
@@ -6985,7 +6940,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <div className="flex items-center gap-1">
                 <button onClick={() => setMaximizedCol(maximizedCol === "projects" ? null : "projects")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "projects" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "projects" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvProject(!showAdvProject)} className={`p-1.5 rounded-lg transition-colors ${showAdvProject ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("project")} className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-500 transition-colors" title="Yeni Proje"><Plus size={16} /></button>}
+                {canEdit && <button onClick={() => setAddModal("project")} className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-500 transition-colors" title="Yeni Proje"><Plus size={16} /></button>}
               </div>
             </div>
             <div className="flex gap-2">
@@ -7020,7 +6975,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               if (type === "topic") handleCreateProjectFromTopic(id);
             }}>
             <div className={maximizedCol === "projects" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} isAdmin={isAdmin} onDrop={handleTopicDropOnProject} onCancelProject={handleCancelProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} maximized={maximizedCol === "projects"} />)}
+            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} isAdmin={canEdit} onDrop={handleTopicDropOnProject} onCancelProject={handleCancelProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} maximized={maximizedCol === "projects"} />)}
             {filteredProjects.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Proje bulunamadı</p>}
             </div>
             {projectColDragOver && (
@@ -7037,8 +6992,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* MODALS */}
       {rolePopup && <RoleSelectPopup position={rolePopup.position} onSelect={handleRoleSelect} onCancel={() => setRolePopup(null)} />}
-      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
-      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} />}
+      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
+      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} />}
       {addModal && isAdmin && <AddItemModal type={addModal} allTopics={topics} projects={projects} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
       {showCalendar && <CalendarModal topics={topics} projects={projects} onClose={() => setShowCalendar(false)} />}
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}
