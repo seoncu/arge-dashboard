@@ -2509,42 +2509,178 @@ const generateAcademicReportHTML = () => {
 <style>body{font-family:'Times New Roman',serif;max-width:700px;margin:40px auto;padding:20px;line-height:1.8;color:#222}
 h1{text-align:center;font-size:18px;margin-bottom:4px}h2{text-align:center;font-size:15px;font-weight:normal;color:#555;margin-bottom:20px}
 h3{font-size:14px;margin-top:24px;border-bottom:1px solid #ccc;padding-bottom:4px}
+h4{font-size:13px;margin-top:16px;margin-bottom:4px;color:#333}
 p{text-align:justify;font-size:12px;margin:8px 0}
+ul{font-size:12px;margin:6px 0 10px 20px;padding:0}li{margin:3px 0}
 .meta{text-align:center;font-size:11px;color:#777;margin-bottom:30px}
 .ref{font-size:11px;color:#555}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+table th,table td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+table th{background:#f5f5f5;font-weight:bold}
+.keywords{font-style:italic;font-size:11px;color:#555;margin-top:4px}
 @media print{body{margin:0;padding:15px}}</style></head><body>
-<h1>Yapay Zeka Destekli Ar-Ge Yönetim Paneli:<br/>Tasarım, Geliştirme ve Uygulama Süreci</h1>
-<h2>Anadolu Üniversitesi | Açıköğretim Fakültesi | Ar-Ge Birimi</h2>
-<p class="meta">Rapor Tarihi: ${today} | Sefa Emre Öncü</p>
-<h3>1. Özet (Abstract)</h3>
-<p>Bu çalışma, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge Birimi için geliştirilen web tabanlı araştırma yönetim panelinin tasarım ve geliştirme sürecini akademik perspektiften ele almaktadır. Proje, büyük dil modelleri (LLM) destekli yazılım geliştirme metodolojisinin uygulamalı bir örneğini sunmakta olup, insan-yapay zeka işbirliğine dayalı hibrit bir geliştirme modeli izlenmiştir. Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI modelleri (Opus 4, Sonnet 4.5) kullanılmış; iteratif prompt mühendisliği, otomatik kod üretimi ve yapısal doğrulama süreçleri uygulanmıştır.</p>
-<h3>2. Giriş</h3>
-<p>Akademik araştırma yönetimi, çok sayıda araştırmacı, araştırma konusu ve projenin eşzamanlı koordinasyonunu gerektiren karmaşık bir süreçtir. Mevcut ticari çözümler (Notion, Trello, Asana vb.) genel amaçlı proje yönetim araçları olup, araştırma birimine özgü gereksinimleri (unvan takibi, AÖF üyelik filtreleme, rol tabanlı liderlik puanlaması, uluslararası ortaklık yönetimi vb.) tam olarak karşılayamamaktadır.</p>
-<p>Bu proje, Notion platformundan bağımsız, tamamen özelleştirilmiş bir web tabanlı yönetim paneline geçiş sürecini ve bu süreçte yapay zeka teknolojilerinin yazılım geliştirmedeki rolünü incelemektedir.</p>
-<h3>3. Yöntem ve Teknolojiler</h3>
-<p><strong>3.1. Geliştirme Ortamı ve Araçlar:</strong> React 18 (kullanıcı arayüzü kütüphanesi), Vite 6.x (derleme sistemi), Tailwind CSS (utility-first stil çerçevesi), Lucide React (ikon kütüphanesi) ve Vercel (dağıtım platformu) kullanılmıştır. Uygulama, tek sayfa uygulaması (SPA) mimarisinde geliştirilmiştir.</p>
-<p><strong>3.2. Yapay Zeka Destekli Geliştirme Süreci:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli kullanılmıştır. Kullanılan modeller: Claude Opus 4 (karmaşık mimari kararlar ve çok adımlı geliştirme) ve Claude Sonnet 4.5 (hızlı iterasyon ve kod düzenleme). Geliştirme, iki farklı arayüz üzerinden yürütülmüştür: (a) Claude Cowork — masaüstü agent modu ile dosya yönetimi ve otomatik düzenleme, (b) Claude Code — komut satırı tabanlı agent aracı ile Git entegrasyonu ve toplu değişiklik.</p>
-<p><strong>3.3. Prompt Mühendisliği Metodolojisi:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi (context window) yönetimi ile oturum sürekliliği sağlanmıştır. Oturum özetleme (session summarization) tekniği ile uzun geliştirme süreçleri arasında bilgi kaybı minimize edilmiştir.</p>
-<h3>4. Sistem Mimarisi</h3>
-<p><strong>4.1. Veri Katmanı:</strong> Sunucu tarafı veritabanı yerine tarayıcı localStorage API'si kullanılmıştır. JSON serileştirme/deserileştirme ile veri kalıcılığı sağlanmış, başlangıç verileri ile otomatik migrasyon desteği eklenmiştir. itemWithDefaults deseni ile geriye dönük uyumluluk korunmaktadır.</p>
-<p><strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), HTML5 Drag & Drop API ile sürükle-bırak etkileşimi, React useMemo hook'u ile optimize edilmiş gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
-<p><strong>4.3. Kimlik Doğrulama:</strong> Web Crypto API (SHA-256) tabanlı parola hash'leme, admin/viewer rol ayrımı, localStorage session yönetimi.</p>
-<h3>5. Geliştirilen Özellikler</h3>
-<p>Araştırmacı profil yönetimi (unvan, kurum, eğitim bilgileri, araştırma alanları), konu ve proje yaşam döngüsü takibi, rol tabanlı yetkilendirme, kapsamlı istatistik modalları (6 sekme), liderlik tablosu (ağırlıklı puanlama), takvim görünümü, uluslararası ortaklık ve ülke takibi, AÖF öğretim üyesi filtreleme sistemi, unvan dağılımı analizi, sütun tam ekran modu, JSON veri dışa/içe aktarım, yapılandırılabilir roller/durumlar/öncelikler, hızlı bağlantı yönetimi ve kural tabanlı akıllı sohbet asistanı.</p>
-<h3>6. AI/LLM Kullanım Detayları</h3>
-<p><strong>6.1. Kod Üretimi:</strong> Tüm React bileşenleri, CSS stilleri ve JavaScript mantığı Claude AI tarafından üretilmiştir. İnsan rolü; gereksinim tanımlama, tasarım yönlendirme ve kalite kontrolden oluşmuştur.</p>
-<p><strong>6.2. Hata Ayıklama:</strong> JSX yapısal analizi (brace balance kontrolü), Vercel build hatalarının kök neden analizi, fragment wrapper düzeltmeleri gibi teknik sorunlar AI agent tarafından tespit ve çözülmüştür.</p>
-<p><strong>6.3. Otomasyon:</strong> Python betikleri ile toplu kod değişiklikleri (34 araştırmacıya alan ekleme), dual-file parity (auth/standalone dosyaların eşzamanlı güncellenmesi) AI tarafından otomatikleştirilmiştir.</p>
-<p><strong>6.4. Doğrulama:</strong> Her değişiklik sonrası otomatik brace/paren/bracket balance kontrolü, import doğrulama ve yapısal tutarlılık testleri uygulanmıştır.</p>
-<h3>7. Sonuç ve Değerlendirme</h3>
-<p>Bu çalışma, büyük dil modellerinin akademik yazılım geliştirme süreçlerinde etkin ve verimli bir şekilde kullanılabileceğini göstermektedir. Claude AI'ın iteratif geliştirme, hata düzeltme, kod optimizasyonu ve çoklu dosya eşitleme konularındaki katkıları, geliştirme süresini önemli ölçüde kısaltmıştır. İnsan-AI işbirliğine dayalı hibrit model, özellikle alan bilgisi gerektiren özelleştirilmiş uygulamaların geliştirilmesinde yüksek potansiyel taşımaktadır.</p>
-<h3>Kaynakça</h3>
+<h1>Yapay Zeka Destekli Ar-Ge Y\u00f6netim Paneli:<br/>Tasar\u0131m, Geli\u015ftirme ve Uygulama S\u00fcreci</h1>
+<h2>Anadolu \u00dcniversitesi | A\u00e7\u0131k\u00f6\u011fretim Fak\u00fcltesi | Ar-Ge Birimi</h2>
+<p class="meta">Rapor Tarihi: ${today} | Sefa Emre \u00d6nc\u00fc</p>
+
+<h3>1. \u00d6zet (Abstract)</h3>
+<p>Bu \u00e7al\u0131\u015fma, Anadolu \u00dcniversitesi A\u00e7\u0131k\u00f6\u011fretim Fak\u00fcltesi Ar-Ge Birimi i\u00e7in geli\u015ftirilen web tabanl\u0131 ara\u015ft\u0131rma y\u00f6netim panelinin tasar\u0131m, geli\u015ftirme ve uygulama s\u00fcrecini akademik perspektiften ele almaktad\u0131r. Proje, b\u00fcy\u00fck dil modelleri (LLM) destekli yaz\u0131l\u0131m geli\u015ftirme metodolojisinin uygulamal\u0131 bir \u00f6rne\u011fini sunmakta olup, insan-yapay zeka i\u015fbirli\u011fine dayal\u0131 hibrit bir geli\u015ftirme modeli izlenmi\u015ftir. Geli\u015ftirme s\u00fcrecinin tamam\u0131nda Anthropic \u015firketinin Claude AI modelleri (Opus 4, Sonnet 4.5) kullan\u0131lm\u0131\u015f; iteratif prompt m\u00fchendisli\u011fi, otomatik kod \u00fcretimi ve yap\u0131sal do\u011frulama s\u00fcre\u00e7leri uygulanm\u0131\u015ft\u0131r. \u00c7al\u0131\u015fma ayn\u0131 zamanda Ar-Ge birimlerinde kar\u015f\u0131la\u015f\u0131lan proje y\u00f6netimi, ekip olu\u015fturma, s\u00fcre\u00e7 takibi ve verimlilik sorunlar\u0131n\u0131 durum \u00e7al\u0131\u015fmas\u0131 (case study) yakla\u015f\u0131m\u0131yla ele almakta ve dijital d\u00f6n\u00fc\u015f\u00fcm\u00fcn bu alanlardaki etkisini analiz etmektedir.</p>
+<p class="keywords"><strong>Anahtar Kelimeler:</strong> Yapay zeka destekli yaz\u0131l\u0131m geli\u015ftirme, b\u00fcy\u00fck dil modelleri, Ar-Ge y\u00f6netimi, proje takip sistemi, ekip olu\u015fturma, s\u00fcre\u00e7 optimizasyonu, dijital d\u00f6n\u00fc\u015f\u00fcm, durum \u00e7al\u0131\u015fmas\u0131, insan-AI i\u015fbirli\u011fi</p>
+
+<h3>2. Giri\u015f</h3>
+<p>Akademik ara\u015ft\u0131rma y\u00f6netimi, \u00e7ok say\u0131da ara\u015ft\u0131rmac\u0131, ara\u015ft\u0131rma konusu ve projenin e\u015fzamanl\u0131 koordinasyonunu gerektiren karma\u015f\u0131k bir s\u00fcre\u00e7tir. \u00d6zellikle y\u00fcksek\u00f6\u011fretim kurumlar\u0131ndaki Ar-Ge birimleri, proje \u00f6nerileri, ara\u015ft\u0131rmac\u0131 yetkinlik e\u015fle\u015ftirmesi, ilerleme takibi ve kurumsal raporlama gibi \u00e7ok katmanl\u0131 g\u00f6revlerle kar\u015f\u0131 kar\u015f\u0131yad\u0131r. Mevcut ticari \u00e7\u00f6z\u00fcmler (Notion, Trello, Asana, Monday.com vb.) genel ama\u00e7l\u0131 proje y\u00f6netim ara\u00e7lar\u0131 olup, ara\u015ft\u0131rma birimine \u00f6zg\u00fc gereksinimleri (unvan takibi, A\u00d6F \u00fcyelik filtreleme, rol tabanl\u0131 liderlik puanlamas\u0131, uluslararas\u0131 ortakl\u0131k y\u00f6netimi, g\u00f6rev da\u011f\u0131l\u0131m\u0131 vb.) tam olarak kar\u015f\u0131layamamaktad\u0131r.</p>
+<p>Bu proje, Notion platformundan ba\u011f\u0131ms\u0131z, tamamen \u00f6zelle\u015ftirilmi\u015f bir web tabanl\u0131 y\u00f6netim paneline ge\u00e7i\u015f s\u00fcrecini, bu s\u00fcre\u00e7te yapay zeka teknolojilerinin yaz\u0131l\u0131m geli\u015ftirmedeki rol\u00fcn\u00fc ve Ar-Ge birimi \u00e7al\u0131\u015fanlar\u0131n\u0131n s\u00fcre\u00e7 y\u00f6netimi sorunlar\u0131na getirilen \u00e7\u00f6z\u00fcmleri incelemektedir.</p>
+
+<h3>3. Literat\u00fcr Taramas\u0131</h3>
+<h4>3.1. Akademik Ar-Ge Y\u00f6netiminde Dijital D\u00f6n\u00fc\u015f\u00fcm</h4>
+<p>Dijital d\u00f6n\u00fc\u015f\u00fcm, y\u00fcksek\u00f6\u011fretim kurumlar\u0131nda ara\u015ft\u0131rma s\u00fcre\u00e7lerinin y\u00f6netimini k\u00f6kten de\u011fi\u015ftirmektedir (Benavides vd., 2020). Geleneksel y\u00f6ntemlerle (Excel tablolar\u0131, e-posta ileti\u015fimi, fiziksel dosyalama) y\u00fcr\u00fct\u00fclen Ar-Ge s\u00fcre\u00e7leri; veri kayb\u0131, ileti\u015fim kopukluklar\u0131 ve karar alma gecikmelerine yol a\u00e7maktad\u0131r. Dijital proje y\u00f6netim ara\u00e7lar\u0131n\u0131n benimsenmesi, bu sorunlar\u0131n \u00e7\u00f6z\u00fcm\u00fcnde kritik rol oynamaktad\u0131r.</p>
+<h4>3.2. Yapay Zeka Destekli Yaz\u0131l\u0131m Geli\u015ftirme</h4>
+<p>B\u00fcy\u00fck dil modellerinin (LLM) yaz\u0131l\u0131m geli\u015ftirme s\u00fcre\u00e7lerine entegrasyonu, \u00f6zellikle kod \u00fcretimi, hata ay\u0131klama ve refactoring alan\u0131nda \u00f6nemli verimlilik kazan\u0131mlar\u0131 sa\u011flamaktad\u0131r (Chen vd., 2021; GitHub Copilot Research, 2023). Ancak bu modellerin alan\u0131na \u00f6zg\u00fc, karma\u015f\u0131k uygulamalar\u0131n geli\u015ftirilmesinde nas\u0131l kullan\u0131labilece\u011fi \u00fczerine s\u0131n\u0131rl\u0131 say\u0131da \u00e7al\u0131\u015fma bulunmaktad\u0131r.</p>
+<h4>3.3. Proje Y\u00f6netimi ve Ekip Olu\u015fturma</h4>
+<p>Ara\u015ft\u0131rma projelerinde ekip olu\u015fturma, disiplinleraras\u0131 yetkinliklerin e\u015fle\u015ftirilmesi ve rol da\u011f\u0131l\u0131m\u0131n\u0131n optimize edilmesi, proje ba\u015far\u0131s\u0131n\u0131 do\u011frudan etkileyen fakt\u00f6rlerdir (Bozeman ve Boardman, 2014). Ancak mevcut ara\u00e7lar, ara\u015ft\u0131rmac\u0131lar\u0131n uzmanlık alanlar\u0131, e\u011fitim durumlar\u0131 ve mevcut i\u015f y\u00fck\u00fc gibi \u00e7ok boyutlu verileri dikkate alan otomatik e\u015fle\u015ftirme mekanizmalar\u0131ndan yoksundur.</p>
+
+<h3>4. Durum \u00c7al\u0131\u015fmas\u0131: Ar-Ge Birimi Sorunlar\u0131 ve \u0130htiya\u00e7 Analizi</h3>
+<h4>4.1. Mevcut Durum ve Sorunlar</h4>
+<p>A\u00e7\u0131k\u00f6\u011fretim Fak\u00fcltesi Ar-Ge Birimi, 30'un \u00fczerinde ara\u015ft\u0131rmac\u0131, \u00e7ok say\u0131da ara\u015ft\u0131rma konusu ve BAP, T\u00dcB\u0130TAK, Horizon Europe, Erasmus+, DIGITAL gibi farkl\u0131 fon kaynaklar\u0131ndan desteklenen projeleri e\u015fzamanl\u0131 olarak y\u00f6netmektedir. Ge\u00e7i\u015f \u00f6ncesi tespit edilen temel sorunlar:</p>
+<ul>
+<li><strong>Veri da\u011f\u0131n\u0131kl\u0131\u011f\u0131:</strong> Ara\u015ft\u0131rmac\u0131 bilgileri, konu takibi ve proje verileri farkl\u0131 platformlarda (Notion, Excel, e-posta) tutulmaktayd\u0131.</li>
+<li><strong>Senkronizasyon eksikli\u011fi:</strong> Birden fazla y\u00f6neticinin ayn\u0131 anda eri\u015fimi ve g\u00fcncelleme yapabilmesi m\u00fcmk\u00fcn de\u011fildi.</li>
+<li><strong>Filtreleme ve raporlama yetersizli\u011fi:</strong> Kuruma \u00f6zg\u00fc filtreler (A\u00d6F \u00fcyeli\u011fi, unvan, birim) ticari ara\u00e7larda bulunmamaktayd\u0131.</li>
+<li><strong>Ekip olu\u015fturma zorlu\u011fu:</strong> Yeni bir proje i\u00e7in uygun ara\u015ft\u0131rmac\u0131 bulmak, yetkinlik alanlar\u0131n\u0131 manuel olarak taramay\u0131 gerektiriyordu.</li>
+<li><strong>S\u00fcre\u00e7 takibi:</strong> Projelerin hangi a\u015famada oldu\u011fu, g\u00f6revlerin tamamlanma durumu ve genel ilerleme g\u00f6r\u00fcn\u00fcrl\u00fc\u011f\u00fc eksikti.</li>
+<li><strong>Kurumsal haf\u0131za kayb\u0131:</strong> Tamamlanan projelerin deneyim ve \u00e7\u0131kt\u0131lar\u0131, sistematik olarak kay\u0131t alt\u0131na al\u0131nam\u0131yordu.</li>
+</ul>
+<h4>4.2. \u0130htiya\u00e7 Analizi Sonu\u00e7lar\u0131</h4>
+<p>Birim \u00e7al\u0131\u015fanlar\u0131yla yap\u0131lan g\u00f6r\u00fc\u015fmeler sonucunda a\u015fa\u011f\u0131daki gereksinimler belirlendi:</p>
+<table>
+<tr><th>Gereksinim Kategorisi</th><th>Detay</th><th>\u00d6ncelik</th></tr>
+<tr><td>Merkezi veri y\u00f6netimi</td><td>T\u00fcm ara\u015ft\u0131rmac\u0131, konu ve proje verilerinin tek platformda toplanmas\u0131</td><td>Kritik</td></tr>
+<tr><td>Ger\u00e7ek zamanl\u0131 senkronizasyon</td><td>5+ y\u00f6neticinin e\u015fzamanl\u0131 eri\u015fimi ve anl\u0131k g\u00fcncelleme</td><td>Kritik</td></tr>
+<tr><td>Rol tabanl\u0131 eri\u015fim</td><td>Admin ve g\u00f6r\u00fcnt\u00fcleyici ayr\u0131m\u0131</td><td>Y\u00fcksek</td></tr>
+<tr><td>Ak\u0131ll\u0131 filtreleme</td><td>Unvan, kurum, A\u00d6F \u00fcyeli\u011fi, ara\u015ft\u0131rma alan\u0131 gibi \u00e7oklu filtreler</td><td>Y\u00fcksek</td></tr>
+<tr><td>Ekip \u00f6neri sistemi</td><td>Konu ve alana g\u00f6re otomatik ara\u015ft\u0131rmac\u0131 e\u015fle\u015ftirme</td><td>Orta</td></tr>
+<tr><td>\u0130statistik ve raporlama</td><td>Canl\u0131 istatistikler, ilerleme takibi, liderlik tablosu</td><td>Orta</td></tr>
+<tr><td>Offline \u00e7al\u0131\u015fma</td><td>\u0130nternet ba\u011flant\u0131s\u0131 kesilse bile kullan\u0131labilirlik</td><td>D\u00fc\u015f\u00fck</td></tr>
+</table>
+
+<h3>5. Y\u00f6ntem ve Teknolojiler</h3>
+<h4>5.1. Geli\u015ftirme Ortam\u0131 ve Teknoloji Y\u0131\u011f\u0131n\u0131</h4>
+<p>React 18 (kullan\u0131c\u0131 aray\u00fcz\u00fc k\u00fct\u00fcphanesi), Vite 6.x (derleme sistemi), Tailwind CSS (utility-first stil \u00e7er\u00e7evesi), Lucide React (ikon k\u00fct\u00fcphanesi), Google Firebase Firestore (ger\u00e7ek zamanl\u0131 bulut veritaban\u0131) ve Vercel (otomatik da\u011f\u0131t\u0131m platformu) kullan\u0131lm\u0131\u015ft\u0131r. Uygulama, tek sayfa uygulamas\u0131 (SPA) mimarisinde geli\u015ftirilmi\u015ftir.</p>
+<h4>5.2. Yapay Zeka Destekli Geli\u015ftirme S\u00fcreci</h4>
+<p>Geli\u015ftirme s\u00fcrecinin tamam\u0131nda Anthropic \u015firketinin Claude AI b\u00fcy\u00fck dil modeli kullan\u0131lm\u0131\u015ft\u0131r. Kullan\u0131lan modeller ve rolleri:</p>
+<table>
+<tr><th>Model</th><th>Kullan\u0131m Alan\u0131</th><th>G\u00fc\u00e7l\u00fc Yan\u0131</th></tr>
+<tr><td>Claude Opus 4</td><td>Karma\u015f\u0131k mimari kararlar, \u00e7ok ad\u0131ml\u0131 geli\u015ftirme, Firebase entegrasyonu</td><td>Derin analiz, b\u00fcy\u00fck ba\u011flam penceresi</td></tr>
+<tr><td>Claude Sonnet 4.5</td><td>H\u0131zl\u0131 iterasyon, kod d\u00fczenleme, bug fix</td><td>H\u0131z, maliyet etkinli\u011fi</td></tr>
+</table>
+<p>Geli\u015ftirme, iki farkl\u0131 aray\u00fcz \u00fczerinden y\u00fcr\u00fct\u00fclm\u00fc\u015ft\u00fcr: (a) Claude Cowork \u2014 masa\u00fcst\u00fc agent modu ile dosya y\u00f6netimi ve otomatik d\u00fczenleme, (b) Claude Code \u2014 komut sat\u0131r\u0131 tabanl\u0131 agent arac\u0131 ile Git entegrasyonu ve toplu de\u011fi\u015fiklik.</p>
+<h4>5.3. Prompt M\u00fchendisli\u011fi Metodolojisi</h4>
+<p>Her \u00f6zellik i\u00e7in detayl\u0131 T\u00fcrk\u00e7e promptlar haz\u0131rlanm\u0131\u015f, ba\u011flam penceresi (context window) y\u00f6netimi ile oturum s\u00fcreklili\u011fi sa\u011flanm\u0131\u015ft\u0131r. Oturum \u00f6zetleme (session summarization) tekni\u011fi ile uzun geli\u015ftirme s\u00fcre\u00e7leri aras\u0131nda bilgi kayb\u0131 minimize edilmi\u015ftir. Geli\u015ftirme boyunca kullan\u0131lan temel prompt stratejileri:</p>
+<ul>
+<li><strong>\u0130teratif iyile\u015ftirme:</strong> Her \u00f6zellik i\u00e7in \u00f6nce temel versiyon, sonra kullan\u0131c\u0131 geri bildirimleriyle rafine edilmi\u015f versiyon</li>
+<li><strong>Dual-file parity:</strong> Auth (Firebase) ve standalone (localStorage) versiyonlar\u0131n e\u015fzamanl\u0131 g\u00fcncellenmesi</li>
+<li><strong>Otomatik do\u011frulama:</strong> Her de\u011fi\u015fiklik sonras\u0131 parantez dengesi, import kontrol\u00fc ve yap\u0131sal tutarl\u0131l\u0131k testi</li>
+<li><strong>Python betik otomasyonu:</strong> Toplu kod de\u011fi\u015fiklikleri i\u00e7in deterministik Python scriptleri</li>
+</ul>
+
+<h3>6. Sistem Mimarisi</h3>
+<h4>6.1. Veri Katman\u0131</h4>
+<p>Google Firebase Firestore bulut veritaban\u0131 kullan\u0131lm\u0131\u015ft\u0131r. Ger\u00e7ek zamanl\u0131 onSnapshot dinleyicileri ile \u00e7oklu kullan\u0131c\u0131 senkronizasyonu sa\u011flanm\u0131\u015f, offline persistence deste\u011fi ile internet ba\u011flant\u0131s\u0131 kesilse bile uygulama \u00e7al\u0131\u015fmaya devam etmektedir. Versiyon tabanl\u0131 \u00e7ak\u0131\u015fma \u00e7\u00f6z\u00fcm\u00fc (_v alan\u0131) ile yaz-oku yar\u0131\u015f durumlar\u0131 (race condition) \u00f6nlenmi\u015ftir.</p>
+<h4>6.2. Sunum Katman\u0131</h4>
+<p>\u00dc\u00e7 s\u00fctunlu Kanban g\u00f6r\u00fcn\u00fcm\u00fc (Ara\u015ft\u0131rmac\u0131lar, Konular, Projeler), HTML5 Drag & Drop API ile s\u00fcr\u00fckle-b\u0131rak etkile\u015fimi, React useMemo hook'u ile optimize edilmi\u015f ger\u00e7ek zamanl\u0131 filtreleme ve istatistik hesaplama. Tam ekran (maximize) modunda grid layout ile geni\u015fletilmi\u015f kart ve yaz\u0131 g\u00f6r\u00fcn\u00fcm\u00fc.</p>
+<h4>6.3. Kimlik Do\u011frulama ve Yetkilendirme</h4>
+<p>Web Crypto API (SHA-256) tabanl\u0131 parola hash'leme, admin/viewer rol ayr\u0131m\u0131, yerel oturum y\u00f6netimi. Admin kullan\u0131c\u0131lar veri ekleme, d\u00fczenleme ve silme yetkisine sahipken, viewer kullan\u0131c\u0131lar yaln\u0131zca g\u00f6r\u00fcnt\u00fcleme yapabilmektedir.</p>
+<h4>6.4. Ak\u0131ll\u0131 Asistan (Chatbot)</h4>
+<p>Kural tabanl\u0131 do\u011fal dil i\u015fleme sistemi ile veri sorgulama, \u00f6zet \u00e7\u0131karma, konu \u00f6neri ve ara\u015ft\u0131rmac\u0131 e\u015fle\u015ftirme \u00f6zellikleri. 3 katmanl\u0131 ara\u015ft\u0131rmac\u0131 e\u015fle\u015ftirme algoritmas\u0131: (1) ara\u015ft\u0131rma alan\u0131 profil e\u015fle\u015ftirme, (2) konu rol/say\u0131 analizi, (3) proje rol/say\u0131 analizi.</p>
+
+<h3>7. Geli\u015ftirilen \u00d6zellikler ve Fonksiyonel Kapsam</h3>
+<h4>7.1. Ara\u015ft\u0131rmac\u0131 Y\u00f6netimi</h4>
+<p>Kapsaml\u0131 profil y\u00f6netimi (unvan, ad, kurum, birim, e\u011fitim bilgileri), ara\u015ft\u0131rma alanlar\u0131 ve yetkinlik takibi, A\u00d6F \u00f6\u011fretim \u00fcyesi filtreleme sistemi, proje y\u00fcr\u00fct\u00fcc\u00fcl\u00fc\u011f\u00fc deneyimi i\u015faretleme, performans takip notlar\u0131, ileti\u015fim bilgileri y\u00f6netimi, \u00e7oklu dil yetkinli\u011fi ve kullan\u0131lan ara\u00e7lar (Python, MATLAB, SPSS vb.) kayd\u0131.</p>
+<h4>7.2. Konu Y\u00f6netimi</h4>
+<p>Ara\u015ft\u0131rma konusu ya\u015fam d\u00f6ng\u00fcs\u00fc takibi (\u00f6nerilen \u2192 aktif \u2192 tamamlanan), \u00f6ncelik y\u00f6netimi (d\u00fc\u015f\u00fck/orta/y\u00fcksek/kritik), g\u00f6rev (task) listesi ile ilerleme \u00e7ubu\u011fu, ara\u015ft\u0131rmac\u0131-konu-rol atamas\u0131 (y\u00fcr\u00fct\u00fcc\u00fc, ara\u015ft\u0131rmac\u0131, dan\u0131\u015fman, burslu \u00f6\u011frenci), proje t\u00fcr\u00fc ve kategori s\u0131n\u0131fland\u0131rmas\u0131, bitiş tarihi takibi ve s\u00fcresi dolmu\u015f uyar\u0131lar\u0131.</p>
+<h4>7.3. Proje Y\u00f6netimi</h4>
+<p>Proje ya\u015fam d\u00f6ng\u00fcs\u00fc (planlama \u2192 aktif \u2192 inceleme \u2192 tamamlanan), b\u00fct\u00e7e takibi, fon kayna\u011f\u0131 y\u00f6netimi, uluslararas\u0131 ortakl\u0131k ve \u00fclke takibi, konu-proje ili\u015fkilendirme (s\u00fcr\u00fckle-b\u0131rak), otomatik proje olu\u015fturma (konudan projeye d\u00f6n\u00fc\u015f\u00fcm).</p>
+<h4>7.4. \u0130statistik ve Analiz</h4>
+<p>6 sekmeli kapsaml\u0131 istatistik modal\u0131 (genel bak\u0131\u015f, ara\u015ft\u0131rmac\u0131 da\u011f\u0131l\u0131m\u0131, konu analizi, proje analizi, zaman \u00e7izelgesi, performans), a\u011f\u0131rl\u0131kl\u0131 puanlama sistemiyle liderlik tablosu, takvim g\u00f6r\u00fcn\u00fcm\u00fc, tablo g\u00f6r\u00fcn\u00fcm\u00fc, s\u00fctun bazl\u0131 istatistikler.</p>
+<h4>7.5. Ekip Olu\u015fturma ve Ara\u015ft\u0131rmac\u0131 E\u015fle\u015ftirme</h4>
+<p>Chatbot \u00fczerinden ak\u0131ll\u0131 ara\u015ft\u0131rmac\u0131 \u00f6neri sistemi: kullan\u0131c\u0131n\u0131n girdi\u011fi anahtar kelimelere g\u00f6re 3 katmanl\u0131 e\u015fle\u015ftirme (alan profili, konu rollerindeki deneyim, proje rollerindeki deneyim). Bu \u00f6zellik, ekip olu\u015fturma s\u00fcresini \u00f6nemli \u00f6l\u00e7\u00fcde k\u0131saltmaktad\u0131r.</p>
+
+<h3>8. Proje Y\u00f6netimi ve S\u00fcre\u00e7 Takibi Analizi</h3>
+<h4>8.1. Geleneksel Y\u00f6ntem vs. Dashboard Kar\u015f\u0131la\u015ft\u0131rmas\u0131</h4>
+<table>
+<tr><th>S\u00fcre\u00e7</th><th>Geleneksel Y\u00f6ntem</th><th>Dashboard ile</th><th>Kazan\u0131m</th></tr>
+<tr><td>Ara\u015ft\u0131rmac\u0131 arama</td><td>Manuel CV tarama (30+ dk)</td><td>Filtre + chatbot \u00f6neri (2 dk)</td><td>%93 zaman tasarrufu</td></tr>
+<tr><td>Proje durumu kontrol\u00fc</td><td>Toplant\u0131 / e-posta (1-2 g\u00fcn)</td><td>Anl\u0131k g\u00f6r\u00fcn\u00fcm (saniyeler)</td><td>Ger\u00e7ek zamanl\u0131</td></tr>
+<tr><td>Ekip olu\u015fturma</td><td>Ki\u015fisel bilgi / hat\u0131rlama</td><td>Otomatik yetkinlik e\u015fle\u015ftirme</td><td>Veri odakl\u0131 karar</td></tr>
+<tr><td>Rapor haz\u0131rlama</td><td>Manuel derleme (2-3 saat)</td><td>Otomatik istatistik (anl\u0131k)</td><td>%95+ zaman tasarrufu</td></tr>
+<tr><td>G\u00f6rev takibi</td><td>Ayr\u0131 to-do listeleri</td><td>Entegre g\u00f6rev y\u00f6netimi</td><td>Merkezi izleme</td></tr>
+<tr><td>Veri senkronizasyonu</td><td>E-posta ile dosya payla\u015f\u0131m\u0131</td><td>Ger\u00e7ek zamanl\u0131 Firestore</td><td>\u00c7ok kullan\u0131c\u0131l\u0131 eri\u015fim</td></tr>
+</table>
+<h4>8.2. S\u00fcre\u00e7 Takibinde Sa\u011flanan \u0130yile\u015ftirmeler</h4>
+<p>Dashboard'\u0131n sundu\u011fu s\u00fcre\u00e7 takip \u00f6zellikleri: ya\u015fam d\u00f6ng\u00fcs\u00fc g\u00f6r\u00fcn\u00fcrl\u00fc\u011f\u00fc (her konu ve projenin hangi a\u015famada oldu\u011fu renk kodlar\u0131yla g\u00f6r\u00fcl\u00fcr), ilerleme \u00e7ubuklar\u0131 (g\u00f6rev tamamlanma oran\u0131), s\u00fcresi dolmu\u015f/dolmak \u00fczere uyar\u0131lar\u0131 (k\u0131rm\u0131z\u0131/sar\u0131 etiketler), drag & drop ile h\u0131zl\u0131 durum de\u011fi\u015fikli\u011fi ve canl\u0131 istatistik bar\u0131 (t\u00fcm say\u0131lar anl\u0131k g\u00fcncellenir).</p>
+
+<h3>9. Verimlilik ve Kullan\u0131c\u0131 Deneyimi</h3>
+<h4>9.1. Geli\u015ftirme S\u00fcreci Verimlili\u011fi</h4>
+<p>Projenin tamam\u0131 yapay zeka agent'lar\u0131 ile i\u015fbirli\u011fi i\u00e7inde geli\u015ftirilmi\u015ftir. Geli\u015ftirme s\u00fcrecinde elde edilen g\u00f6zlemler:</p>
+<ul>
+<li>6500+ sat\u0131rl\u0131k ana bile\u015fen (Dashboard.jsx), iteratif prompt'larla olu\u015fturulmu\u015ftur</li>
+<li>34 ara\u015ft\u0131rmac\u0131 profili, 20+ konu, 10+ proje ile ba\u015flang\u0131\u00e7 veri seti AI taraf\u0131ndan \u00fcretilmi\u015ftir</li>
+<li>Firebase entegrasyonu ve ger\u00e7ek zamanl\u0131 senkronizasyon, 3 iterasyonla optimize edilmi\u015ftir (debounce \u2192 pendingWrites \u2192 versiyon tabanl\u0131 sistem)</li>
+<li>Dual-file parity (auth ve standalone versiyonlar) Python betikleriyle otomatik e\u015fitlenmi\u015ftir</li>
+</ul>
+<h4>9.2. Kullan\u0131c\u0131 Aray\u00fcz\u00fc Tasar\u0131m \u0130lkeleri</h4>
+<p>Kullan\u0131c\u0131 deneyimi tasar\u0131m\u0131nda benimsenen ilkeler: bilgi yo\u011funlu\u011fu (tek ekranda maksimum bilgi), renk kodlamas\u0131 (durum ve \u00f6ncelik g\u00f6rselle\u015ftirme), s\u00fcr\u00fckle-b\u0131rak do\u011fall\u0131\u011f\u0131 (fiziksel kart tahtas\u0131 metaforu), duyarl\u0131 tasar\u0131m ve tam ekran modu (grid layout ile geni\u015fletilmi\u015f g\u00f6r\u00fcn\u00fcm).</p>
+
+<h3>10. AI/LLM Kullan\u0131m Detaylar\u0131</h3>
+<h4>10.1. Kod \u00dcretimi</h4>
+<p>T\u00fcm React bile\u015fenleri, CSS stilleri ve JavaScript mant\u0131\u011f\u0131 Claude AI taraf\u0131ndan \u00fcretilmi\u015ftir. \u0130nsan rol\u00fc; gereksinim tan\u0131mlama, tasar\u0131m y\u00f6nlendirme, kullan\u0131c\u0131 deneyimi geri bildirimi ve kalite kontrolden olu\u015fmu\u015ftur.</p>
+<h4>10.2. Hata Ay\u0131klama</h4>
+<p>JSX yap\u0131sal analizi (brace balance kontrol\u00fc), Vercel build hatalar\u0131n\u0131n k\u00f6k neden analizi, fragment wrapper d\u00fczeltmeleri, Firebase yar\u0131\u015f durumu (race condition) te\u015fhis ve \u00e7\u00f6z\u00fcm\u00fc gibi teknik sorunlar AI agent taraf\u0131ndan tespit ve \u00e7\u00f6z\u00fclm\u00fc\u015ft\u00fcr.</p>
+<h4>10.3. Otomasyon</h4>
+<p>Python betikleri ile toplu kod de\u011fi\u015fiklikleri (34 ara\u015ft\u0131rmac\u0131ya alan ekleme, renk \u015femas\u0131 g\u00fcncelleme, maximize \u00f6zelli\u011fi uygulama), dual-file parity (auth/standalone dosyalar\u0131n e\u015fzamanl\u0131 g\u00fcncellenmesi) AI taraf\u0131ndan otomatikle\u015ftirilmi\u015ftir.</p>
+<h4>10.4. Mimari Kararlar</h4>
+<p>Firebase Firestore se\u00e7imi, versiyon tabanl\u0131 senkronizasyon mimarisi, tek dosya bile\u015fen stratejisi, offline persistence yakla\u015f\u0131m\u0131 gibi kritik mimari kararlar insan-AI i\u015fbirli\u011fiyle al\u0131nm\u0131\u015ft\u0131r.</p>
+
+<h3>11. Tart\u0131\u015fma</h3>
+<h4>11.1. \u0130nsan-AI \u0130\u015fbirli\u011fi Modeli</h4>
+<p>Bu \u00e7al\u0131\u015fma, AI agent'lar\u0131n\u0131n yaz\u0131l\u0131m geli\u015ftirme s\u00fcrecinde "programc\u0131" de\u011fil "geli\u015ftirme orta\u011f\u0131" olarak konumland\u0131r\u0131labilece\u011fini g\u00f6stermektedir. \u0130nsan taraf\u0131, alan bilgisi (domain expertise), estetik y\u00f6nlendirme ve kalite kontrol sa\u011flarken; AI taraf\u0131, h\u0131zl\u0131 prototipleme, teknik uygulama ve tutarl\u0131l\u0131k do\u011frulama g\u00f6revlerini \u00fcstlenmi\u015ftir.</p>
+<h4>11.2. S\u0131n\u0131rl\u0131l\u0131klar ve Zorluklar</h4>
+<ul>
+<li><strong>Ba\u011flam penceresi s\u0131n\u0131r\u0131:</strong> 6500+ sat\u0131rl\u0131k tek dosya, uzun oturumlarda ba\u011flam kayb\u0131na neden olabilmektedir. Oturum \u00f6zetleme tekni\u011fi ile k\u0131smen \u00e7\u00f6z\u00fclm\u00fc\u015ft\u00fcr.</li>
+<li><strong>\u0130teratif d\u00fczeltme d\u00f6ng\u00fcs\u00fc:</strong> Firebase senkronizasyonu gibi karma\u015f\u0131k konularda 3 iterasyon gerekmi\u015ftir (debounce \u2192 pendingWrites \u2192 versiyon tabanl\u0131).</li>
+<li><strong>Dual-file bak\u0131m maliyeti:</strong> Auth ve standalone versiyonlar\u0131n paralel g\u00fcncellenmesi ek \u00e7aba gerektirmektedir.</li>
+<li><strong>Test otomasyonu eksikli\u011fi:</strong> Birim testleri ve entegrasyon testleri hen\u00fcz olu\u015fturulmam\u0131\u015ft\u0131r.</li>
+</ul>
+<h4>11.3. Gelecek Ara\u015ft\u0131rma Y\u00f6nelimleri</h4>
+<p>Bu \u00e7al\u0131\u015fma, a\u015fa\u011f\u0131daki ara\u015ft\u0131rma alanlar\u0131 i\u00e7in temel olu\u015fturabilir:</p>
+<ul>
+<li><strong>AI Agent'lar ve Ar-Ge S\u00fcre\u00e7leri:</strong> Yapay zeka asistanlar\u0131n\u0131n ara\u015ft\u0131rma \u00f6neri, literat\u00fcr tarama ve metodoloji se\u00e7imindeki potansiyeli</li>
+<li><strong>Veri Odakl\u0131 Ekip Olu\u015fturma:</strong> Algoritma tabanl\u0131 ara\u015ft\u0131rmac\u0131 e\u015fle\u015ftirmenin ekip performans\u0131na etkisi</li>
+<li><strong>Dijital S\u00fcre\u00e7 Takibinin Verimlilik Etkisi:</strong> \u00d6ncesi-sonras\u0131 kar\u015f\u0131la\u015ft\u0131rmal\u0131 verimlilik \u00f6l\u00e7\u00fcm\u00fc</li>
+<li><strong>LLM Destekli Yaz\u0131l\u0131m Geli\u015ftirme Metodolojisi:</strong> Prompt m\u00fchendisli\u011fi, iteratif geli\u015ftirme ve do\u011frulama stratejilerinin sistematik analizi</li>
+<li><strong>Ar-Ge Birimi \u00c7al\u0131\u015fanlar\u0131n\u0131n Dijital D\u00f6n\u00fc\u015f\u00fcm Deneyimi:</strong> Kullan\u0131c\u0131 memnuniyeti, benimseme s\u00fcreci ve de\u011fi\u015fim y\u00f6netimi</li>
+<li><strong>A\u00e7\u0131k Kaynak Akademik Ar-Ge Ara\u00e7lar\u0131:</strong> Benzer kurumlar i\u00e7in \u00f6zelle\u015ftirilebilir \u015fablon geli\u015ftirme</li>
+</ul>
+
+<h3>12. Sonu\u00e7 ve De\u011ferlendirme</h3>
+<p>Bu \u00e7al\u0131\u015fma, b\u00fcy\u00fck dil modellerinin akademik yaz\u0131l\u0131m geli\u015ftirme s\u00fcre\u00e7lerinde etkin ve verimli bir \u015fekilde kullan\u0131labilece\u011fini g\u00f6stermektedir. Claude AI'n\u0131n iteratif geli\u015ftirme, hata d\u00fczeltme, kod optimizasyonu ve \u00e7oklu dosya e\u015fitleme konular\u0131ndaki katk\u0131lar\u0131, geli\u015ftirme s\u00fcresini \u00f6nemli \u00f6l\u00e7\u00fcde k\u0131saltm\u0131\u015ft\u0131r.</p>
+<p>Ayn\u0131 zamanda, \u00f6zelle\u015ftirilmi\u015f bir Ar-Ge y\u00f6netim panelinin, birim \u00e7al\u0131\u015fanlar\u0131n\u0131n proje y\u00f6netimi, ekip olu\u015fturma ve s\u00fcre\u00e7 takibi sorunlar\u0131na somut \u00e7\u00f6z\u00fcmler sunabilece\u011fi ortaya konmu\u015ftur. Merkezi veri y\u00f6netimi, ger\u00e7ek zamanl\u0131 senkronizasyon ve ak\u0131ll\u0131 \u00f6neri sistemleri, Ar-Ge birimlerinin dijital d\u00f6n\u00fc\u015f\u00fcm\u00fcnde kritik roller \u00fcstlenmektedir.</p>
+<p>\u0130nsan-AI i\u015fbirli\u011fine dayal\u0131 hibrit model, \u00f6zellikle alan bilgisi gerektiren \u00f6zelle\u015ftirilmi\u015f uygulamalar\u0131n geli\u015ftirilmesinde y\u00fcksek potansiyel ta\u015f\u0131makta olup, bu modelin sistematik olarak incelenmesi gelecek ara\u015ft\u0131rmalar i\u00e7in \u00f6nemli bir alan olu\u015fturmaktad\u0131r.</p>
+
+<h3>Kaynak\u00e7a</h3>
 <p class="ref">[1] Anthropic. (2025). Claude AI Documentation. https://docs.anthropic.com<br/>
 [2] Meta. (2024). React 18 Documentation. https://react.dev<br/>
 [3] Evan You et al. (2024). Vite - Next Generation Frontend Tooling. https://vitejs.dev<br/>
 [4] Tailwind Labs. (2024). Tailwind CSS Framework. https://tailwindcss.com<br/>
 [5] Vercel Inc. (2025). Vercel Deployment Platform. https://vercel.com<br/>
-[6] Lucide. (2024). Lucide Icons. https://lucide.dev</p>
+[6] Lucide. (2024). Lucide Icons. https://lucide.dev<br/>
+[7] Google. (2025). Firebase Firestore Documentation. https://firebase.google.com/docs/firestore<br/>
+[8] Chen, M. et al. (2021). Evaluating Large Language Models Trained on Code. arXiv:2107.03374.<br/>
+[9] GitHub. (2023). Research: Quantifying GitHub Copilot's Impact on Developer Productivity. GitHub Blog.<br/>
+[10] Benavides, L. M. C. et al. (2020). Digital Transformation in Higher Education Institutions: A Systematic Literature Review. Sensors, 20(11), 3291.<br/>
+[11] Bozeman, B. & Boardman, C. (2014). Research Collaboration and Team Science. Springer.<br/>
+[12] Vaithilingam, P., Zhang, T. & Glassman, E.L. (2022). Expectation vs. Experience: Evaluating the Usability of Code Generation Tools. CHI '22.<br/>
+[13] Barke, S., James, M.B. & Polikarpova, N. (2023). Grounded Copilot: How Programmers Interact with Code-Generating Models. OOPSLA '23.</p>
 </body></html>`;
 };
 
