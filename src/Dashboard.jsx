@@ -3134,8 +3134,126 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return Object.entries(counts).map(([k, v]) => ({ label: k, value: v, color: colors[k] || "#6366f1" }));
   }, [filteredProjects, yearFilter]);
 
+  const [selectedPersonId, setSelectedPersonId] = useState("");
+
+  // Person-based stats
+  const personStats = useMemo(() => {
+    if (!selectedPersonId) return null;
+    const person = researchers.find(r => r.id === selectedPersonId);
+    if (!person) return null;
+    const myTopics = topics.filter(t => (t.researchers || []).some(r => r.researcherId === selectedPersonId));
+    const myTopicStatus = { proposed: 0, active: 0, completed: 0 };
+    myTopics.forEach(t => { if (myTopicStatus[t.status] !== undefined) myTopicStatus[t.status]++; });
+    const myProjectTopicIds = new Set(myTopics.map(t => t.id));
+    const myProjects = (projects || []).filter(p =>
+      (p.researchers || []).some(r => r.researcherId === selectedPersonId) ||
+      (p.topics || []).some(tid => myProjectTopicIds.has(tid))
+    );
+    const myProjectStatus = { proposed: 0, planning: 0, active: 0, completed: 0 };
+    myProjects.forEach(p => { if (myProjectStatus[p.status] !== undefined) myProjectStatus[p.status]++; });
+    const proposedProjects = (myProjectStatus.proposed || 0) + (myProjectStatus.planning || 0);
+    const allTasks = [...myTopics, ...myProjects].flatMap(x => x.tasks || []);
+    const doneTasks = allTasks.filter(tk => tk.status === "done").length;
+    const myRoleCounts = {};
+    myTopics.forEach(t => {
+      const a = t.researchers.find(r => r.researcherId === selectedPersonId);
+      if (a?.role) myRoleCounts[a.role] = (myRoleCounts[a.role] || 0) + 1;
+    });
+    return { person, myTopics, myTopicStatus, myProjects, myProjectStatus, proposedProjects, allTasks, doneTasks, myRoleCounts };
+  }, [selectedPersonId, researchers, topics, projects]);
+
+  // Researcher column stats (same logic as main page)
+  const researcherStats = useMemo(() => {
+    const uniqueResInTopics = (status) => {
+      const ids = new Set();
+      topics.filter(t => t.status === status).forEach(t => (t.researchers || []).forEach(r => ids.add(r.researcherId)));
+      return ids.size;
+    };
+    const uniqueResInProjects = (status) => {
+      const ids = new Set();
+      projects.filter(p => p.status === status).forEach(p => {
+        (p.researchers || []).forEach(r => ids.add(r.researcherId));
+        (p.topics || []).forEach(tid => {
+          const t = topics.find(x => x.id === tid);
+          if (t) (t.researchers || []).forEach(r => ids.add(r.researcherId));
+        });
+      });
+      return ids.size;
+    };
+    return {
+      proposedTopicRes: uniqueResInTopics("proposed"),
+      activeTopicRes: uniqueResInTopics("active"),
+      completedTopicRes: uniqueResInTopics("completed"),
+      proposedProjectRes: uniqueResInProjects("proposed") + uniqueResInProjects("planning"),
+      activeProjectRes: uniqueResInProjects("active"),
+      completedProjectRes: uniqueResInProjects("completed"),
+    };
+  }, [topics, projects]);
+
+  // Time stats
+  const [timeView, setTimeView] = useState("year"); // "year" or "month"
+  const [timeSelectedYear, setTimeSelectedYear] = useState("");
+
+  const availableYears = useMemo(() => {
+    const ySet = new Set();
+    [...topics, ...projects].forEach(item => {
+      if (item.startDate) ySet.add(item.startDate.slice(0, 4));
+      if (item.endDate) ySet.add(item.endDate.slice(0, 4));
+      if (item.createdAt) ySet.add(item.createdAt.slice(0, 4));
+    });
+    return [...ySet].sort();
+  }, [topics, projects]);
+
+  const timeData = useMemo(() => {
+    if (timeView === "year") {
+      // Year-based aggregation
+      const yearMap = {};
+      availableYears.forEach(y => { yearMap[y] = { proposedT: 0, activeT: 0, completedT: 0, proposedP: 0, activeP: 0, completedP: 0 }; });
+      topics.forEach(t => {
+        const y = (t.startDate || t.createdAt || "").slice(0, 4);
+        if (!y || !yearMap[y]) return;
+        if (t.status === "proposed") yearMap[y].proposedT++;
+        else if (t.status === "active") yearMap[y].activeT++;
+        else if (t.status === "completed") yearMap[y].completedT++;
+      });
+      projects.forEach(p => {
+        const y = (p.startDate || p.createdAt || "").slice(0, 4);
+        if (!y || !yearMap[y]) return;
+        if (p.status === "proposed" || p.status === "planning") yearMap[y].proposedP++;
+        else if (p.status === "active") yearMap[y].activeP++;
+        else if (p.status === "completed") yearMap[y].completedP++;
+      });
+      return Object.entries(yearMap).map(([y, v]) => ({ label: y, ...v }));
+    } else {
+      // Month-based aggregation for selected year
+      const yr = timeSelectedYear || availableYears[availableYears.length - 1] || new Date().getFullYear().toString();
+      const months = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+      const monthNames = ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+      const monthMap = {};
+      months.forEach((m, i) => { monthMap[`${yr}-${m}`] = { label: monthNames[i], proposedT: 0, activeT: 0, completedT: 0, proposedP: 0, activeP: 0, completedP: 0 }; });
+      topics.forEach(t => {
+        const ym = (t.startDate || t.createdAt || "").slice(0, 7);
+        if (!monthMap[ym]) return;
+        if (t.status === "proposed") monthMap[ym].proposedT++;
+        else if (t.status === "active") monthMap[ym].activeT++;
+        else if (t.status === "completed") monthMap[ym].completedT++;
+      });
+      projects.forEach(p => {
+        const ym = (p.startDate || p.createdAt || "").slice(0, 7);
+        if (!monthMap[ym]) return;
+        if (p.status === "proposed" || p.status === "planning") monthMap[ym].proposedP++;
+        else if (p.status === "active") monthMap[ym].activeP++;
+        else if (p.status === "completed") monthMap[ym].completedP++;
+      });
+      return Object.values(monthMap);
+    }
+  }, [timeView, timeSelectedYear, topics, projects, availableYears]);
+
   const tabs = [
     { key: "summary", label: "Özet", icon: BarChart3 },
+    { key: "researcherStats", label: "Araştırmacı İst.", icon: Users },
+    { key: "personReport", label: "Kişi Bazlı Rapor", icon: UserCheck },
+    { key: "timeStats", label: "Zaman İstatistikleri", icon: CalendarDays },
     { key: "topics", label: "Konu Bazlı", icon: BookOpen },
     { key: "projects", label: "Proje Bazlı", icon: FolderKanban },
   ];
@@ -3199,18 +3317,66 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === "summary" && (
             <div className="space-y-6">
+              {/* Top row: genel sayılar */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {statCard("Araştırmacı", summary.uniqueResearchers, <Users size={16} className="text-indigo-500" />, "bg-indigo-50")}
                 {statCard("Toplam Konu", summary.topicCount, <BookOpen size={16} className="text-emerald-500" />, "bg-emerald-50")}
                 {statCard("Toplam Proje", summary.projectCount, <FolderKanban size={16} className="text-violet-500" />, "bg-violet-50")}
                 {statCard("Toplam Bütçe", `₺${summary.totalBudget.toLocaleString("tr-TR")}`, <Briefcase size={16} className="text-amber-500" />, "bg-amber-50")}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {statCard("Aktif Konular", summary.topicsByStatus.active || 0, <Activity size={16} className="text-green-500" />, "bg-green-50")}
-                {statCard("Aktif Projeler", summary.projectsByStatus.active || 0, <Target size={16} className="text-blue-500" />, "bg-blue-50")}
-                {statCard("Tamamlanan Görevler", `${summary.doneTasks}/${summary.totalTasks}`, <CheckCircle2 size={16} className="text-emerald-500" />, "bg-emerald-50")}
-                {statCard("Önerilen Konular", summary.topicsByStatus.proposed || 0, <Clock size={16} className="text-slate-500" />, "bg-slate-50")}
+              {/* Konu durum kartları */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Konular</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <BookOpen size={16} className="text-slate-400" />
+                    <div><p className="text-[10px] text-slate-400">Önerilen Konu</p><p className="text-lg font-bold text-slate-700">{summary.topicsByStatus.proposed || 0}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <BookOpen size={16} className="text-emerald-500" />
+                    <div><p className="text-[10px] text-emerald-500">Aktif Konu</p><p className="text-lg font-bold text-emerald-700">{summary.topicsByStatus.active || 0}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <BookOpen size={16} className="text-blue-500" />
+                    <div><p className="text-[10px] text-blue-500">Tamamlanan Konu</p><p className="text-lg font-bold text-blue-700">{summary.topicsByStatus.completed || 0}</p></div>
+                  </div>
+                </div>
               </div>
+              {/* Proje durum kartları */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Projeler</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <FolderKanban size={16} className="text-amber-500" />
+                    <div><p className="text-[10px] text-amber-500">Önerilen Proje</p><p className="text-lg font-bold text-amber-700">{(summary.projectsByStatus.proposed || 0) + (summary.projectsByStatus.planning || 0)}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 rounded-xl border border-violet-100">
+                    <FolderKanban size={16} className="text-violet-500" />
+                    <div><p className="text-[10px] text-violet-500">Aktif Proje</p><p className="text-lg font-bold text-violet-700">{summary.projectsByStatus.active || 0}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-teal-50 rounded-xl border border-teal-100">
+                    <FolderKanban size={16} className="text-teal-500" />
+                    <div><p className="text-[10px] text-teal-500">Tamamlanan Proje</p><p className="text-lg font-bold text-teal-700">{summary.projectsByStatus.completed || 0}</p></div>
+                  </div>
+                </div>
+              </div>
+              {/* Görevler */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Görevler</p>
+                <div className="flex items-center gap-3 bg-sky-50 rounded-xl p-4 border border-sky-100">
+                  <ListTodo size={18} className="text-sky-500 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm text-slate-600 font-medium">{summary.doneTasks} / {summary.totalTasks} tamamlandı</span>
+                      <span className="text-sm font-bold text-sky-600">{summary.totalTasks > 0 ? Math.round((summary.doneTasks / summary.totalTasks) * 100) : 0}%</span>
+                    </div>
+                    <div className="w-full bg-sky-100 rounded-full h-2">
+                      <div className="bg-gradient-to-r from-sky-500 to-emerald-500 h-2 rounded-full transition-all" style={{ width: `${summary.totalTasks > 0 ? (summary.doneTasks / summary.totalTasks) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Grafikler */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-50 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><BookOpen size={14} className="text-emerald-500" />Konu Durumu Dağılımı</h3>
@@ -3219,6 +3385,347 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 <div className="bg-slate-50 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Proje Durumu Dağılımı</h3>
                   <SimplePieChart data={projectStatusPie} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Araştırmacı İstatistikleri Tab */}
+          {activeTab === "researcherStats" && (
+            <div className="space-y-6">
+              <p className="text-sm text-slate-500">Her durumdaki konu ve projelerde yer alan benzersiz (unique) araştırmacı sayıları.</p>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Konulardaki Araştırmacılar</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <BookOpen size={16} className="text-slate-400 mx-auto mb-2" />
+                    <p className="text-[10px] text-slate-400 mb-1">Önerilen Konu</p>
+                    <p className="text-2xl font-bold text-slate-700">{researcherStats.proposedTopicRes}</p>
+                    <p className="text-[9px] text-slate-300 mt-0.5">kişi</p>
+                  </div>
+                  <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <BookOpen size={16} className="text-emerald-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-emerald-500 mb-1">Aktif Konu</p>
+                    <p className="text-2xl font-bold text-emerald-700">{researcherStats.activeTopicRes}</p>
+                    <p className="text-[9px] text-emerald-300 mt-0.5">kişi</p>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100">
+                    <BookOpen size={16} className="text-blue-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-blue-500 mb-1">Tamamlanan Konu</p>
+                    <p className="text-2xl font-bold text-blue-700">{researcherStats.completedTopicRes}</p>
+                    <p className="text-[9px] text-blue-300 mt-0.5">kişi</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Projelerdeki Araştırmacılar</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-4 bg-amber-50 rounded-xl border border-amber-100">
+                    <FolderKanban size={16} className="text-amber-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-amber-500 mb-1">Önerilen Proje</p>
+                    <p className="text-2xl font-bold text-amber-700">{researcherStats.proposedProjectRes}</p>
+                    <p className="text-[9px] text-amber-300 mt-0.5">kişi</p>
+                  </div>
+                  <div className="text-center p-4 bg-violet-50 rounded-xl border border-violet-100">
+                    <FolderKanban size={16} className="text-violet-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-violet-500 mb-1">Aktif Proje</p>
+                    <p className="text-2xl font-bold text-violet-700">{researcherStats.activeProjectRes}</p>
+                    <p className="text-[9px] text-violet-300 mt-0.5">kişi</p>
+                  </div>
+                  <div className="text-center p-4 bg-teal-50 rounded-xl border border-teal-100">
+                    <FolderKanban size={16} className="text-teal-500 mx-auto mb-2" />
+                    <p className="text-[10px] text-teal-500 mb-1">Tamamlanan Proje</p>
+                    <p className="text-2xl font-bold text-teal-700">{researcherStats.completedProjectRes}</p>
+                    <p className="text-[9px] text-teal-300 mt-0.5">kişi</p>
+                  </div>
+                </div>
+              </div>
+              {/* Researcher activity table */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Araştırmacı Aktivite Tablosu</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th rowSpan="2" className="pb-2 font-semibold text-slate-500 text-left align-bottom">Araştırmacı</th>
+                        <th colSpan="3" className="pb-1 font-semibold text-slate-400 text-center border-b border-slate-100 text-[10px] uppercase tracking-wider">Konular</th>
+                        <th colSpan="3" className="pb-1 font-semibold text-slate-400 text-center border-b border-slate-100 text-[10px] uppercase tracking-wider">Projeler</th>
+                        <th rowSpan="2" className="pb-2 font-semibold text-slate-500 text-center align-bottom">Görev</th>
+                      </tr>
+                      <tr className="border-b border-slate-200">
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-slate-400 text-center">Önerilen</th>
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-emerald-500 text-center">Aktif</th>
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-blue-500 text-center">Tamamlanan</th>
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-amber-500 text-center">Önerilen</th>
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-violet-500 text-center">Aktif</th>
+                        <th className="pb-1.5 pt-1 text-[9px] font-medium text-teal-500 text-center">Tamamlanan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {researchers.map(r => {
+                        const rTopics = topics.filter(t => (t.researchers || []).some(ra => ra.researcherId === r.id));
+                        const rTopicIds = new Set(rTopics.map(t => t.id));
+                        const rProjects = projects.filter(p => (p.researchers || []).some(ra => ra.researcherId === r.id) || (p.topics || []).some(tid => rTopicIds.has(tid)));
+                        const rTasks = [...rTopics, ...rProjects].flatMap(x => x.tasks || []);
+                        const rDone = rTasks.filter(tk => tk.status === "done").length;
+                        const tProposed = rTopics.filter(t => t.status === "proposed").length;
+                        const tActive = rTopics.filter(t => t.status === "active").length;
+                        const tCompleted = rTopics.filter(t => t.status === "completed").length;
+                        const pProposed = rProjects.filter(p => p.status === "proposed" || p.status === "planning").length;
+                        const pActive = rProjects.filter(p => p.status === "active").length;
+                        const pCompleted = rProjects.filter(p => p.status === "completed").length;
+                        return (
+                          <tr key={r.id} className="border-b border-slate-100 hover:bg-white/50">
+                            <td className="py-1.5 font-medium text-slate-700 whitespace-nowrap">{r.title ? `${r.title} ` : ""}{r.name}</td>
+                            <td className="text-center text-slate-500">{tProposed}</td>
+                            <td className="text-center text-emerald-600 font-medium">{tActive}</td>
+                            <td className="text-center text-blue-600 font-medium">{tCompleted}</td>
+                            <td className="text-center text-amber-500">{pProposed}</td>
+                            <td className="text-center text-violet-600 font-medium">{pActive}</td>
+                            <td className="text-center text-teal-600 font-medium">{pCompleted}</td>
+                            <td className="text-center text-slate-500">{rDone}/{rTasks.length}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Kişi Bazlı Rapor Tab */}
+          {activeTab === "personReport" && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-600">Araştırmacı Seçin:</label>
+                <select value={selectedPersonId} onChange={e => setSelectedPersonId(e.target.value)}
+                  className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-indigo-200 outline-none min-w-[250px]">
+                  <option value="">-- Kişi Seçin --</option>
+                  {researchers.map(r => <option key={r.id} value={r.id}>{r.title ? `${r.title} ` : ""}{r.name}</option>)}
+                </select>
+              </div>
+              {!selectedPersonId && (
+                <div className="text-center py-12 text-slate-400">
+                  <Users size={40} className="mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm">Kişi bazlı istatistikleri görmek için yukarıdan bir araştırmacı seçin.</p>
+                </div>
+              )}
+              {personStats && (
+                <div className="space-y-5">
+                  {/* Person header */}
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      {personStats.person.name[0]}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{personStats.person.title ? `${personStats.person.title} ` : ""}{personStats.person.name}</h3>
+                      <p className="text-sm text-white/70">{personStats.person.institution}{personStats.person.unit ? ` · ${personStats.person.unit}` : ""}</p>
+                    </div>
+                  </div>
+                  {/* Konu istatistikleri */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Konular</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <BookOpen size={14} className="text-slate-400 flex-shrink-0" />
+                        <div><p className="text-[9px] text-slate-400">Önerilen</p><p className="text-lg font-bold text-slate-700">{personStats.myTopicStatus.proposed}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <BookOpen size={14} className="text-emerald-500 flex-shrink-0" />
+                        <div><p className="text-[9px] text-emerald-500">Aktif</p><p className="text-lg font-bold text-emerald-700">{personStats.myTopicStatus.active}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 rounded-xl border border-blue-100">
+                        <BookOpen size={14} className="text-blue-500 flex-shrink-0" />
+                        <div><p className="text-[9px] text-blue-500">Tamamlanan</p><p className="text-lg font-bold text-blue-700">{personStats.myTopicStatus.completed}</p></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Proje istatistikleri */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Projeler</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 rounded-xl border border-amber-100">
+                        <FolderKanban size={14} className="text-amber-500 flex-shrink-0" />
+                        <div><p className="text-[9px] text-amber-500">Önerilen</p><p className="text-lg font-bold text-amber-700">{personStats.proposedProjects}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-violet-50 rounded-xl border border-violet-100">
+                        <FolderKanban size={14} className="text-violet-500 flex-shrink-0" />
+                        <div><p className="text-[9px] text-violet-500">Aktif</p><p className="text-lg font-bold text-violet-700">{personStats.myProjectStatus.active}</p></div>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-teal-50 rounded-xl border border-teal-100">
+                        <FolderKanban size={14} className="text-teal-500 flex-shrink-0" />
+                        <div><p className="text-[9px] text-teal-500">Tamamlanan</p><p className="text-lg font-bold text-teal-700">{personStats.myProjectStatus.completed}</p></div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Görevler */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Görevler</p>
+                    <div className="flex items-center gap-3 bg-white rounded-xl p-4 border border-slate-100">
+                      <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm text-slate-600 font-medium">{personStats.doneTasks} / {personStats.allTasks.length} tamamlandı</span>
+                          <span className="text-sm font-bold text-indigo-600">{personStats.allTasks.length > 0 ? Math.round((personStats.doneTasks / personStats.allTasks.length) * 100) : 0}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-2 rounded-full transition-all" style={{ width: `${personStats.allTasks.length > 0 ? (personStats.doneTasks / personStats.allTasks.length) * 100 : 0}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Rol dağılımı */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Rol Dağılımı</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(roleConfig).map(([rKey, rCfg]) => {
+                        const cnt = personStats.myRoleCounts[rKey] || 0;
+                        if (cnt === 0) return null;
+                        return (
+                          <div key={rKey} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${rCfg.color} text-sm font-medium`}>
+                            <span>{rCfg.label}</span>
+                            <span className="font-bold">{cnt}</span>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(personStats.myRoleCounts).length === 0 && <span className="text-sm text-slate-400 italic">Atama yok</span>}
+                    </div>
+                  </div>
+                  {/* Konu listesi */}
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">Konuları ({personStats.myTopics.length})</h3>
+                    {personStats.myTopics.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {personStats.myTopics.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-slate-100">
+                            <Badge className={statusConfig[t.status]?.color}>{statusConfig[t.status]?.label}</Badge>
+                            <span className="text-xs font-medium text-slate-700 truncate flex-1">{t.title}</span>
+                            {(() => { const a = t.researchers.find(r => r.researcherId === selectedPersonId); return a?.role ? <Badge className={roleConfig[a.role]?.color}>{roleConfig[a.role]?.label}</Badge> : null; })()}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-xs text-slate-400 text-center py-3">Konu atanmamış</p>}
+                  </div>
+                  {/* Proje listesi */}
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">Projeleri ({personStats.myProjects.length})</h3>
+                    {personStats.myProjects.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {personStats.myProjects.map(p => (
+                          <div key={p.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-slate-100">
+                            <Badge className={statusConfig[p.status]?.color}>{statusConfig[p.status]?.label}</Badge>
+                            <span className="text-xs font-medium text-slate-700 truncate flex-1">{p.title}</span>
+                            {p.type && <Badge className="bg-slate-100 text-slate-500">{p.type}</Badge>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-xs text-slate-400 text-center py-3">Proje atanmamış</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Zaman İstatistikleri Tab */}
+          {activeTab === "timeStats" && (
+            <div className="space-y-6">
+              {/* View toggle + year selector */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex bg-slate-100 rounded-lg p-0.5">
+                  <button onClick={() => setTimeView("year")}
+                    className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${timeView === "year" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                    Yıl Bazlı
+                  </button>
+                  <button onClick={() => setTimeView("month")}
+                    className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${timeView === "month" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                    Ay Bazlı
+                  </button>
+                </div>
+                {timeView === "month" && (
+                  <select value={timeSelectedYear || availableYears[availableYears.length - 1] || ""} onChange={e => setTimeSelectedYear(e.target.value)}
+                    className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-indigo-200 outline-none">
+                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                )}
+              </div>
+
+              {/* Konu grafikleri */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Konu Zaman Dağılımı</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><BookOpen size={12} className="text-slate-400" />Önerilen Konu</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.proposedT, color: "#94a3b8" }))} height={120} />
+                  </div>
+                  <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                    <h4 className="text-xs font-semibold text-emerald-700 mb-3 flex items-center gap-1.5"><BookOpen size={12} className="text-emerald-500" />Aktif Konu</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.activeT, color: "#10b981" }))} height={120} />
+                  </div>
+                  <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                    <h4 className="text-xs font-semibold text-blue-700 mb-3 flex items-center gap-1.5"><BookOpen size={12} className="text-blue-500" />Tamamlanan Konu</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.completedT, color: "#3b82f6" }))} height={120} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Proje grafikleri */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Proje Zaman Dağılımı</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-amber-50/50 rounded-xl p-4 border border-amber-100">
+                    <h4 className="text-xs font-semibold text-amber-700 mb-3 flex items-center gap-1.5"><FolderKanban size={12} className="text-amber-500" />Önerilen Proje</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.proposedP, color: "#f59e0b" }))} height={120} />
+                  </div>
+                  <div className="bg-violet-50/50 rounded-xl p-4 border border-violet-100">
+                    <h4 className="text-xs font-semibold text-violet-700 mb-3 flex items-center gap-1.5"><FolderKanban size={12} className="text-violet-500" />Aktif Proje</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.activeP, color: "#8b5cf6" }))} height={120} />
+                  </div>
+                  <div className="bg-teal-50/50 rounded-xl p-4 border border-teal-100">
+                    <h4 className="text-xs font-semibold text-teal-700 mb-3 flex items-center gap-1.5"><FolderKanban size={12} className="text-teal-500" />Tamamlanan Proje</h4>
+                    <SimpleBarChart data={timeData.map(d => ({ label: d.label, value: d.completedP, color: "#14b8a6" }))} height={120} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Toplam trend çizgi grafik */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><TrendingUp size={14} className="text-indigo-500" />Toplam Konu Trendi</h3>
+                <SimpleLineChart data={timeData.map(d => ({ label: d.label, value: d.proposedT + d.activeT + d.completedT }))} color="#6366f1" />
+              </div>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><TrendingUp size={14} className="text-violet-500" />Toplam Proje Trendi</h3>
+                <SimpleLineChart data={timeData.map(d => ({ label: d.label, value: d.proposedP + d.activeP + d.completedP }))} color="#8b5cf6" />
+              </div>
+
+              {/* Detay tablosu */}
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Detay Tablosu</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-left border-b border-slate-200">
+                      <th className="pb-2 font-semibold text-slate-500">{timeView === "year" ? "Yıl" : "Ay"}</th>
+                      <th className="pb-2 font-semibold text-slate-400 text-center">Ön. Konu</th>
+                      <th className="pb-2 font-semibold text-emerald-500 text-center">Aktif K.</th>
+                      <th className="pb-2 font-semibold text-blue-500 text-center">Tam. K.</th>
+                      <th className="pb-2 font-semibold text-amber-500 text-center">Ön. Proje</th>
+                      <th className="pb-2 font-semibold text-violet-500 text-center">Aktif P.</th>
+                      <th className="pb-2 font-semibold text-teal-500 text-center">Tam. P.</th>
+                    </tr></thead>
+                    <tbody>
+                      {timeData.map((d, i) => (
+                        <tr key={i} className="border-b border-slate-100 hover:bg-white/50">
+                          <td className="py-1.5 font-medium text-slate-700">{d.label}</td>
+                          <td className="text-center">{d.proposedT}</td>
+                          <td className="text-center text-emerald-600 font-medium">{d.activeT}</td>
+                          <td className="text-center text-blue-600 font-medium">{d.completedT}</td>
+                          <td className="text-center">{d.proposedP}</td>
+                          <td className="text-center text-violet-600 font-medium">{d.activeP}</td>
+                          <td className="text-center text-teal-600 font-medium">{d.completedP}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
