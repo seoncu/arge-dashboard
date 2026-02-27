@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -867,11 +867,11 @@ const DEFAULT_PRIORITY_CONFIG = {
   critical: { label: "Kritik", color: "bg-red-200 text-red-800", icon: "◉" },
 };
 const DEFAULT_ROLE_CONFIG = {
-  lead: { label: "Yürütücü", color: "bg-indigo-100 text-indigo-700", weight: 10 },
-  unit_manager: { label: "Birim Sorumlusu", color: "bg-rose-100 text-rose-700", weight: 9 },
-  responsible: { label: "Sorumlu", color: "bg-orange-100 text-orange-700", weight: 8 },
-  member: { label: "Araştırmacı", color: "bg-emerald-100 text-emerald-700", weight: 4 },
-  advisor: { label: "Danışman", color: "bg-purple-100 text-purple-700", weight: 2 },
+  lead: { label: "Yürütücü", color: "bg-indigo-100 text-indigo-700", weight: 1 },
+  unit_manager: { label: "Birim Sorumlusu", color: "bg-rose-100 text-rose-700", weight: 1 },
+  responsible: { label: "Sorumlu", color: "bg-orange-100 text-orange-700", weight: 1 },
+  member: { label: "Araştırmacı", color: "bg-emerald-100 text-emerald-700", weight: 1 },
+  advisor: { label: "Danışman", color: "bg-purple-100 text-purple-700", weight: 1 },
   scholar: { label: "Bursiyer", color: "bg-cyan-100 text-cyan-700", weight: 1 },
 };
 const taskStatusConfig = {
@@ -1018,7 +1018,7 @@ const Toast = ({ message, type = "success", onClose }) => {
 };
 
 // ─── RESEARCHER CARD (Compact — just name shown, click for full profile) ──
-const ResearcherCard = ({ researcher, onClick, isAdmin, topics }) => {
+const ResearcherCard = ({ researcher, onClick, topics }) => {
   const myTopics = (topics || []).filter(t => t.researchers.some(r => r.researcherId === researcher.id));
   const proposedCount = myTopics.filter(t => t.status === "proposed").length;
   const activeCount = myTopics.filter(t => t.status === "active").length;
@@ -1026,12 +1026,8 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics }) => {
   const totalCount = myTopics.length;
   return (
     <div
-      draggable={isAdmin}
+      draggable
       onDragStart={(e) => {
-        if (!isAdmin) {
-          e.preventDefault();
-          return;
-        }
         e.stopPropagation();
         e.dataTransfer.setData("type", "researcher");
         e.dataTransfer.setData("id", researcher.id);
@@ -1084,7 +1080,7 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics }) => {
 };
 
 // ─── RESEARCHER DETAIL MODAL (Full profile) ──────────────
-const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose, onUpdate, onSelectTopic, onDeleteResearcher }) => {
+const ResearcherDetailModal = ({ researcher, topics, projects, onClose, onUpdate, onSelectTopic, onDeleteResearcher }) => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...researcher });
   const ef = (key, val) => setForm({ ...form, [key]: val });
@@ -1114,11 +1110,11 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
         {/* Header with avatar — all inside gradient */}
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-5 relative flex-shrink-0">
           <div className="absolute top-3 right-3 flex gap-1.5">
-            {isAdmin && <button onClick={() => editing ? handleCancel() : setEditing(true)}
+            <button onClick={() => editing ? handleCancel() : setEditing(true)}
               className={`p-1.5 rounded-lg text-white ${editing ? "bg-white/30" : "bg-white/20 hover:bg-white/30"}`}
               title={editing ? "Düzenlemeyi iptal et" : "Profili düzenle"}>
               {editing ? <X size={16} /> : <Edit3 size={16} />}
-            </button>}
+            </button>
             <button onClick={onClose} className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white">
               <X size={16} />
             </button>
@@ -1295,7 +1291,8 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
                   {eduDegreeOptions.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <select value={form.eduStatus} onChange={e => ef("eduStatus", e.target.value)} className={eInput}>
-                  {eduStatusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="Öğrenci">Öğrenci</option><option value="Mezun">Mezun</option>
+                  <option value="Doktora Devam Ediyor">Doktora Devam Ediyor</option>
                 </select>
               </div>
             </>) : (<>
@@ -1508,7 +1505,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
           )}
 
           {/* Delete Researcher */}
-          {!editing && isAdmin && onDeleteResearcher && (
+          {!editing && onDeleteResearcher && (
             <div className="pt-3 mt-3 border-t border-red-100">
               <button onClick={() => onDeleteResearcher(researcher.id)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors">
@@ -1524,7 +1521,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
 };
 
 // ─── TOPIC CARD ───────────────────────────────────────────
-const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, onRemoveFromProject }) => {
+const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveFromProject }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[topic.status] || statusConfig.proposed;
   const prCfg = priorityConfig[topic.priority] || priorityConfig.medium;
@@ -1532,12 +1529,12 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
   const isProjected = (projects || []).some(p => (p.topics || []).includes(topic.id));
   const linkedProject = isProjected ? (projects || []).find(p => (p.topics || []).includes(topic.id)) : null;
   const cardStyle = getCardStyle(topic.status, topic.endDate);
-  const baseBg = isProjected ? "bg-slate-100 opacity-80 hover:opacity-100" : cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
+  const baseBg = isProjected ? "bg-slate-100 opacity-80 hover:opacity-90" : cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
   const baseBorder = dragOver ? "border-indigo-400 bg-indigo-50 shadow-lg ring-2 ring-indigo-200" : isProjected ? "border-slate-300" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-indigo-200";
   return (
     <div
-      draggable={isAdmin}
-      onDragStart={(e) => { if (!isAdmin) { e.preventDefault(); return; } e.dataTransfer.setData("type", "topic"); e.dataTransfer.setData("id", topic.id); e.dataTransfer.effectAllowed = "copy"; }}
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData("type", "topic"); e.dataTransfer.setData("id", topic.id); e.dataTransfer.effectAllowed = "copy"; }}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setDragOver(false); const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id"); if (type === "researcher") onDrop(topic.id, id, e); }}
@@ -1554,18 +1551,19 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
         <div className="flex items-center gap-1.5 mb-2 px-2 py-1 bg-slate-200/80 rounded-lg">
           <FolderKanban size={12} className="text-slate-500" />
           <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Projelendirildi</span>
-          {linkedProject && <span className="text-[10px] text-slate-500 truncate max-w-[100px]">{linkedProject.title}</span>}
-          {isAdmin && onRemoveFromProject && (
-            <button onClick={(e) => { e.stopPropagation(); onRemoveFromProject(topic.id); }}
-              className="ml-auto px-1.5 py-0.5 text-[10px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
-              title="Projelendirmeyi İptal Et">
-              <X size={10} className="inline mr-0.5" />İptal
+          {linkedProject && <span className="text-[10px] text-slate-500 ml-auto truncate max-w-[120px]">{linkedProject.title}</span>}
+          {linkedProject && onRemoveFromProject && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemoveFromProject(topic.id, linkedProject.id); }}
+              className="ml-1.5 p-0.5 hover:bg-slate-300 rounded transition-colors text-slate-500 hover:text-slate-700"
+              title="Projeden çıkar">
+              <X size={14} />
             </button>
           )}
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
-        <h3 className={`text-sm font-semibold flex-1 pr-2 ${isProjected ? "text-slate-600" : topic.status === "failed" ? "text-red-700" : topic.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{topic.title}</h3>
+        <h3 className={`text-sm font-semibold flex-1 pr-2 ${isProjected ? "text-slate-500" : topic.status === "failed" ? "text-red-700" : topic.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{topic.title}</h3>
         <GripVertical size={16} className="text-slate-300 flex-shrink-0" />
       </div>
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
@@ -1604,7 +1602,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
 };
 
 // ─── PROJECT CARD ─────────────────────────────────────────
-const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject, isAdmin }) => {
+const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[project.status] || statusConfig.planning;
   const prCfg = priorityConfig[project.priority] || priorityConfig.medium;
@@ -1668,7 +1666,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
           <span className="flex items-center gap-0.5"><Users size={12} />{projectResearchers.length}</span>
         </div>
       </div>
-      {isAdmin && onCancelProject && (
+      {onCancelProject && (
         <div className="mt-2 pt-2 border-t border-slate-100 relative z-10">
           <button
             type="button"
@@ -1689,7 +1687,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
 };
 
 // ─── DETAIL MODAL (Topic & Project) ──────────────────────
-const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, onClose, onUpdate, onSelectResearcher, onSelectTopic, onRemoveFromProject, onCancelProject, onDeleteTopic }) => {
+const DetailModal = ({ item, type, allResearchers, topics, projects, onClose, onUpdate, onSelectResearcher, onSelectTopic, onRemoveFromProject, onCancelProject, onDeleteTopic }) => {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ ...item });
@@ -1759,33 +1757,39 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                   {isProject && item.fundingSource && <Badge className="bg-violet-50 text-violet-600">{item.fundingSource}</Badge>}
                 </div>
               )}
-              {isTopic && !editing && (() => {
-                const projectedProject = (projects || []).find(p => (p.topics || []).includes(item.id));
-                if (!projectedProject) return null;
-                return (
-                  <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-slate-100 rounded-lg border border-slate-200">
-                    <FolderKanban size={14} className="text-violet-500" />
-                    <span className="text-xs text-slate-600 font-medium">Proje: <span className="text-violet-600">{projectedProject.title}</span></span>
-                    {isAdmin && onRemoveFromProject && (
-                      <button onClick={() => { onRemoveFromProject(item.id); onClose(); }}
-                        className="ml-auto px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-200">
-                        <X size={12} className="inline mr-0.5" />Projelendirmeyi İptal Et
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
             </div>
             <div className="flex items-center gap-1">
-              {isAdmin && <button onClick={() => { if (editing) { handleCancelEdit(); } else { setEditForm({ ...item }); setEditing(true); } }}
+              <button onClick={() => { if (editing) { handleCancelEdit(); } else { setEditForm({ ...item }); setEditing(true); } }}
                 className={`p-1.5 rounded-lg transition-colors ${editing ? "bg-amber-100 text-amber-600 hover:bg-amber-200" : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"}`}
                 title={editing ? "Düzenlemeyi iptal et" : "Düzenle"}>
                 <Pencil size={16} />
-              </button>}
+              </button>
               <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><X size={18} /></button>
             </div>
           </div>
         </div>
+        {isTopic && (() => {
+          const linkedProject = (projects || []).find(p => (p.topics || []).includes(item.id));
+          return linkedProject ? (
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <FolderKanban size={14} className="text-slate-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-400">Proje</p>
+                  <p className="text-sm font-medium text-slate-700 truncate">{linkedProject.title}</p>
+                </div>
+              </div>
+              {onRemoveFromProject && (
+                <button
+                  onClick={() => { onRemoveFromProject(item.id, linkedProject.id); onClose(); }}
+                  className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1">
+                  <X size={14} />
+                  İptal
+                </button>
+              )}
+            </div>
+          ) : null;
+        })()}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Description */}
           <div>
@@ -1898,11 +1902,11 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
           {isTopic && <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ekip ({itemResearchers.length})</h4>
-              {isAdmin && <button onClick={() => setShowAddResearcher(!showAddResearcher)}
+              <button onClick={() => setShowAddResearcher(!showAddResearcher)}
                 className={`p-1 rounded-lg transition-colors ${showAddResearcher ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-400"}`}
-                title="Araştırmacı Ekle"><UserPlus size={14} /></button>}
+                title="Araştırmacı Ekle"><UserPlus size={14} /></button>
             </div>
-            {showAddResearcher && isAdmin && (
+            {showAddResearcher && (
               <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 mb-3 space-y-2 animate-slide-up">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-indigo-600">Araştırmacı Ekle</p>
@@ -1968,11 +1972,11 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
           {isProject && <div>
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Proje Ekibi ({(item.researchers || []).length})</h4>
-              {isAdmin && <button onClick={() => setShowAddResearcher(!showAddResearcher)}
+              <button onClick={() => setShowAddResearcher(!showAddResearcher)}
                 className={`p-1 rounded-lg transition-colors ${showAddResearcher ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-400"}`}
-                title="Araştırmacı Ekle"><UserPlus size={14} /></button>}
+                title="Araştırmacı Ekle"><UserPlus size={14} /></button>
             </div>
-            {showAddResearcher && isAdmin && (
+            {showAddResearcher && (
               <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 mb-3 space-y-2 animate-slide-up">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-indigo-600">Projeye Araştırmacı Ekle</p>
@@ -2021,10 +2025,10 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     className="cursor-pointer hover:opacity-80 transition-opacity">
                     <Badge className={roleConfig[tr.role]?.color || "bg-slate-100 text-slate-600"}>{roleConfig[tr.role]?.label || tr.role}</Badge>
                   </button>
-                  {isAdmin && <button onClick={() => {
+                  <button onClick={() => {
                     const newResearchers = (item.researchers || []).filter(x => x.researcherId !== tr.researcherId);
                     onUpdate({ ...item, researchers: newResearchers });
-                  }} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><X size={14} /></button>}
+                  }} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 p-1 flex-shrink-0"><X size={14} /></button>
                 </div>
                 );
               }).filter(Boolean)}</div>
@@ -2069,17 +2073,17 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
             <div className="space-y-0.5 mb-3">
               {(item.tasks || []).map(task => <TaskItem key={task.id} task={task} researchers={allResearchers} onStatusChange={handleTaskStatus} onDelete={handleDeleteTask} />)}
             </div>
-            {isAdmin && <div className="flex gap-2">
+            <div className="flex gap-2">
               <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAddTask()}
                 placeholder="Yeni görev ekle..." className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300" />
               <button onClick={handleAddTask} className="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"><Plus size={16} /></button>
-            </div>}
+            </div>
           </div>
           {isTopic && item.tags?.length > 0 && <div>
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Etiketler</h4>
             <div className="flex flex-wrap gap-1.5">{item.tags.map(tag => <Badge key={tag} className="bg-slate-100 text-slate-600">#{tag}</Badge>)}</div>
           </div>}
-          {isProject && isAdmin && onCancelProject && (
+          {isProject && onCancelProject && (
             <div className="pt-3 mt-3 border-t border-red-100">
               <button type="button" onClick={() => onCancelProject(item.id)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 rounded-xl border border-red-200 transition-colors cursor-pointer select-none">
@@ -2088,7 +2092,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
               <p className="text-[10px] text-slate-400 text-center mt-1.5">Proje silinir, bağlı konular projelendirilmemiş olarak kalır.</p>
             </div>
           )}
-          {isTopic && isAdmin && onDeleteTopic && (
+          {isTopic && onDeleteTopic && (
             <div className="pt-3 mt-3 border-t border-red-100">
               <button type="button" onClick={() => onDeleteTopic(item.id)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 rounded-xl border border-red-200 transition-colors cursor-pointer select-none">
@@ -2115,9 +2119,9 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
     languages: "", researchAreas: "", tools: "",
     hasPIExperience: false, url: "", phone: "", email: "", bio: "", performanceNotes: "",
   });
+  const [activeTab, setActiveTab] = useState("basic");
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [topicError, setTopicError] = useState("");
-  const [activeTab, setActiveTab] = useState("basic");
 
   const isR = type === "researcher";
   const isT = type === "topic";
@@ -2717,8 +2721,6 @@ const SettingsModal = ({
           {activeTab === "data" && (
             <div className="space-y-4">
               <p className="text-xs text-slate-500">Tüm verileri (araştırmacılar, konular, projeler, ayarlar) dışa aktarıp başka bir cihaza veya tarayıcıya aktarabilirsiniz.</p>
-
-              {/* Export */}
               <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
                 <h4 className="text-sm font-semibold text-emerald-800 flex items-center gap-2 mb-2"><Download size={15} />Veriyi Dışa Aktar</h4>
                 <p className="text-xs text-emerald-600 mb-3">Tüm verileriniz bir JSON dosyası olarak indirilir. Bu dosyayı başka bir cihazda "İçe Aktar" ile yükleyebilirsiniz.</p>
@@ -2726,8 +2728,6 @@ const SettingsModal = ({
                   <Download size={14} />JSON Olarak İndir
                 </button>
               </div>
-
-              {/* Import */}
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                 <h4 className="text-sm font-semibold text-blue-800 flex items-center gap-2 mb-2"><Upload size={15} />Veriyi İçe Aktar</h4>
                 <p className="text-xs text-blue-600 mb-3">Daha önce dışa aktardığınız JSON dosyasını yükleyerek tüm verileri bu cihaza aktarın. Mevcut veriler değiştirilecektir!</p>
@@ -2748,8 +2748,6 @@ const SettingsModal = ({
                   <Upload size={14} />JSON Dosyası Seç
                 </button>
               </div>
-
-              {/* Reset All */}
               <div className="bg-red-50 rounded-xl p-4 border border-red-200">
                 <h4 className="text-sm font-semibold text-red-800 flex items-center gap-2 mb-2"><Trash2 size={15} />Tüm Verileri Sıfırla</h4>
                 <p className="text-xs text-red-600 mb-3">Tüm araştırmacı, konu ve proje verilerini başlangıç haline döndürür. Ayarlar da varsayılana sıfırlanır. Bu işlem geri alınamaz!</p>
@@ -3074,7 +3072,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return [...ySet].sort();
   }, [topics, projects]);
 
-  // Summary stats
   const summary = useMemo(() => {
     const ft = filteredTopics;
     const fp = filteredProjects;
@@ -3089,7 +3086,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return { topicCount: ft.length, projectCount: fp.length, topicsByStatus, projectsByStatus, totalBudget, totalTasks: allTasks.length, doneTasks: allTasks.filter(t => t.status === "done").length, uniqueResearchers: uniqueResearchers.size };
   }, [filteredTopics, filteredProjects]);
 
-  // Topic monthly data
   const topicMonthly = useMemo(() => {
     const months = {};
     filteredTopics.forEach(t => {
@@ -3099,13 +3095,11 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([m, v]) => ({ label: m.slice(2), start: v.start, end: v.end }));
   }, [filteredTopics]);
 
-  // Topic status pie
   const topicStatusPie = useMemo(() => {
     const colors = { proposed: "#94a3b8", active: "#10b981", completed: "#3b82f6", failed: "#ef4444", archived: "#6b7280", planning: "#f59e0b", review: "#a855f7" };
     return Object.entries(summary.topicsByStatus).filter(([, v]) => v > 0).map(([k, v]) => ({ label: statusConfig[k]?.label || k, value: v, color: colors[k] || "#94a3b8" }));
   }, [summary]);
 
-  // Project monthly line
   const projectMonthly = useMemo(() => {
     const months = {};
     filteredProjects.forEach(p => {
@@ -3114,7 +3108,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return Object.entries(months).sort(([a], [b]) => a.localeCompare(b)).map(([m, v]) => ({ label: m.slice(2), value: v }));
   }, [filteredProjects]);
 
-  // Project status yearly pie
   const projectStatusPie = useMemo(() => {
     const colors = { planning: "#f59e0b", active: "#10b981", review: "#a855f7", completed: "#3b82f6", failed: "#ef4444" };
     let fp = filteredProjects;
@@ -3124,7 +3117,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     return Object.entries(counts).map(([k, v]) => ({ label: statusConfig[k]?.label || k, value: v, color: colors[k] || "#94a3b8" }));
   }, [filteredProjects, yearFilter]);
 
-  // Project type yearly bar
   const projectTypeBar = useMemo(() => {
     const colors = { "BAP": "#6366f1", "TÜBİTAK": "#10b981", "Horizon": "#3b82f6", "Erasmus+": "#f59e0b", "DIGITAL": "#ec4899", "Diğer Ulusal": "#8b5cf6", "Diğer Uluslararası": "#14b8a6", "Diğer": "#94a3b8" };
     let fp = filteredProjects;
@@ -3161,8 +3153,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><X size={18} /></button>
         </div>
-
-        {/* Filters */}
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center gap-3 flex-shrink-0 bg-slate-50/50">
           <select value={personFilter} onChange={e => setPersonFilter(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-indigo-200 outline-none min-w-[180px]">
             <option value="">Tüm Araştırmacılar</option>
@@ -3184,8 +3174,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
             <button onClick={() => { setPersonFilter(""); setStatusFilter(""); setTypeFilter(""); setYearFilter(""); }} className="text-xs text-red-500 hover:text-red-700 px-2">Filtreleri Temizle</button>
           )}
         </div>
-
-        {/* Tabs */}
         <div className="flex border-b border-slate-100 px-5">
           {tabs.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -3194,8 +3182,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
             </button>
           ))}
         </div>
-
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === "summary" && (
             <div className="space-y-6">
@@ -3223,7 +3209,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
               </div>
             </div>
           )}
-
           {activeTab === "topics" && (
             <div className="space-y-6">
               <div className="bg-slate-50 rounded-xl p-4">
@@ -3268,7 +3253,6 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
               </div>
             </div>
           )}
-
           {activeTab === "projects" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -3723,8 +3707,7 @@ const CalendarModal = ({ topics, projects, onClose }) => {
 };
 
 // ─── MAIN APP ─────────────────────────────────────────────
-export default function ArGeDashboard({ role, user, onLogout }) {
-  const isAdmin = role === "admin";
+export default function ArGeDashboard() {
   const [researchers, setResearchers] = useState(() => {
     try { const saved = localStorage.getItem("arge_researchers"); return saved ? JSON.parse(saved) : initialResearchers; } catch { return initialResearchers; }
   });
@@ -3772,6 +3755,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [quickLinks, setQuickLinks] = useState(() => {
     try { const saved = localStorage.getItem("arge_quicklinks"); return saved ? JSON.parse(saved) : defaultQuickLinks; } catch { return defaultQuickLinks; }
   });
+
   const [roleConfigSt, setRoleConfig] = useState(() => {
     try { const s = localStorage.getItem("arge_cfg_roles"); return s ? JSON.parse(s) : DEFAULT_ROLE_CONFIG; } catch { return DEFAULT_ROLE_CONFIG; }
   });
@@ -3795,6 +3779,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   });
   const [showSettings, setShowSettings] = useState(false);
 
+  // localStorage persistence
   useEffect(() => { localStorage.setItem("arge_researchers", JSON.stringify(researchers)); }, [researchers]);
   useEffect(() => { localStorage.setItem("arge_topics", JSON.stringify(topics)); }, [topics]);
   useEffect(() => { localStorage.setItem("arge_projects", JSON.stringify(projects)); }, [projects]);
@@ -3887,7 +3872,6 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     }
     msg += "\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?";
     if (!confirm(msg)) return;
-    // Remove topic from any project
     if (linkedProject) {
       const remainingTopics = (linkedProject.topics || []).filter(tid => tid !== topicId);
       if (remainingTopics.length === 0) {
@@ -3920,14 +3904,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     }
     msg += "\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?";
     if (!confirm(msg)) return;
-    // Remove from all topics
     if (usedInTopics.length > 0) {
       setTopics(prev => prev.map(t => ({
         ...t,
         researchers: (t.researchers || []).filter(r => r.researcherId !== researcherId)
       })));
     }
-    // Remove from all projects
     if (usedInProjects.length > 0) {
       setProjects(prev => prev.map(p => ({
         ...p,
@@ -4145,24 +4127,13 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
           {/* Settings Button */}
-          {isAdmin && <button onClick={() => { setShowSettings(true); setShowDeadlines(false); }}
+          <button onClick={() => { setShowSettings(true); setShowDeadlines(false); }}
             className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
             title="Ayarlar">
             <Wrench size={18} />
-          </button>}
+          </button>
           <div className="w-px h-6 bg-slate-200" />
-          <div className="flex items-center gap-2">
-            <div className="text-right">
-              <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
-              <p className="text-[10px] text-slate-400">{role === "admin" ? "Yönetici" : "Görüntüleyici"}</p>
-            </div>
-            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-xs">
-              {(user?.displayName || "K")[0]}
-            </div>
-            <button onClick={onLogout} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Çıkış Yap">
-              <LogOut size={16} />
-            </button>
-          </div>
+          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-xs">SE</div>
         </div>
       </header>
 
@@ -4236,7 +4207,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => setShowAdvRes(!showAdvRes)} className={`p-1.5 rounded-lg transition-colors ${showAdvRes ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>}
+                <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>
               </div>
             </div>
             <FilterDropdown label="Kurum" icon={Building2}
@@ -4269,7 +4240,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={isAdmin} topics={topics} onClick={setSelectedResearcher} />)}
+            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} topics={topics} onClick={setSelectedResearcher} />)}
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
           </div>
         </div>
@@ -4281,7 +4252,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><BookOpen size={15} className="text-emerald-500" />Konular<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredTopics.length}</Badge></h2>
               <div className="flex items-center gap-1">
                 <button onClick={() => setShowAdvTopic(!showAdvTopic)} className={`p-1.5 rounded-lg transition-colors ${showAdvTopic ? "bg-emerald-100 text-emerald-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("topic")} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 transition-colors" title="Yeni Konu"><Plus size={16} /></button>}
+                <button onClick={() => setAddModal("topic")} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 transition-colors" title="Yeni Konu"><Plus size={16} /></button>
               </div>
             </div>
             <div className="flex gap-2">
@@ -4320,7 +4291,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={isAdmin} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} />)}
+            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} projects={projects} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} onRemoveFromProject={handleRemoveTopicFromProject} />)}
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
           </div>
         </div>
@@ -4332,7 +4303,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><FolderKanban size={15} className="text-violet-500" />Projeler<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredProjects.length}</Badge></h2>
               <div className="flex items-center gap-1">
                 <button onClick={() => setShowAdvProject(!showAdvProject)} className={`p-1.5 rounded-lg transition-colors ${showAdvProject ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
-                {isAdmin && <button onClick={() => setAddModal("project")} className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-500 transition-colors" title="Yeni Proje"><Plus size={16} /></button>}
+                <button onClick={() => setAddModal("project")} className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-500 transition-colors" title="Yeni Proje"><Plus size={16} /></button>
               </div>
             </div>
             <div className="flex gap-2">
@@ -4361,12 +4332,11 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             onDragOver={(e) => { e.preventDefault(); const t = e.dataTransfer.types; if (t) setProjectColDragOver(true); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setProjectColDragOver(false); }}
             onDrop={(e) => {
-              if (!isAdmin) return;
               e.preventDefault(); setProjectColDragOver(false);
               const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id");
               if (type === "topic") handleCreateProjectFromTopic(id);
             }}>
-            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} isAdmin={isAdmin} onDrop={handleTopicDropOnProject} onCancelProject={handleCancelProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} />)}
+            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} onDrop={handleTopicDropOnProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} onCancelProject={handleCancelProject} />)}
             {filteredProjects.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Proje bulunamadı</p>}
             {projectColDragOver && (
               <div className="border-2 border-dashed border-violet-400 rounded-xl p-4 text-center animate-slide-up">
@@ -4381,14 +4351,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* MODALS */}
       {rolePopup && <RoleSelectPopup position={rolePopup.position} onSelect={handleRoleSelect} onCancel={() => setRolePopup(null)} />}
-      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
-      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} />}
-      {addModal && isAdmin && <AddItemModal type={addModal} allTopics={topics} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
+      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
+      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} />}
+      {addModal && <AddItemModal type={addModal} allTopics={topics} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
       {showCalendar && <CalendarModal topics={topics} projects={projects} onClose={() => setShowCalendar(false)} />}
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}
       {showTableView && <TableViewModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowTableView(false)} />}
       {showStats && <StatsModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowStats(false)} />}
-      {showSettings && isAdmin && <SettingsModal
+      {showSettings && <SettingsModal
         roleConfig={roleConfig} onRoleConfigChange={setRoleConfig}
         statusConfig={statusConfig} onStatusConfigChange={setStatusConfig}
         priorityConfig={priorityConfig} onPriorityConfigChange={setPriorityConfig}
