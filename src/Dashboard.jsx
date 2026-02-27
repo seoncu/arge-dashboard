@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, deleteDoc } from "firebase/firestore";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -10,7 +10,7 @@ import {
   Globe, Phone, Mail, GraduationCap, Building2, Wrench, Award,
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
-  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot
+  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -2696,7 +2696,8 @@ const SettingsModal = ({
   eduStatusOptions, onEduStatusOptionsChange,
   onResetDefaults, onClose,
   onExportData, onImportData, onResetAllData,
-  quickLinks, onQuickLinksChange
+  quickLinks, onQuickLinksChange,
+  onForceSync, syncStatus
 }) => {
   const [activeTab, setActiveTab] = useState("roles");
   const fileInputRef = useRef(null);
@@ -3113,6 +3114,17 @@ const SettingsModal = ({
                 }} />
                 <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
                   <Upload size={14} />JSON Dosyası Seç
+                </button>
+              </div>
+
+              {/* Manuel Senkronizasyon */}
+              <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
+                <h4 className="text-sm font-semibold text-indigo-800 flex items-center gap-2 mb-2"><RefreshCw size={15} />Manuel Senkronizasyon</h4>
+                <p className="text-xs text-indigo-600 mb-3">Otomatik senkronizasyon her 30 saniyede çalışır. Sorun yaşıyorsanız bu butonla tüm verileri elle senkronize edebilirsiniz.</p>
+                <button onClick={onForceSync} disabled={syncStatus === "syncing"}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-all flex items-center gap-2 ${syncStatus === "syncing" ? "bg-indigo-400 cursor-not-allowed" : syncStatus === "done" ? "bg-emerald-500" : "bg-indigo-500 hover:bg-indigo-600"}`}>
+                  <RefreshCw size={14} className={syncStatus === "syncing" ? "animate-spin" : ""} />
+                  {syncStatus === "syncing" ? "Senkronize ediliyor..." : syncStatus === "done" ? "Senkronize edildi!" : "Senkronize Et"}
                 </button>
               </div>
 
@@ -5900,6 +5912,102 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin";
+  const [sessionBlocked, setSessionBlocked] = useState(false);
+  const [activeSessionUser, setActiveSessionUser] = useState(null);
+  const sessionId = useRef(Math.random().toString(36).slice(2, 10));
+
+  // ─── Aktif Oturum Kilidi (Presence Lock) ───
+  useEffect(() => {
+    if (!isAdmin) return;
+    const sessionDocRef = doc(db, "arge", "_active_session");
+    let heartbeatInterval;
+
+    const claimSession = async () => {
+      try {
+        const snap = await getDoc(sessionDocRef);
+        if (snap.exists()) {
+          const s = snap.data();
+          const elapsed = Date.now() - (s.heartbeat || 0);
+          // Eğer başka bir session aktifse ve heartbeat 60 saniyeden tazeyse
+          if (s.sessionId !== sessionId.current && elapsed < 60000) {
+            setSessionBlocked(true);
+            setActiveSessionUser(s.user || "Bilinmeyen");
+            return;
+          }
+        }
+        // Session'ı al
+        await setDoc(sessionDocRef, {
+          sessionId: sessionId.current,
+          user: user?.displayName || "Admin",
+          heartbeat: Date.now(),
+          startedAt: Date.now()
+        });
+        setSessionBlocked(false);
+        setActiveSessionUser(null);
+
+        // Heartbeat: her 15 saniyede oturum canlı tut
+        heartbeatInterval = setInterval(async () => {
+          try {
+            await setDoc(sessionDocRef, {
+              sessionId: sessionId.current,
+              user: user?.displayName || "Admin",
+              heartbeat: Date.now(),
+              startedAt: Date.now()
+            });
+          } catch (e) { console.warn("Heartbeat error:", e); }
+        }, 15000);
+      } catch (e) { console.warn("Session claim error:", e); }
+    };
+
+    claimSession();
+
+    // Sayfa kapanırken session'ı temizle
+    const cleanup = () => {
+      navigator.sendBeacon && deleteDoc(sessionDocRef).catch(() => {});
+    };
+    window.addEventListener("beforeunload", cleanup);
+
+    // Diğer admin'in session durumunu dinle
+    const unsub = onSnapshot(sessionDocRef, (snap) => {
+      if (snap.exists()) {
+        const s = snap.data();
+        if (s.sessionId !== sessionId.current) {
+          const elapsed = Date.now() - (s.heartbeat || 0);
+          if (elapsed < 60000) {
+            setSessionBlocked(true);
+            setActiveSessionUser(s.user || "Bilinmeyen");
+          } else {
+            setSessionBlocked(false);
+            setActiveSessionUser(null);
+          }
+        } else {
+          setSessionBlocked(false);
+        }
+      }
+    });
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener("beforeunload", cleanup);
+      unsub();
+      // Çıkışta session'ı temizle
+      deleteDoc(sessionDocRef).catch(() => {});
+    };
+  }, [isAdmin, user]);
+
+  // Oturum kilidi — başka admin aktifken düzenlemeyi engelle
+  const forceClaimSession = useCallback(async () => {
+    const sessionDocRef = doc(db, "arge", "_active_session");
+    await setDoc(sessionDocRef, {
+      sessionId: sessionId.current,
+      user: user?.displayName || "Admin",
+      heartbeat: Date.now(),
+      startedAt: Date.now()
+    });
+    setSessionBlocked(false);
+    setActiveSessionUser(null);
+  }, [user]);
+
   // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
   const firestoreReady = useRef(false);
   const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
@@ -5966,6 +6074,100 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [eduDegreeOptionsSt, setEduDegreeOptions] = useState(DEFAULT_EDU_DEGREES);
   const [eduStatusOptionsSt, setEduStatusOptions] = useState(DEFAULT_EDU_STATUSES);
   const [showSettings, setShowSettings] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("idle"); // "idle" | "syncing" | "done"
+
+  // ─── Manuel Senkronizasyon (Yayınla/Güncelle) ───
+  const forceSync = useCallback(async () => {
+    setSyncStatus("syncing");
+    try {
+      // Adım 1: Mevcut verileri Firestore'a zorla yaz
+      const writes = [
+        setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
+      ];
+      await Promise.all(writes);
+
+      // Adım 2: Firestore'dan taze veri çek
+      const reads = [
+        { id: "researchers", setter: setResearchers, isConfig: false },
+        { id: "topics", setter: setTopics, isConfig: false },
+        { id: "projects", setter: setProjects, isConfig: false },
+        { id: "quicklinks", setter: setQuickLinks, isConfig: false },
+        { id: "cfg_roles", setter: setRoleConfig, isConfig: true },
+        { id: "cfg_statuses", setter: setStatusConfig, isConfig: true },
+        { id: "cfg_priorities", setter: setPriorityConfig, isConfig: true },
+        { id: "cfg_ptypes", setter: setProjectTypeOptions, isConfig: true },
+        { id: "cfg_categories", setter: setCategoryOptions, isConfig: true },
+        { id: "cfg_degrees", setter: setEduDegreeOptions, isConfig: true },
+        { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
+      ];
+      for (const { id, setter, isConfig } of reads) {
+        const snap = await getDoc(doc(db, "arge", id));
+        if (snap.exists()) {
+          const d = snap.data();
+          const val = isConfig ? d.data : d.items;
+          if (val !== undefined) {
+            lastJson.current[id] = JSON.stringify(val);
+            setter(val);
+          }
+        }
+      }
+
+      setSyncStatus("done");
+      setToast({ type: "success", message: "Veriler senkronize edildi!" });
+      setTimeout(() => setSyncStatus("idle"), 2000);
+    } catch (err) {
+      console.warn("Sync error:", err);
+      setSyncStatus("idle");
+      setToast({ type: "error", message: "Senkronizasyon hatası: " + err.message });
+    }
+  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt]);
+
+  // Otomatik senkronizasyon — her 30 saniyede Firestore'dan güncelle
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (!firestoreReady.current) return;
+      try {
+        const reads = [
+          { id: "researchers", setter: setResearchers, isConfig: false },
+          { id: "topics", setter: setTopics, isConfig: false },
+          { id: "projects", setter: setProjects, isConfig: false },
+          { id: "quicklinks", setter: setQuickLinks, isConfig: false },
+          { id: "cfg_roles", setter: setRoleConfig, isConfig: true },
+          { id: "cfg_statuses", setter: setStatusConfig, isConfig: true },
+          { id: "cfg_priorities", setter: setPriorityConfig, isConfig: true },
+          { id: "cfg_ptypes", setter: setProjectTypeOptions, isConfig: true },
+          { id: "cfg_categories", setter: setCategoryOptions, isConfig: true },
+          { id: "cfg_degrees", setter: setEduDegreeOptions, isConfig: true },
+          { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
+        ];
+        for (const { id, setter, isConfig } of reads) {
+          const snap = await getDoc(doc(db, "arge", id));
+          if (snap.exists()) {
+            const d = snap.data();
+            const val = isConfig ? d.data : d.items;
+            if (val !== undefined) {
+              const json = JSON.stringify(val);
+              if (lastJson.current[id] !== json) {
+                lastJson.current[id] = json;
+                setter(val);
+              }
+            }
+          }
+        }
+      } catch (err) { console.warn("Auto-sync error:", err); }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ─── Firestore'dan gerçek zamanlı okuma (onSnapshot) ───
   useEffect(() => {
@@ -6397,6 +6599,31 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         </div>
       </header>
 
+      {/* SESSION LOCK OVERLAY */}
+      {sessionBlocked && isAdmin && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle size={32} className="text-amber-500" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">Oturum Meşgul</h2>
+            <p className="text-sm text-slate-600">
+              <strong className="text-indigo-600">{activeSessionUser}</strong> şu anda dashboard üzerinde çalışıyor.
+              Aynı anda iki kişinin düzenleme yapması veri çakışmasına neden olabilir.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                Çıkış Yap
+              </button>
+              <button onClick={forceClaimSession} className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors">
+                Yine de Devam Et
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400">Diğer kullanıcı çıkış yaptığında oturum otomatik açılacaktır.</p>
+          </div>
+        </div>
+      )}
+
       {/* STATS BAR */}
       <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center gap-3 flex-shrink-0 overflow-x-auto">
         <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-lg"><Users size={14} className="text-indigo-500" /><span className="text-xs text-slate-500">Araştırmacı</span><span className="text-sm font-bold text-indigo-700">{stats.researchers}</span></div>
@@ -6707,6 +6934,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           setEduStatusOptions(DEFAULT_EDU_STATUSES);
           showToast("Tüm veriler sıfırlandı", "warning");
         }}
+        onForceSync={forceSync} syncStatus={syncStatus}
         onClose={() => setShowSettings(false)}
       />}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
