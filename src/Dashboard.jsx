@@ -1,6 +1,18 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
+
+// ─── Timeout Wrapper — Firestore askıda kalma engeli ───
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise(function(_, reject) {
+      setTimeout(function() {
+        reject(new Error("TIMEOUT (" + ms + "ms): " + (label || "Firestore işlemi") + " yanıt vermedi. Güvenlik kurallarını kontrol edin!"));
+      }, ms);
+    })
+  ]);
+}
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -6014,7 +6026,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     lastJson.current[docId] = json;
     console.log("[SYNC] Firestore'a yazılıyor:", docId);
     setSaveIndicator("saving");
-    setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
+    withTimeout(setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() }), 8000, "setDoc:" + docId)
       .then(() => {
         console.log("[SYNC] Yazma başarılı:", docId);
         setLastSavedAt(new Date());
@@ -6022,8 +6034,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         setTimeout(() => setSaveIndicator("idle"), 2000);
       })
       .catch(err => {
-        console.error("[SYNC] YAZMA HATASI:", docId, err);
+        console.error("[SYNC] YAZMA HATASI:", docId, err.message);
         setSaveIndicator("idle");
+        setToast({ type: "error", message: "Kayıt hatası: " + err.message });
       });
   }, []);
 
@@ -6037,7 +6050,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     lastJson.current[docId] = json;
     console.log("[SYNC] Config yazılıyor:", docId);
     setSaveIndicator("saving");
-    setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
+    withTimeout(setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() }), 8000, "setDoc:" + docId)
       .then(() => {
         console.log("[SYNC] Config yazma başarılı:", docId);
         setLastSavedAt(new Date());
@@ -6045,7 +6058,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         setTimeout(() => setSaveIndicator("idle"), 2000);
       })
       .catch(err => {
-        console.error("[SYNC] CONFIG YAZMA HATASI:", docId, err);
+        console.error("[SYNC] CONFIG YAZMA HATASI:", docId, err.message);
         setSaveIndicator("idle");
       });
   }, []);
@@ -6098,31 +6111,41 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [lastSavedAt, setLastSavedAt] = useState(null); // Son kayıt zamanı
   const [saveIndicator, setSaveIndicator] = useState("idle"); // "idle" | "saving" | "saved"
 
-  // ─── Bağlantı Testi — Firestore'a yaz ve oku ───
+  // ─── Bağlantı Testi — Firestore'a yaz ve oku (timeout'lu) ───
   const testConnection = useCallback(async () => {
     const testId = "_conn_test";
     const testVal = Date.now();
     console.log("[TEST] Bağlantı testi başlıyor...");
-    setToast({ type: "info", message: "Firestore bağlantı testi..." });
+    setToast({ type: "info", message: "Firestore bağlantı testi yapılıyor (8 saniye)..." });
     try {
-      // 1. Yaz
-      await setDoc(doc(db, "arge", testId), { v: testVal, by: user?.displayName || "?" });
+      // 1. Yaz (8s timeout)
+      await withTimeout(
+        setDoc(doc(db, "arge", testId), { v: testVal, by: user?.displayName || "?" }),
+        8000, "test yazma"
+      );
       console.log("[TEST] Yazma OK:", testVal);
-      // 2. Oku
-      const snap = await getDoc(doc(db, "arge", testId));
+      // 2. Oku (8s timeout)
+      const snap = await withTimeout(
+        getDoc(doc(db, "arge", testId)),
+        8000, "test okuma"
+      );
       if (snap.exists() && snap.data().v === testVal) {
         console.log("[TEST] ✅ Okuma OK — Firestore bağlantısı ÇALIŞIYOR");
-        setToast({ type: "success", message: "✅ Firestore bağlantısı çalışıyor! Yazma ve okuma başarılı." });
+        setToast({ type: "success", message: "✅ Firestore bağlantısı çalışıyor!" });
         setFirestoreStatus("ready");
         firestoreReady.current = true;
       } else {
         console.error("[TEST] ❌ Okuma başarısız — yazılan değer okunamadı");
-        setToast({ type: "error", message: "❌ Firestore yazma tamam ama okuma başarısız!" });
+        setToast({ type: "error", message: "❌ Firestore okuma başarısız!" });
       }
     } catch (err) {
-      console.error("[TEST] ❌ Bağlantı testi BAŞARISIZ:", err);
-      setToast({ type: "error", message: "❌ Firestore bağlantı hatası: " + err.message });
+      console.error("[TEST] ❌ BAŞARISIZ:", err.message);
       setFirestoreStatus("error");
+      if (err.message.includes("TIMEOUT")) {
+        setToast({ type: "error", message: "❌ Firestore YANIT VERMİYOR! Güvenlik kurallarını kontrol edin. (Firebase Console → Firestore → Rules)" });
+      } else {
+        setToast({ type: "error", message: "❌ Firestore hatası: " + err.message });
+      }
     }
   }, [user]);
 
@@ -6145,7 +6168,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
       ];
       for (const { id, setter, isConfig } of reads) {
-        const snap = await getDoc(doc(db, "arge", id));
+        const snap = await withTimeout(getDoc(doc(db, "arge", id)), 8000, "getDoc:" + id);
         if (snap.exists()) {
           const d = snap.data();
           const val = isConfig ? d.data : d.items;
@@ -6160,18 +6183,22 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       setToast({ type: "success", message: "Veriler senkronize edildi!" });
       setTimeout(() => setSyncStatus("idle"), 2000);
     } catch (err) {
-      console.warn("Sync error:", err);
+      console.error("[SYNC] Senkronizasyon hatası:", err.message);
       setSyncStatus("idle");
-      setToast({ type: "error", message: "Senkronizasyon hatası: " + err.message });
+      if (err.message.includes("TIMEOUT")) {
+        setToast({ type: "error", message: "❌ Firestore yanıt vermiyor! Güvenlik kurallarını kontrol edin." });
+      } else {
+        setToast({ type: "error", message: "Senkronizasyon hatası: " + err.message });
+      }
     }
-  }, []); // dependency yok — sadece okuma yapıyor, ref-based
+  }, []);
 
   // ─── Zorunlu Yayınla — tüm client'lara bildirim gönder ───
   const forcePublish = useCallback(async () => {
     setSyncStatus("syncing");
     try {
-      // 1. Tüm verileri Firestore'a yaz
-      await Promise.all([
+      // 1. Tüm verileri Firestore'a yaz (timeout'lu)
+      await withTimeout(Promise.all([
         setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
@@ -6183,13 +6210,13 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
-      ]);
-      // 2. Force reload sinyali gönder — tüm diğer client'lar bunu dinliyor
-      await setDoc(doc(db, "arge", "_force_reload"), {
+      ]), 15000, "forcePublish");
+      // 2. Force reload sinyali gönder
+      await withTimeout(setDoc(doc(db, "arge", "_force_reload"), {
         tabId: tabId.current,
         user: user?.displayName || "Admin",
         timestamp: Date.now()
-      });
+      }), 8000, "forceReload");
       setSyncStatus("done");
       setLastSavedAt(new Date());
       setToast({ type: "success", message: "Veriler yayınlandı! Tüm ekranlar güncelleniyor..." });
@@ -6224,7 +6251,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         ];
         let updatedCount = 0;
         for (const { id, setter, isConfig } of reads) {
-          const snap = await getDoc(doc(db, "arge", id));
+          const snap = await withTimeout(getDoc(doc(db, "arge", id)), 8000, "autoSync:" + id);
           if (snap.exists()) {
             const d = snap.data();
             const val = isConfig ? d.data : d.items;
@@ -6274,6 +6301,17 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           firestoreReady.current = true;
           setFirestoreStatus("ready");
           console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
+          // İlk yükleme sonrası tüm veriyi Firestore'a push et (sunucu boşsa diye)
+          setTimeout(() => {
+            if (forcePublishRef.current) {
+              console.log("[SYNC] 🚀 İlk veri push başlatılıyor...");
+              forcePublishRef.current().then(() => {
+                console.log("[SYNC] ✅ İlk veri push tamamlandı!");
+              }).catch((err) => {
+                console.warn("[SYNC] ⚠️ İlk veri push hatası:", err.message);
+              });
+            }
+          }, 1000);
         }
       }
     };

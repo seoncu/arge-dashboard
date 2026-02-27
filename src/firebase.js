@@ -1,6 +1,6 @@
 // ─── Firebase Konfigürasyonu ───────────────────────────────
 import { initializeApp } from "firebase/app";
-import { initializeFirestore } from "firebase/firestore";
+import { initializeFirestore, memoryLocalCache } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAWQN5caYDCTzl9al4vc85ejhsY4PCZJVM",
@@ -13,14 +13,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// initializeFirestore ile özel ayarlar:
-// - experimentalAutoDetectLongPolling: WebSocket bloklandığında otomatik Long Polling'e geçer
-//   (üniversite ağları, kurumsal proxy'ler, bazı firewall'lar WebSocket'i engeller)
-// - Persistence KAPALI: lokal cache çoklu tarayıcı senkronizasyonunu engelliyordu
+// ZORUNLU Long Polling — Üniversite ağları WebSocket'i blokluyor
+// memoryLocalCache: IndexedDB offline cache'i kapatır — eski hatalı kuyruk temizlenir
 const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
+  localCache: memoryLocalCache(),
 });
-
-console.log("[FIREBASE] Firestore başlatıldı (autoDetectLongPolling: ON)");
 
 export { db };
