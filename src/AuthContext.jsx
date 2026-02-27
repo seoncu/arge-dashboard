@@ -61,6 +61,16 @@ async function getUsers() {
   return usersReady;
 }
 
+// Firestore çağrısına timeout ekle — asılma sorununu çözer
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Firestore zaman aşımı")), ms)
+    ),
+  ]);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +93,7 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      // 1. Kullanıcı doğrulama
+      // 1. Kullanıcı doğrulama (lokal — Firestore'a bağlı değil)
       const users = await getUsers();
       const pwHash = await hashPassword(password);
       const found = users.find(
@@ -96,10 +106,10 @@ export function AuthProvider({ children }) {
       const myPriority = ROLE_PRIORITY[found.role] || 0;
       const sessionId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-      // 2. Hiyerarşik oturum kontrolü (Firestore)
+      // 2. Hiyerarşik oturum kontrolü (Firestore — 5sn timeout)
       try {
         const sessionDocRef = doc(db, "arge", "_active_session");
-        const snap = await getDoc(sessionDocRef);
+        const snap = await withTimeout(getDoc(sessionDocRef), 5000);
 
         if (snap.exists()) {
           const s = snap.data();
@@ -113,7 +123,7 @@ export function AuthProvider({ children }) {
               const roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
               return {
                 success: false,
-                error: `Şu anda ${roleName}, uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün.`
+                error: "Şu anda " + roleName + ", uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün."
               };
             }
             // Aynı veya üst hiyerarşi → öncekini at, oturumu al
@@ -121,50 +131,52 @@ export function AuthProvider({ children }) {
           // else: heartbeat eski (>60sn), oturum ölü → al
         }
 
-        // 3. Oturumu Firestore'a kaydet
-        await setDoc(sessionDocRef, {
+        // 3. Oturumu Firestore'a kaydet (arka planda — bekleme)
+        setDoc(sessionDocRef, {
           sessionId,
           user: found.displayName,
           username: found.username,
           role: found.role,
           priority: myPriority,
           heartbeat: Date.now(),
-        });
+        }).catch(function(e) { console.warn("Session write error:", e); });
+
       } catch (e) {
-        console.warn("Session claim error:", e);
-        // Firestore hatası olsa bile login'e izin ver
+        console.warn("Session check atlandı:", e.message || e);
+        // Firestore hatası veya timeout — login'e devam et
       }
 
-      // 4. Local session oluştur
-      const session = {
+      // 4. Local session oluştur — BU HER ZAMAN ÇALIŞIR
+      var session = {
         username: found.username,
         role: found.role,
         displayName: found.displayName,
-        sessionId,
+        sessionId: sessionId,
       };
       setUser(session);
       localStorage.setItem("arge_auth", JSON.stringify(session));
       return { success: true };
+
     } catch (err) {
       console.error("Login genel hata:", err);
       return { success: false, error: "Giriş hatası: " + (err.message || "Bilinmeyen hata") };
     }
   };
 
-  const logout = () => {
+  var logout = function() {
     setUser(null);
     localStorage.removeItem("arge_auth");
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user: user, login: login, logout: logout, loading: loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
+  var ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
