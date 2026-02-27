@@ -6664,7 +6664,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
           {/* Sync Button */}
-          {isAdmin && !viewOnlyMode && <button onClick={forceSync} disabled={syncStatus === "syncing"}
+          {isAdmin && <button onClick={forceSync} disabled={syncStatus === "syncing"}
             className={`p-2 rounded-lg transition-all ${syncStatus === "done" ? "bg-emerald-100 text-emerald-600" : syncStatus === "syncing" ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-500"}`}
             title="Senkronize Et">
             <RefreshCw size={18} className={syncStatus === "syncing" ? "animate-spin" : ""} />
@@ -6751,7 +6751,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
                 <Eye size={14} /> Görüntüleme Modunda Devam Et
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Görüntüleme modunda verileri görebilir ancak düzenleyemezsiniz. Diğer kullanıcının değişiklikleri otomatik yansır.</p>
+            <p className="text-[10px] text-slate-400">Görüntüleme modunda verileri görebilir ancak düzenleyemezsiniz. Yapılan değişiklikleri görmek için üstteki Sync butonuna basabilirsiniz.</p>
           </div>
         </div>
       )}
@@ -6763,7 +6763,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg">👑</div>
             <div>
               <p className="font-bold text-sm">Master Yönetici Giriş Yaptı</p>
-              <p className="text-[11px] text-white/80">Görüntüleme moduna geçirildiniz</p>
+              <p className="text-[11px] text-white/80">Görüntüleme moduna geçirildiniz. Sync butonu ile değişiklikleri görebilirsiniz.</p>
             </div>
           </div>
         </div>
@@ -6784,15 +6784,18 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* VIEW-ONLY BANNER */}
       {viewOnlyMode && (
-        <div className={`border-b px-5 py-2 flex items-center justify-center gap-2 flex-shrink-0 ${
+        <div className={`border-b px-5 py-2.5 flex items-center justify-center gap-3 flex-shrink-0 ${
           activeSessionRole === "master" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
         }`}>
           {activeSessionRole === "master" ? <span className="text-sm">👑</span> : <Eye size={14} className="text-amber-600" />}
           <span className={`text-xs font-medium ${activeSessionRole === "master" ? "text-red-700" : "text-amber-700"}`}>
             {activeSessionRole === "master"
-              ? <>Master Yönetici <strong>{activeSessionUser}</strong> aktif — Görüntüleme modundasınız. Değişiklikler otomatik yansır.</>
-              : <>Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor. Değişiklikler otomatik yansır.</>
+              ? <>Master Yönetici <strong>{activeSessionUser}</strong> aktif — Görüntüleme modundasınız.</>
+              : <>Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor.</>
             }
+          </span>
+          <span className="text-[10px] bg-white/70 border border-current/20 px-2 py-0.5 rounded-full font-medium animate-pulse" style={{color: activeSessionRole === "master" ? "#b91c1c" : "#92400e"}}>
+            Yapılan işlemleri görmek için ↑ Sync butonuna basınız!
           </span>
         </div>
       )}
