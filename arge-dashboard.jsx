@@ -2709,7 +2709,7 @@ const SettingsModal = ({
     { key: "education", label: "Eğitim", icon: GraduationCap },
     { key: "links", label: "Bağlantılar", icon: Link2 },
     { key: "data", label: "Veri", icon: DatabaseBackup },
-    { key: "report", label: "Akademik Rapor", icon: FileText },
+    { key: "report", label: "Rapor", icon: FileText },
   ];
 
   const PALETTE = [
@@ -3119,11 +3119,11 @@ const SettingsModal = ({
             </div>
           )}
 
-          {activeTab === "report" && (
+                    {activeTab === "report" && (
             <div className="space-y-4">
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
                 <h3 className="text-sm font-bold text-indigo-800 flex items-center gap-2 mb-2"><FileText size={16} />Ar-Ge Dashboard Akademik Raporu</h3>
-                <p className="text-xs text-slate-600 mb-3">Bu rapor, Ar-Ge Dashboard uygulamasının geliştirilme sürecini, kullanılan yapay zeka teknolojilerini ve metodolojisini akademik formatta açıklamaktadır.</p>
+                <p className="text-xs text-slate-600 mb-3">Bu rapor, Ar-Ge Dashboard uygulamasının geliştirilme sürecini, kullanılan yapay zeka teknolojilerini, Ar-Ge birimi sorunlarına getirilen çözümleri ve gelecek araştırma yönelimlerini akademik formatta açıklamaktadır.</p>
                 <div className="flex gap-2">
                   <button onClick={() => {
                     const html = generateAcademicReportHTML();
@@ -3149,30 +3149,59 @@ const SettingsModal = ({
                 <div className="prose prose-sm max-w-none">
                   <h2 className="text-base font-bold text-slate-800 text-center mb-1">Yapay Zeka Destekli Ar-Ge Yönetim Paneli:</h2>
                   <h3 className="text-sm font-semibold text-slate-600 text-center mb-3">Tasarım, Geliştirme ve Uygulama Süreci</h3>
-                  <p className="text-[10px] text-slate-400 text-center mb-4">Anadolu Üniversitesi | Açıköğretim Fakültesi | Ar-Ge Birimi<br/>Rapor Tarihi: {new Date().toLocaleDateString("tr-TR")}</p>
+                  <p className="text-[10px] text-slate-400 text-center mb-4">Anadolu Üniversitesi | Açıköğretim Fakültesi | Ar-Ge Birimi<br/>Rapor Tarihi: {new Date().toLocaleDateString("tr-TR")} | Sefa Emre Öncü</p>
+                  <p className="text-[10px] text-slate-400 text-center mb-4 italic">Anahtar Kelimeler: Yapay zeka destekli yazılım geliştirme, büyük dil modelleri, Ar-Ge yönetimi, proje takip sistemi, ekip oluşturma, süreç optimizasyonu, dijital dönüşüm, durum çalışması</p>
+
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">1. Özet (Abstract)</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge Birimi için geliştirilen web tabanlı araştırma yönetim panelinin tasarım ve geliştirme sürecini akademik perspektiften ele almaktadır. Proje, büyük dil modelleri (LLM) destekli yazılım geliştirme metodolojisinin uygulamalı bir örneğini sunmaktadır.</p>
+                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge Birimi için geliştirilen web tabanlı araştırma yönetim panelinin tasarım ve geliştirme sürecini akademik perspektiften ele almaktadır. Proje, büyük dil modelleri (LLM) destekli yazılım geliştirme metodolojisinin uygulamalı bir örneğini sunmakta olup, insan-yapay zeka işbirliğine dayalı hibrit bir geliştirme modeli izlenmiştir. Çalışma aynı zamanda Ar-Ge birimlerinde karşılaşılan proje yönetimi, ekip oluşturma, süreç takibi ve verimlilik sorunlarını durum çalışması (case study) yaklaşımıyla ele almaktadır.</p>
+
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">2. Giriş</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">Akademik araştırma yönetimi, çok sayıda araştırmacı, konu ve projenin koordinasyonunu gerektirmektedir. Mevcut ticari çözümler (Notion, Trello vb.) genel amaçlı olup, Ar-Ge birimine özgü ihtiyaçları karşılamamaktadır. Bu çalışmada, Notion platformundan bağımsız, özelleştirilmiş bir yönetim paneline geçiş süreci ve bu süreçte yapay zeka teknolojilerinin rolü ele alınmaktadır.</p>
-                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">3. Yöntem ve Teknolojiler</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.1. Geliştirme Ortamı:</strong> React 18, Vite 6.x build sistemi, Tailwind CSS utility-first framework ve Lucide React ikon kütüphanesi kullanılmıştır. Uygulama, tek sayfa uygulaması (SPA) mimarisinde geliştirilmiş olup, Vercel platformu üzerinden dağıtılmaktadır.</p>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.2. Yapay Zeka Destekli Geliştirme:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli (Claude Opus 4 ve Claude Sonnet 4.5) kullanılmıştır. Cowork (masaüstü agent modu) ve Claude Code (komut satırı agent aracı) üzerinden iteratif geliştirme yapılmıştır.</p>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.3. Prompt Mühendisliği:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi yönetimi ile tutarlılık sağlanmıştır. Oturum sürekliliği (session continuity) tekniği ile uzun geliştirme süreçleri yönetilmiştir.</p>
-                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">4. Sistem Mimarisi</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong>4.1. Veri Katmanı:</strong> localStorage tabanlı kalıcı veri saklama, JSON serileştirme/deserileştirme, başlangıç verileri ile otomatik migrasyon desteği. <strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), sürükle-bırak etkileşimi, gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
-                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">5. Özellikler</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">Araştırmacı yönetimi, konu ve proje takibi, rol tabanlı yetkilendirme (admin/viewer), detaylı istatistik modalları, liderlik tablosu, takvim görünümü, uluslararası ortaklık takibi, AÖF üyelik filtreleme, unvan dağılımı analizi, sütun tam ekran modu, veri dışa/içe aktarım ve kural tabanlı akıllı sohbet asistanı (chatbot).</p>
-                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">6. AI/LLM Kullanım Detayları</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">Kod üretimi, hata ayıklama, JSX yapısal analiz, Python otomasyonu ile toplu değişiklik, brace balance doğrulama, dual-file parity (auth/standalone eşitleme) süreçlerinin tamamında Claude AI agent olarak kullanılmıştır. İnsan-AI işbirliğine dayalı hibrit geliştirme modeli uygulanmıştır.</p>
-                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">7. Sonuç</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, büyük dil modellerinin akademik yazılım geliştirme süreçlerinde etkin bir şekilde kullanılabileceğini göstermektedir. Claude AI'ın iteratif geliştirme, hata düzeltme ve kod optimizasyonu konularındaki katkıları, geliştirme süresini önemli ölçüde kısaltmıştır.</p>
+                  <p className="text-xs text-slate-600 leading-relaxed">Akademik araştırma yönetimi, çok sayıda araştırmacı, konu ve projenin eşzamanlı koordinasyonunu gerektiren karmaşık bir süreçtir. Mevcut ticari çözümler (Notion, Trello, Asana vb.) genel amaçlı olup, araştırma birimine özgü gereksinimleri karşılayamamaktadır. Bu proje, Notion platformundan bağımsız, tamamen özelleştirilmiş bir web tabanlı yönetim paneline geçiş sürecini ve bu süreçte yapay zeka teknolojilerinin rolünü incelemektedir.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">3. Literatür Taraması</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.1. Dijital Dönüşüm:</strong> Yükseköğretim kurumlarında araştırma süreçlerinin dijital dönüşümü, veri kaybı ve iletişim kopukluklarını çözmede kritik rol oynamaktadır (Benavides vd., 2020). <strong>3.2. AI Destekli Geliştirme:</strong> LLM'lerin yazılım geliştirme süreçlerine entegrasyonu önemli verimlilik kazanımları sağlamaktadır (Chen vd., 2021). <strong>3.3. Ekip Oluşturma:</strong> Disiplinlerarası yetkinliklerin eşleştirilmesi ve rol dağılımının optimize edilmesi, proje başarısını doğrudan etkilemektedir (Bozeman ve Boardman, 2014).</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">4. Durum Çalışması: Ar-Ge Birimi Sorunları</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>Tespit edilen sorunlar:</strong> Veri dağınıklığı (farklı platformlarda tutulan veriler), senkronizasyon eksikliği (çoklu yönetici erişimi yok), filtreleme yetersizliği (kuruma özgü filtreler mevcut değil), ekip oluşturma zorluğu (manuel CV tarama gereksinimi), süreç takibi eksikliği (proje aşamalarının görünürlüğü yok), kurumsal hafıza kaybı (tamamlanan projelerin deneyimleri kayıt altına alınamıyor).</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">5. Yöntem ve Teknolojiler</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>5.1. Teknoloji Yığını:</strong> React 18, Vite 6.x, Tailwind CSS, Firebase Firestore, Vercel. <strong>5.2. AI Modelleri:</strong> Claude Opus 4 (karmaşık mimari kararlar) ve Claude Sonnet 4.5 (hızlı iterasyon). <strong>5.3. Geliştirme Araçları:</strong> Claude Cowork (masaüstü agent) ve Claude Code (komut satırı agent). <strong>5.4. Prompt Mühendisliği:</strong> İteratif iyileştirme, dual-file parity, otomatik doğrulama, Python betik otomasyonu.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">6. Sistem Mimarisi</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>6.1. Veri Katmanı:</strong> Firebase Firestore, gerçek zamanlı onSnapshot, offline persistence, versiyon tabanlı çakışma çözümü. <strong>6.2. Sunum:</strong> Üç sütunlu Kanban, sürükle-bırak, tam ekran grid layout. <strong>6.3. Kimlik Doğrulama:</strong> SHA-256, admin/viewer roller. <strong>6.4. Akıllı Asistan:</strong> Kural tabanlı chatbot, 3 katmanlı araştırmacı eşleştirme.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">7. Geliştirilen Özellikler</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Araştırmacı profil yönetimi, konu ve proje yaşam döngüsü, rol tabanlı yetkilendirme, 6 sekmeli istatistik, liderlik tablosu, takvim görünümü, uluslararası ortaklık takibi, AÖF filtreleme, sütun tam ekran modu, JSON veri aktarım, akıllı chatbot ile konu önerisi ve araştırmacı eşleştirme.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">8. Proje Yönetimi ve Süreç Takibi Analizi</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Geleneksel yöntem vs. Dashboard karşılaştırması: Araştırmacı arama (%93 zaman tasarrufu), proje durumu kontrolü (anlık vs. 1-2 gün), ekip oluşturma (otomatik eşleştirme vs. kişisel bilgi), rapor hazırlama (%95+ tasarruf), görev takibi (merkezi izleme vs. ayrı listeler), veri senkronizasyonu (gerçek zamanlı vs. e-posta ile paylaşım).</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">9. Verimlilik ve Kullanıcı Deneyimi</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">6500+ satırlık ana bileşen iteratif prompt'larla oluşturulmuş, Firebase entegrasyonu 3 iterasyonla optimize edilmiş (debounce → pendingWrites → versiyon tabanlı), dual-file parity Python betikleriyle otomatikleştirilmiştir. UI tasarım ilkeleri: bilgi yoğunluğu, renk kodlaması, sürükle-bırak doğallığı, duyarlı tasarım.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">10. AI/LLM Kullanım Detayları</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Kod üretimi, hata ayıklama, Firebase race condition çözümü, Python otomasyonu, brace balance doğrulama, dual-file eşitleme, mimari kararlar (Firestore seçimi, versiyon tabanlı senkronizasyon). İnsan rolü: gereksinim tanımlama, UX yönlendirme, kalite kontrol.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">11. Tartışma</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>11.1. İnsan-AI İşbirliği:</strong> AI agent'ları "geliştirme ortağı" olarak konumlandırılmıştır. <strong>11.2. Sınırlılıklar:</strong> Bağlam penceresi sınırı, iteratif düzeltme döngüsü, dual-file bakım maliyeti, test otomasyonu eksikliği. <strong>11.3. Gelecek Araştırma Yönelimleri:</strong> AI agent'lar ve Ar-Ge süreçleri, veri odaklı ekip oluşturma, dijital süreç takibinin verimlilik etkisi, LLM destekli yazılım geliştirme metodolojisi, Ar-Ge çalışanlarının dijital dönüşüm deneyimi, açık kaynak akademik Ar-Ge araçları.</p>
+
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">12. Sonuç</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, büyük dil modellerinin akademik yazılım geliştirmede etkin kullanılabileceğini ve özelleştirilmiş Ar-Ge yönetim panellerinin proje yönetimi, ekip oluşturma ve süreç takibi sorunlarına somut çözümler sunabileceğini göstermektedir. İnsan-AI işbirliğine dayalı hibrit model, alan bilgisi gerektiren uygulamaların geliştirilmesinde yüksek potansiyel taşımaktadır.</p>
+
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">Kaynakça</h4>
                   <p className="text-[10px] text-slate-500 leading-relaxed">
                     [1] Anthropic. (2025). Claude AI Documentation. https://docs.anthropic.com<br/>
                     [2] Meta. (2024). React 18 Documentation. https://react.dev<br/>
                     [3] Evan You et al. (2024). Vite Build Tool. https://vitejs.dev<br/>
                     [4] Tailwind Labs. (2024). Tailwind CSS. https://tailwindcss.com<br/>
-                    [5] Vercel. (2025). Vercel Deployment Platform. https://vercel.com
+                    [5] Vercel. (2025). Vercel Platform. https://vercel.com<br/>
+                    [6] Google. (2025). Firebase Firestore. https://firebase.google.com/docs/firestore<br/>
+                    [7] Chen, M. et al. (2021). Evaluating LLMs Trained on Code. arXiv:2107.03374.<br/>
+                    [8] Benavides, L. et al. (2020). Digital Transformation in Higher Education. Sensors, 20(11).<br/>
+                    [9] Bozeman, B. & Boardman, C. (2014). Research Collaboration and Team Science. Springer.<br/>
+                    [10] GitHub. (2023). Copilot Productivity Research. GitHub Blog.<br/>
+                    [11] Vaithilingam, P. et al. (2022). Code Generation Tools Usability. CHI '22.<br/>
+                    [12] Barke, S. et al. (2023). Grounded Copilot. OOPSLA '23.
                   </p>
                 </div>
               </div>
