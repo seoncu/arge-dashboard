@@ -1167,7 +1167,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, onClose, onUpdate
 
           {/* Badges: PI experience */}
           <div className="flex flex-wrap gap-2">
-            {editing ? (
+            {editing ? (<>
               <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                 <input type="checkbox" checked={form.hasPIExperience} onChange={e => ef("hasPIExperience", e.target.checked)} className="rounded border-slate-300" />
                 Proje Yürütücülüğü Deneyimi
@@ -1176,7 +1176,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, onClose, onUpdate
                 <input type="checkbox" checked={form.isAofMember || false} onChange={e => ef("isAofMember", e.target.checked)} className="rounded border-teal-300 text-teal-500 focus:ring-teal-200" />
                 AÖF Öğretim Üyesi
               </label>
-            ) : (<>
+            </>) : (<>
               {researcher.isAofMember && <Badge className="bg-teal-100 text-teal-700">AÖF Öğretim Üyesi</Badge>}
               {researcher.hasPIExperience
                 ? <Badge className="bg-amber-100 text-amber-700"><Award size={11} className="mr-1" />Proje Yürütücülüğü Deneyimi Var</Badge>
