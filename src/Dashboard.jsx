@@ -860,7 +860,7 @@ const DEFAULT_STATUS_CONFIG = {
   failed: { label: "Tamamlanamadı", color: "bg-red-100 text-red-700", dot: "bg-red-500" },
   archived: { label: "Arşiv", color: "bg-gray-100 text-gray-500", dot: "bg-gray-400" },
   planning: { label: "İşlem Yapılıyor", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
-  review: { label: "İnceleme", color: "bg-purple-100 text-purple-700", dot: "bg-purple-500" },
+  review: { label: "İnceleme", color: "bg-purple-100 text-indigo-700", dot: "bg-purple-500" },
 };
 const DEFAULT_PRIORITY_CONFIG = {
   low: { label: "Düşük", color: "bg-slate-100 text-slate-600", icon: "○" },
@@ -873,7 +873,7 @@ const DEFAULT_ROLE_CONFIG = {
   unit_manager: { label: "Birim Sorumlusu", color: "bg-rose-100 text-rose-700", weight: 9 },
   responsible: { label: "Sorumlu", color: "bg-orange-100 text-orange-700", weight: 8 },
   member: { label: "Araştırmacı", color: "bg-emerald-100 text-emerald-700", weight: 4 },
-  advisor: { label: "Danışman", color: "bg-purple-100 text-purple-700", weight: 2 },
+  advisor: { label: "Danışman", color: "bg-purple-100 text-indigo-700", weight: 2 },
   scholar: { label: "Bursiyer", color: "bg-cyan-100 text-cyan-700", weight: 1 },
 };
 const taskStatusConfig = {
@@ -1423,7 +1423,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
             ];
             const bgMap = { emerald: "bg-emerald-50", blue: "bg-blue-50", red: "bg-red-50", slate: "bg-slate-50", amber: "bg-amber-50", purple: "bg-purple-50", gray: "bg-gray-50" };
             const dotMap = { emerald: "bg-emerald-500", blue: "bg-blue-500", red: "bg-red-500", slate: "bg-slate-400", amber: "bg-amber-500", purple: "bg-purple-500", gray: "bg-gray-400" };
-            const textMap = { emerald: "text-emerald-700", blue: "text-blue-700", red: "text-red-700", slate: "text-slate-700", amber: "text-amber-700", purple: "text-purple-700", gray: "text-gray-500" };
+            const textMap = { emerald: "text-emerald-700", blue: "text-blue-700", red: "text-red-700", slate: "text-slate-700", amber: "text-amber-700", purple: "text-indigo-700", gray: "text-gray-500" };
             const roleOrder = { lead: 0, unit_manager: 1, responsible: 2, member: 3, advisor: 4, scholar: 5 };
             const getLinkedProject = (topicId) => (projects || []).find(p => (p.topics || []).includes(topicId));
 
@@ -2719,7 +2719,7 @@ const SettingsModal = ({
     { value: "bg-rose-100 text-rose-700", label: "Gül", preview: "bg-rose-100" },
     { value: "bg-orange-100 text-orange-700", label: "Turuncu", preview: "bg-orange-100" },
     { value: "bg-emerald-100 text-emerald-700", label: "Yeşil", preview: "bg-emerald-100" },
-    { value: "bg-purple-100 text-purple-700", label: "Mor", preview: "bg-purple-100" },
+    { value: "bg-purple-100 text-indigo-700", label: "Mor", preview: "bg-purple-100" },
     { value: "bg-cyan-100 text-cyan-700", label: "Camgöbeği", preview: "bg-cyan-100" },
     { value: "bg-amber-100 text-amber-700", label: "Amber", preview: "bg-amber-100" },
     { value: "bg-pink-100 text-pink-700", label: "Pembe", preview: "bg-pink-100" },
@@ -5773,6 +5773,27 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
     return cats;
   }, [searchThemes]);
 
+  const catGradients = [
+    "from-indigo-600 to-violet-500",
+    "from-violet-500 to-purple-500",
+    "from-purple-500 to-indigo-500",
+    "from-indigo-500 to-blue-500",
+    "from-blue-500 to-indigo-400",
+    "from-violet-500 to-blue-500",
+    "from-purple-500 to-violet-400",
+    "from-indigo-500 to-violet-400",
+  ];
+  const catSubColors = [
+    "from-indigo-50 to-violet-50 text-indigo-600 border-indigo-200 hover:from-indigo-100 hover:to-violet-100",
+    "from-violet-50 to-purple-50 text-violet-600 border-violet-200 hover:from-violet-100 hover:to-purple-100",
+    "from-purple-50 to-indigo-50 text-purple-600 border-purple-200 hover:from-purple-100 hover:to-indigo-100",
+    "from-indigo-50 to-blue-50 text-indigo-600 border-indigo-200 hover:from-indigo-100 hover:to-blue-100",
+    "from-blue-50 to-indigo-50 text-blue-600 border-blue-200 hover:from-blue-100 hover:to-indigo-100",
+    "from-violet-50 to-blue-50 text-violet-600 border-violet-200 hover:from-violet-100 hover:to-blue-100",
+    "from-purple-50 to-violet-50 text-purple-600 border-purple-200 hover:from-purple-100 hover:to-violet-100",
+    "from-indigo-50 to-violet-50 text-indigo-600 border-indigo-200 hover:from-indigo-100 hover:to-violet-100",
+  ];
+
   const handleCatClick = useCallback((text) => {
     setMessages(prev => [...prev, { role: "user", text }]);
     setTimeout(() => { const r = processQuery(text); const sg = getSuggestions(text); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300);
@@ -5780,12 +5801,12 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 
   if (!open) return (
     <div className="fixed bottom-5 right-5 z-40 flex items-end gap-3">
-      <div className="relative bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl shadow-lg border border-purple-200 px-4 py-3 max-w-[220px]" style={{animation:"fadeIn 0.6s ease-out"}}>
+      <div className="relative bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50 rounded-2xl shadow-lg shadow-indigo-100/50 border border-indigo-200/60 px-4 py-3 max-w-[220px]" style={{animation:"fadeIn 0.6s ease-out"}}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
-        <p className="text-xs text-purple-700 font-medium leading-relaxed">Merhaba, ben Ar-Ge Asistanı! Nasıl yardımcı olabilirim?</p>
-        <div className="absolute bottom-3 -right-2 w-3 h-3 bg-indigo-50 border-r border-b border-purple-200 rotate-[-45deg]" />
+        <p className="text-xs text-indigo-700 font-medium leading-relaxed">Merhaba, ben Ar-Ge Asistanı! Nasıl yardımcı olabilirim?</p>
+        <div className="absolute bottom-3 -right-2 w-3 h-3 bg-violet-50 border-r border-b border-indigo-200 rotate-[-45deg]" />
       </div>
-      <button onClick={() => setOpen(true)} className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center flex-shrink-0" title="Ar-Ge Asistanı">
+      <button onClick={() => setOpen(true)} className="w-14 h-14 bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-500 text-white rounded-full shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-105 transition-all flex items-center justify-center flex-shrink-0" title="Ar-Ge Asistanı">
         <Bot size={24} /><span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
     </div>
@@ -5793,7 +5814,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 
   return (
     <div className={chatMaximized ? "fixed inset-4 z-40 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" : "fixed bottom-5 right-5 z-40 w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"} style={chatMaximized ? {} : {height:"min(580px, calc(100vh - 40px))"}}>
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3.5 flex items-center justify-between flex-shrink-0">
+      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-3.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <div className={`bg-white/20 rounded-xl flex items-center justify-center ${chatMaximized ? "w-11 h-11" : "w-9 h-9"}`}><Bot size={chatMaximized ? 24 : 20} className="text-white" /></div>
           <div><h3 className={`font-bold text-white ${chatMaximized ? "text-base" : "text-sm"}`}>Ar-Ge Asistanı</h3><p className={`text-white/70 ${chatMaximized ? "text-xs" : "text-[10px]"}`}>Akıllı veri sorgu asistanı</p></div>
@@ -5813,25 +5834,25 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
               </div>
             </div>
             {m.isWelcome && i === messages.length - 1 && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 space-y-2 bg-gradient-to-b from-slate-50/50 to-white rounded-xl p-2 -mx-1">
                 <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-sky-500 text-white rounded-xl hover:bg-sky-600 transition-all flex items-center gap-2 shadow-md ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                  className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
                   <span>🆕</span> Yeni Araştırma Konusu Öner
                 </button>
                 <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-sky-500 text-white rounded-xl hover:bg-sky-600 transition-all flex items-center gap-2 shadow-md mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                  className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
                   <span>👤</span> Uygun Araştırmacı Öner
                 </button>
                 {chatCategories.map((cat, ci) => (
                   <div key={ci}>
                     <button onClick={() => cat.subs.length > 0 && handleCatClick(cat.subs[0])}
-                      className={`w-full text-left font-semibold bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex items-center gap-2 shadow-sm ${chatMaximized ? "px-4 py-3 text-sm" : "px-3 py-2 text-[11px]"}`}>
-                      <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-indigo-200">{cat.subs.length}</span>
+                      className={`w-full text-left font-semibold bg-gradient-to-r ${catGradients[ci % catGradients.length]} text-white rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-indigo-100/40 hover:shadow-lg hover:scale-[1.01] ${chatMaximized ? "px-4 py-3 text-sm" : "px-3 py-2 text-[11px]"}`}>
+                      <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-white/60">{cat.subs.length}</span>
                     </button>
                     <div className="flex flex-wrap gap-1 mt-1 ml-2">
                       {cat.subs.map((sub, si) => (
                         <button key={si} onClick={() => handleCatClick(sub)}
-                          className={`bg-blue-50 text-blue-500 rounded-full hover:bg-blue-100 transition-colors border border-blue-200 ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
+                          className={`bg-gradient-to-r ${catSubColors[ci % catSubColors.length]} rounded-full transition-all border hover:shadow-sm ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
                       ))}
                     </div>
                   </div>
@@ -5841,7 +5862,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
               <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
                 {m.suggestions.map((s, si) => (
                   <button key={si} onClick={() => { if (s === "Başka konu öner" || s === "Yeni konu öner") { setTopicMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Başka bir konu için anahtar kelimeleri yazın..." }]); } else if (s === "Başka araştırmacı ara" || s === "Uygun araştırmacı öner") { setResearcherMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Araştırmacı aramak için anahtar kelimeleri yazın..." }]); } else { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); } }}
-                    className={`bg-blue-50 text-blue-500 rounded-full hover:bg-blue-100 transition-colors border border-blue-200 cursor-pointer ${chatMaximized ? "px-3.5 py-1.5 text-xs" : "px-2.5 py-1 text-[10px]"}`}>{s}</button>
+                    className={`bg-gradient-to-r from-violet-50 to-indigo-50 text-indigo-600 rounded-full hover:from-violet-100 hover:to-indigo-100 transition-all border border-indigo-200/60 cursor-pointer hover:shadow-sm ${chatMaximized ? "px-3.5 py-1.5 text-xs" : "px-2.5 py-1 text-[10px]"}`}>{s}</button>
                 ))}
               </div>
             )}
