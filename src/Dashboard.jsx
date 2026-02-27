@@ -5900,31 +5900,25 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin";
-  // ─── Firestore senkronizasyon yardımcıları ───
+  // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
   const firestoreReady = useRef(false);
-  const localVersion = useRef({});
-  const lastSyncedJson = useRef({}); // Write-back loop engelleme: son sync edilen veri
-  const totalListeners = 11; // 4 veri + 7 config doküman
+  const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
 
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
     const json = JSON.stringify(data);
-    if (lastSyncedJson.current[docId] === json) return;
-    lastSyncedJson.current[docId] = json;
-    const ver = (localVersion.current[docId] || 0) + 1;
-    localVersion.current[docId] = ver;
-    setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now(), _v: ver })
+    if (lastJson.current[docId] === json) return;
+    lastJson.current[docId] = json;
+    setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore yazma hatası:", docId, err));
   }, []);
 
   const writeConfigToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
     const json = JSON.stringify(data);
-    if (lastSyncedJson.current[docId] === json) return;
-    lastSyncedJson.current[docId] = json;
-    const ver = (localVersion.current[docId] || 0) + 1;
-    localVersion.current[docId] = ver;
-    setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now(), _v: ver })
+    if (lastJson.current[docId] === json) return;
+    lastJson.current[docId] = json;
+    setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore config yazma hatası:", docId, err));
   }, []);
 
@@ -5976,46 +5970,43 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   // ─── Firestore'dan gerçek zamanlı okuma (onSnapshot) ───
   useEffect(() => {
     const unsubs = [];
-    const firstLoad = new Set();
+    const readyDocs = new Set();
+
     const listen = (docId, setter, fallback, isConfig) => {
-      let isFirst = true;
       const unsub = onSnapshot(doc(db, "arge", docId), (snap) => {
         if (snap.exists()) {
           const d = snap.data();
-          const remoteVer = d._v || 0;
-          const localVer = localVersion.current[docId] || 0;
-          // Kendi yazdığımız veriyi geri okumayı atla
-          if (!isFirst && remoteVer < localVer) {
-            // Kesinlikle kendi yazımız (daha düşük versiyon), atla
-          } else {
-            const val = isConfig ? d.data : d.items;
-            if (val !== undefined) {
-              localVersion.current[docId] = remoteVer;
-              lastSyncedJson.current[docId] = JSON.stringify(val);
+          const val = isConfig ? d.data : d.items;
+          if (val !== undefined) {
+            // JSON karşılaştır — aynıysa setter çağırma (gereksiz re-render engelle)
+            const json = JSON.stringify(val);
+            if (lastJson.current[docId] !== json) {
+              lastJson.current[docId] = json;
               setter(val);
             }
           }
-        } else if (isFirst) {
-          // Doküman henüz yok — default veriyi Firestore'a yaz (ilk kurulum)
+        } else {
+          // Doküman yok — default veriyi yaz (ilk kurulum)
           const payload = isConfig
-            ? { data: fallback, updatedAt: Date.now(), _v: 1 }
-            : { items: fallback, updatedAt: Date.now(), _v: 1 };
-          localVersion.current[docId] = 1;
+            ? { data: fallback, updatedAt: Date.now() }
+            : { items: fallback, updatedAt: Date.now() };
+          lastJson.current[docId] = JSON.stringify(fallback);
           setDoc(doc(db, "arge", docId), payload).catch(() => {});
         }
-        if (isFirst) {
-          isFirst = false;
-          firstLoad.add(docId);
-          if (firstLoad.size >= totalListeners) {
-            firestoreReady.current = true;
-          }
+        if (!readyDocs.has(docId)) {
+          readyDocs.add(docId);
+          if (readyDocs.size >= 11) firestoreReady.current = true;
         }
       }, (err) => {
         console.warn("Firestore dinleme hatası:", docId, err);
-        if (isFirst) { isFirst = false; firstLoad.add(docId); if (firstLoad.size >= totalListeners) firestoreReady.current = true; }
+        if (!readyDocs.has(docId)) {
+          readyDocs.add(docId);
+          if (readyDocs.size >= 11) firestoreReady.current = true;
+        }
       });
       unsubs.push(unsub);
     };
+
     listen("researchers", setResearchers, initialResearchers, false);
     listen("topics", setTopics, initialTopics, false);
     listen("projects", setProjects, initialProjects, false);
