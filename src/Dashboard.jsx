@@ -20,7 +20,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["destek hizmetleri", "mikro-yeterlik (mikro-kredilendirme)", "uzaktan eğitim", "yapay zeka (AI)", "yükseköğretimin yönetimi"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#6366f1"
@@ -32,7 +32,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["karma araştırma yöntemleri", "uzaktan eğitim", "yabancı dil eğitimi", "yapay zeka (AI)"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#8b5cf6"
@@ -44,7 +44,7 @@ const initialResearchers = [
    languages: ["Fransızca", "İngilizce"],
    researchAreas: ["eğitim bilimleri", "uzaktan eğitim", "yabancı dil eğitimi"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#ec4899"
@@ -56,7 +56,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["AR", "VR", "XR", "oyunlaştırma", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f43f5e"
@@ -68,7 +68,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["proje yönetimi", "uluslararası ilişkiler"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: false,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f97316"
@@ -80,7 +80,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["bilgisayar öğretimi ve teknolojileri", "destek hizmetleri", "uzaktan eğitim", "yapay zeka (AI)", "öğretim tasarımı"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#eab308"
@@ -92,7 +92,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["eğitim programları (curriculum)", "uzaktan eğitim", "ölçme ve değerlendirme"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#22c55e"
@@ -104,7 +104,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["bilgisayar öğretimi ve teknolojileri", "oyunlaştırma", "sayısal tablolar", "uzaktan eğitim", "yapay zeka (AI)", "öğretim tasarımı"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#14b8a6"
@@ -116,7 +116,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["grafik tasarımı", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#06b6d4"
@@ -128,7 +128,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#3b82f6"
@@ -140,7 +140,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["oyunlaştırma", "programlama", "uzaktan eğitim", "öğretim tasarımı"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#a855f7"
@@ -152,7 +152,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["oyunlaştırma", "programlama", "uzaktan eğitim", "yapay zeka (AI)"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#d946ef"
@@ -164,7 +164,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["fotoğrafçılık", "iletişim", "sosyal medya", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#0ea5e9"
@@ -176,7 +176,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["oyunlaştırma", "sayısal tablolar", "veri analizi", "yapay zeka (AI)"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#10b981"
@@ -188,7 +188,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["eğitim bilimleri", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f59e0b"
@@ -200,7 +200,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["destek hizmetleri", "uzaktan eğitim", "yabancı dil eğitimi", "ölçme ve değerlendirme"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#ef4444"
@@ -212,7 +212,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["eğitim programları (curriculum)", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#8b5cf6"
@@ -224,7 +224,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["sinema ve televizyon", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#6366f1"
@@ -236,7 +236,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["sinema ve televizyon", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#14b8a6"
@@ -248,7 +248,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["uzaktan eğitim", "öğrenci topluluğu"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#ec4899"
@@ -260,7 +260,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["bilgisayar öğretimi ve teknolojileri", "uzaktan eğitim", "yapay zeka (AI)"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#3b82f6"
@@ -272,7 +272,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["iletişim", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#22c55e"
@@ -284,7 +284,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["nicel araştırma yöntemleri", "ölçme ve değerlendirme"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f97316"
@@ -296,7 +296,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["bilgisayar öğretimi ve teknolojileri", "programlama"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#06b6d4"
@@ -308,7 +308,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["sinema ve televizyon", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#a855f7"
@@ -320,7 +320,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["eğitim programları (curriculum)", "görsel iletişim ve tasarım", "iktisat", "nitel araştırma yöntemleri", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#d946ef"
@@ -332,7 +332,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#eab308"
@@ -344,7 +344,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["uzaktan eğitim", "yabancı dil eğitimi"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#0ea5e9"
@@ -356,7 +356,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["eğitim programları (curriculum)", "mikro-yeterlik (mikro-kredilendirme)", "nicel araştırma yöntemleri", "su ürünleri", "tarım teknolojileri", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#10b981"
@@ -368,7 +368,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["uluslararası ilişkiler", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f59e0b"
@@ -380,7 +380,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["halkla ilişkiler", "iletişim", "uzaktan eğitim"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: true,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#ef4444"
@@ -392,7 +392,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["halkla ilişkiler", "iletişim", "uzaktan eğitim", "öğrenci topluluğu"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: false,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#f43f5e"
@@ -404,7 +404,7 @@ const initialResearchers = [
    languages: ["İngilizce"],
    researchAreas: ["oyunlaştırma", "uzaktan eğitim", "yabancı dil eğitimi"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: false,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#6366f1"
@@ -416,7 +416,7 @@ const initialResearchers = [
    languages: [],
     researchAreas: ["yapay zeka (AI)"],
    tools: [],
-    hasPIExperience: false,
+    hasPIExperience: false, isAofMember: false,
     url: "", phone: "", email: "",
    bio: "", performanceNotes: "",
    color: "#8b5cf6"
@@ -1097,6 +1097,9 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics }) => {
         </div>
         <div className="flex flex-col items-center gap-1">
           <GripVertical size={16} className="text-slate-300" />
+          {researcher.isAofMember && (
+            <span className="text-[8px] font-bold text-teal-600 bg-teal-50 border border-teal-200 rounded px-1 py-0.5 leading-none" title="AÖF Öğretim Üyesi">AÖF</span>
+          )}
           {researcher.hasPIExperience && (
             <Award size={12} className="text-amber-400" title="Proje Yürütücülüğü Deneyimi" />
           )}
@@ -1174,7 +1177,12 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
                 <input type="checkbox" checked={form.hasPIExperience} onChange={e => ef("hasPIExperience", e.target.checked)} className="rounded border-slate-300" />
                 Proje Yürütücülüğü Deneyimi
               </label>
+              <label className="flex items-center gap-2 text-sm text-teal-700 cursor-pointer">
+                <input type="checkbox" checked={form.isAofMember || false} onChange={e => ef("isAofMember", e.target.checked)} className="rounded border-teal-300 text-teal-500 focus:ring-teal-200" />
+                AÖF Öğretim Üyesi
+              </label>
             ) : (<>
+              {researcher.isAofMember && <Badge className="bg-teal-100 text-teal-700">AÖF Öğretim Üyesi</Badge>}
               {researcher.hasPIExperience
                 ? <Badge className="bg-amber-100 text-amber-700"><Award size={11} className="mr-1" />Proje Yürütücülüğü Deneyimi Var</Badge>
                 : <Badge className="bg-slate-100 text-slate-500">Proje Yürütücülüğü Deneyimi Yok</Badge>}
@@ -1721,7 +1729,15 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const knownInsts = useMemo(() => getKnownInstitutions(projects), [projects]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ ...item });
+  // Eski projelerde eksik alanları default'la doldur
+  const itemWithDefaults = useMemo(() => ({
+    ...item,
+    piInstitution: item.piInstitution || "",
+    piCountry: item.piCountry || "Türkiye",
+    partnerInstitutions: Array.isArray(item.partnerInstitutions) ? item.partnerInstitutions : [],
+    partnerCountries: Array.isArray(item.partnerCountries) ? item.partnerCountries : [],
+  }), [item]);
+  const [editForm, setEditForm] = useState({ ...itemWithDefaults });
   const [showAddResearcher, setShowAddResearcher] = useState(false);
   const [addResearcherRole, setAddResearcherRole] = useState("member");
   const eff = (key, val) => setEditForm({ ...editForm, [key]: val });
@@ -1729,13 +1745,16 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const handleSaveEdit = () => {
     const cleaned = { ...editForm };
     if (cleaned.budget !== undefined) cleaned.budget = parseFloat(cleaned.budget) || 0;
-    if (cleaned.piInstitution) cleaned.piInstitution = toUpperTR(cleaned.piInstitution);
+    // Kurum adlarını büyük harfe dönüştür
+    cleaned.piInstitution = toUpperTR(cleaned.piInstitution || "");
+    cleaned.piCountry = cleaned.piCountry || "Türkiye";
     if (typeof cleaned.partnerInstitutions === "string") cleaned.partnerInstitutions = cleaned.partnerInstitutions.split(",").map(s => toUpperTR(s.trim())).filter(Boolean);
     if (Array.isArray(cleaned.partnerInstitutions)) cleaned.partnerInstitutions = cleaned.partnerInstitutions.map(s => toUpperTR(s));
+    else cleaned.partnerInstitutions = [];
     if (!Array.isArray(cleaned.partnerCountries)) cleaned.partnerCountries = [];
     onUpdate({ ...item, ...cleaned }); setEditing(false);
   };
-  const handleCancelEdit = () => { setEditForm({ ...item }); setEditing(false); };
+  const handleCancelEdit = () => { setEditForm({ ...itemWithDefaults }); setEditing(false); };
   const stCfg = statusConfig[item.status] || statusConfig.proposed;
   const prCfg = priorityConfig[item.priority] || priorityConfig.medium;
   const isTopic = type === "topic";
@@ -1810,7 +1829,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
               })()}
             </div>
             <div className="flex items-center gap-1">
-              {isAdmin && <button onClick={() => { if (editing) { handleCancelEdit(); } else { setEditForm({ ...item }); setEditing(true); } }}
+              {isAdmin && <button onClick={() => { if (editing) { handleCancelEdit(); } else { setEditForm({ ...itemWithDefaults }); setEditing(true); } }}
                 className={`p-1.5 rounded-lg transition-colors ${editing ? "bg-amber-100 text-amber-600 hover:bg-amber-200" : "hover:bg-slate-100 text-slate-400 hover:text-slate-600"}`}
                 title={editing ? "Düzenlemeyi iptal et" : "Düzenle"}>
                 <Pencil size={16} />
@@ -1931,18 +1950,18 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
           )}
 
           {/* Kurum & Ülke Bilgileri (project only, view mode) */}
-          {!editing && isProject && (item.piInstitution || item.piCountry || (item.partnerInstitutions || []).length > 0 || (item.partnerCountries || []).length > 0) && (
+          {!editing && isProject && (itemWithDefaults.piInstitution || itemWithDefaults.piCountry || itemWithDefaults.partnerInstitutions.length > 0 || itemWithDefaults.partnerCountries.length > 0) && (
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Globe size={13} /> Kurum & Ülke Bilgileri
-                {[item.piCountry, ...(item.partnerCountries || [])].filter(Boolean).some(c => c !== "Türkiye") && (
+                {[itemWithDefaults.piCountry, ...itemWithDefaults.partnerCountries].filter(Boolean).some(c => c !== "Türkiye") && (
                   <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"><Globe size={10} />Uluslararası Proje</span>
                 )}
               </h4>
               <div className="grid grid-cols-2 gap-3">
-                {item.piInstitution && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Kurum</p><p className="text-sm font-semibold text-indigo-700">{item.piInstitution}</p></div>}
-                {item.piCountry && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Ülke</p><p className="text-sm font-semibold text-indigo-700">{item.piCountry}</p></div>}
-                {(item.partnerInstitutions || []).length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Kurumlar</p><div className="flex flex-wrap gap-1.5">{item.partnerInstitutions.map((inst, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{inst}</span>)}</div></div>}
-                {(item.partnerCountries || []).length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Ülkeler</p><div className="flex flex-wrap gap-1.5">{item.partnerCountries.map((c, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{c}</span>)}</div></div>}
+                {itemWithDefaults.piInstitution && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Kurum</p><p className="text-sm font-semibold text-indigo-700">{itemWithDefaults.piInstitution}</p></div>}
+                {itemWithDefaults.piCountry && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Ülke</p><p className="text-sm font-semibold text-indigo-700">{itemWithDefaults.piCountry}</p></div>}
+                {itemWithDefaults.partnerInstitutions.length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Kurumlar</p><div className="flex flex-wrap gap-1.5">{itemWithDefaults.partnerInstitutions.map((inst, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{inst}</span>)}</div></div>}
+                {itemWithDefaults.partnerCountries.length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Ülkeler</p><div className="flex flex-wrap gap-1.5">{itemWithDefaults.partnerCountries.map((c, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{c}</span>)}</div></div>}
               </div>
             </div>
           )}
@@ -2191,7 +2210,7 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
     name: "", rTitle: "", institution: "", unit: "",
     eduUniversity: "", eduProgram: "", eduDegree: "Yüksek Lisans", eduStatus: "Devam Ediyor",
     languages: "", researchAreas: "", tools: "",
-    hasPIExperience: false, url: "", phone: "", email: "", bio: "", performanceNotes: "",
+    hasPIExperience: false, isAofMember: true, url: "", phone: "", email: "", bio: "", performanceNotes: "",
   });
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [topicError, setTopicError] = useState("");
@@ -2215,7 +2234,7 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
         languages: form.languages.split(",").map(s => s.trim()).filter(Boolean),
         researchAreas: form.researchAreas.split(",").map(s => s.trim()).filter(Boolean),
         tools: form.tools.split(",").map(s => s.trim()).filter(Boolean),
-        hasPIExperience: form.hasPIExperience,
+        hasPIExperience: form.hasPIExperience, isAofMember: form.isAofMember,
         url: form.url, phone: form.phone, email: form.email,
         bio: form.bio, performanceNotes: form.performanceNotes,
         color: `hsl(${Math.random() * 360}, 55%, 55%)`,
@@ -2322,6 +2341,11 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
                     <input type="checkbox" checked={form.hasPIExperience} onChange={e => f("hasPIExperience", e.target.checked)}
                       className="w-4 h-4 rounded border-slate-300 text-indigo-500 focus:ring-indigo-200" />
                     <span className="text-sm text-slate-700">Daha önce Proje Yürütücülüğü yaptı</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isAofMember} onChange={e => f("isAofMember", e.target.checked)}
+                      className="w-4 h-4 rounded border-teal-300 text-teal-500 focus:ring-teal-200" />
+                    <span className="text-sm text-teal-700 font-medium">AÖF Öğretim Üyesi</span>
                   </label>
                 </div>
               </>}
@@ -2929,9 +2953,14 @@ const SettingsModal = ({
 // ─── LEADERBOARD MODAL ───────────────────────────────────
 const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
   const [sortBy, setSortBy] = useState("score");
+  const [aofFilter, setAofFilter] = useState("");
+  const filteredResearchers = useMemo(() => {
+    if (!aofFilter) return researchers;
+    return researchers.filter(r => aofFilter === "aof" ? r.isAofMember : !r.isAofMember);
+  }, [researchers, aofFilter]);
   const leaderboard = useMemo(() => {
     const activeByRole = (rid, role) => topics.filter(t => t.status === "active" && (t.researchers || []).some(tr => tr.researcherId === rid && tr.role === role)).length;
-    return researchers.map(r => {
+    return filteredResearchers.map(r => {
       const topicEntries = topics.filter(t => (t.researchers || []).some(tr => tr.researcherId === r.id));
       const leadCount = activeByRole(r.id, "lead");
       const unitManagerCount = activeByRole(r.id, "unit_manager");
@@ -2950,7 +2979,7 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
         score: leadCount * 10 + unitManagerCount * 9 + responsibleCount * 8 + memberCount * 4 + advisorCount * 2 + scholarCount * 1 + completedCount * 15 + doneTasks * 3 - failedCount * 20
       };
     }).filter(r => r.total > 0);
-  }, [researchers, topics, projects]);
+  }, [filteredResearchers, topics, projects]);
 
   const sorted = useMemo(() => {
     const arr = [...leaderboard];
@@ -2986,7 +3015,14 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
             <h2 className="text-lg font-bold text-slate-800">Leaderboard</h2>
             <Badge className="bg-slate-100 text-slate-500">{sorted.length} araştırmacı</Badge>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={18} /></button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center border border-teal-200 rounded-lg overflow-hidden">
+              <button onClick={() => setAofFilter("")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${!aofFilter ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Tümü</button>
+              <button onClick={() => setAofFilter("aof")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-teal-200 ${aofFilter === "aof" ? "bg-teal-500 text-white" : "bg-white text-teal-600 hover:bg-teal-50"}`}>AÖF Üyesi</button>
+              <button onClick={() => setAofFilter("other")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-teal-200 ${aofFilter === "other" ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Diğer</button>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={18} /></button>
+          </div>
         </div>
 
         {/* Table */}
@@ -3201,17 +3237,30 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
   const [yearFilter, setYearFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [aofFilter, setAofFilter] = useState("");
+
+  const aofResearcherIds = useMemo(() => {
+    if (!aofFilter) return null;
+    const ids = new Set();
+    researchers.forEach(r => { if (aofFilter === "aof" ? r.isAofMember : !r.isAofMember) ids.add(r.id); });
+    return ids;
+  }, [researchers, aofFilter]);
 
   const filteredTopics = useMemo(() => {
     let result = topics;
+    if (aofResearcherIds) result = result.filter(t => (t.researchers || []).some(r => aofResearcherIds.has(r.researcherId)));
     if (personFilter) result = result.filter(t => (t.researchers || []).some(r => r.researcherId === personFilter));
     if (statusFilter) result = result.filter(t => t.status === statusFilter);
     if (typeFilter) result = result.filter(t => t.projectType === typeFilter);
     return result;
-  }, [topics, personFilter, statusFilter, typeFilter]);
+  }, [topics, personFilter, statusFilter, typeFilter, aofResearcherIds]);
 
   const filteredProjects = useMemo(() => {
     let result = projects;
+    if (aofResearcherIds) {
+      const aofTopicIds = new Set(topics.filter(t => (t.researchers || []).some(r => aofResearcherIds.has(r.researcherId))).map(t => t.id));
+      result = result.filter(p => (p.topics || []).some(tid => aofTopicIds.has(tid)));
+    }
     if (personFilter) {
       const personTopicIds = topics.filter(t => (t.researchers || []).some(r => r.researcherId === personFilter)).map(t => t.id);
       result = result.filter(p => (p.topics || []).some(tid => personTopicIds.includes(tid)));
@@ -3219,7 +3268,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     if (statusFilter) result = result.filter(p => p.status === statusFilter);
     if (typeFilter) result = result.filter(p => p.type === typeFilter);
     return result;
-  }, [projects, topics, personFilter, statusFilter, typeFilter]);
+  }, [projects, topics, personFilter, statusFilter, typeFilter, aofResearcherIds]);
 
   const years = useMemo(() => {
     const ySet = new Set();
@@ -3320,18 +3369,19 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
 
   // Researcher column stats (same logic as main page)
   const researcherStats = useMemo(() => {
+    const matchesAof = (rid) => !aofResearcherIds || aofResearcherIds.has(rid);
     const uniqueResInTopics = (status) => {
       const ids = new Set();
-      topics.filter(t => t.status === status).forEach(t => (t.researchers || []).forEach(r => ids.add(r.researcherId)));
+      topics.filter(t => t.status === status).forEach(t => (t.researchers || []).forEach(r => { if (matchesAof(r.researcherId)) ids.add(r.researcherId); }));
       return ids.size;
     };
     const uniqueResInProjects = (status) => {
       const ids = new Set();
       projects.filter(p => p.status === status).forEach(p => {
-        (p.researchers || []).forEach(r => ids.add(r.researcherId));
+        (p.researchers || []).forEach(r => { if (matchesAof(r.researcherId)) ids.add(r.researcherId); });
         (p.topics || []).forEach(tid => {
           const t = topics.find(x => x.id === tid);
-          if (t) (t.researchers || []).forEach(r => ids.add(r.researcherId));
+          if (t) (t.researchers || []).forEach(r => { if (matchesAof(r.researcherId)) ids.add(r.researcherId); });
         });
       });
       return ids.size;
@@ -3344,7 +3394,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
       activeProjectRes: uniqueResInProjects("active"),
       completedProjectRes: uniqueResInProjects("completed"),
     };
-  }, [topics, projects]);
+  }, [topics, projects, aofResearcherIds]);
 
   // Time stats
   const [timeView, setTimeView] = useState("year"); // "year" or "month"
@@ -3441,7 +3491,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center gap-3 flex-shrink-0 bg-slate-50/50">
           <select value={personFilter} onChange={e => setPersonFilter(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-indigo-200 outline-none min-w-[180px]">
             <option value="">Tüm Araştırmacılar</option>
-            {researchers.map(r => <option key={r.id} value={r.id}>{r.title ? `${r.title} ` : ""}{r.name}</option>)}
+            {(aofResearcherIds ? researchers.filter(r => aofResearcherIds.has(r.id)) : researchers).map(r => <option key={r.id} value={r.id}>{r.title ? `${r.title} ` : ""}{r.name}</option>)}
           </select>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:ring-1 focus:ring-indigo-200 outline-none">
             <option value="">Tüm Durumlar</option>
@@ -3455,8 +3505,13 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
             <option value="">Tüm Yıllar</option>
             {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          {(personFilter || statusFilter || typeFilter || yearFilter) && (
-            <button onClick={() => { setPersonFilter(""); setStatusFilter(""); setTypeFilter(""); setYearFilter(""); }} className="text-xs text-red-500 hover:text-red-700 px-2">Filtreleri Temizle</button>
+          <div className="flex items-center border border-teal-200 rounded-lg overflow-hidden">
+            <button onClick={() => setAofFilter("")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${!aofFilter ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Tümü</button>
+            <button onClick={() => setAofFilter("aof")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-teal-200 ${aofFilter === "aof" ? "bg-teal-500 text-white" : "bg-white text-teal-600 hover:bg-teal-50"}`}>AÖF Üyesi</button>
+            <button onClick={() => setAofFilter("other")} className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-l border-teal-200 ${aofFilter === "other" ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Diğer</button>
+          </div>
+          {(personFilter || statusFilter || typeFilter || yearFilter || aofFilter) && (
+            <button onClick={() => { setPersonFilter(""); setStatusFilter(""); setTypeFilter(""); setYearFilter(""); setAofFilter(""); }} className="text-xs text-red-500 hover:text-red-700 px-2">Filtreleri Temizle</button>
           )}
         </div>
 
@@ -3619,7 +3674,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {researchers.map(r => {
+                      {(aofResearcherIds ? researchers.filter(r => aofResearcherIds.has(r.id)) : researchers).map(r => {
                         const rTopics = topics.filter(t => (t.researchers || []).some(ra => ra.researcherId === r.id));
                         const rTopicIds = new Set(rTopics.map(t => t.id));
                         const rProjects = projects.filter(p => (p.researchers || []).some(ra => ra.researcherId === r.id) || (p.topics || []).some(tid => rTopicIds.has(tid)));
@@ -3659,7 +3714,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 <select value={selectedPersonId} onChange={e => setSelectedPersonId(e.target.value)}
                   className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-indigo-200 outline-none min-w-[250px]">
                   <option value="">-- Kişi Seçin --</option>
-                  {researchers.map(r => <option key={r.id} value={r.id}>{r.title ? `${r.title} ` : ""}{r.name}</option>)}
+                  {(aofResearcherIds ? researchers.filter(r => aofResearcherIds.has(r.id)) : researchers).map(r => <option key={r.id} value={r.id}>{r.title ? `${r.title} ` : ""}{r.name}</option>)}
                 </select>
               </div>
               {!selectedPersonId && (
@@ -5175,7 +5230,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       completedTasks: allTasks.filter(t => t.status === "done").length,
       inProgressTasks: allTasks.filter(t => t.status === "in_progress").length,
     };
-  }, [researchers, topics, projects]);
+  }, [filteredResearchers, topics, projects]);
 
   const deadlineCount = useMemo(() => {
     let count = 0;

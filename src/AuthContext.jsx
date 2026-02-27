@@ -10,23 +10,19 @@ async function hashPassword(password) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Önceden hash'lenmiş şifreler (kullanıcı bunları değiştirebilir)
-// admin2026 → sha256
-// user2026 → sha256
+// Önceden hash'lenmiş şifreler
 const USERS = [
   {
     username: "admin",
-    // "admin2026" SHA-256 hash'i — aşağıdaki initHash fonksiyonu ile otomatik hesaplanır
     passwordHash: null,
-    plainForInit: "admin2026",
+    plainForInit: "ArGe@Aof2026",
     role: "admin",
     displayName: "Yönetici",
   },
   {
     username: "user",
-    // "user2026" SHA-256 hash'i
     passwordHash: null,
-    plainForInit: "user2026",
+    plainForInit: "AofView2026!",
     role: "viewer",
     displayName: "Görüntüleyici",
   },
