@@ -5915,98 +5915,101 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [sessionBlocked, setSessionBlocked] = useState(false);
   const [activeSessionUser, setActiveSessionUser] = useState(null);
   const sessionId = useRef(Math.random().toString(36).slice(2, 10));
+  const heartbeatRef = useRef(null);
+
+  // Heartbeat başlatan yardımcı
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    const sessionDocRef = doc(db, "arge", "_active_session");
+    heartbeatRef.current = setInterval(async () => {
+      try {
+        await setDoc(sessionDocRef, {
+          sessionId: sessionId.current,
+          user: user?.displayName || "Admin",
+          heartbeat: Date.now()
+        });
+      } catch (e) { console.warn("Heartbeat error:", e); }
+    }, 15000);
+  }, [user]);
+
+  // Session'ı al ve heartbeat başlat
+  const claimAndStart = useCallback(async () => {
+    const sessionDocRef = doc(db, "arge", "_active_session");
+    await setDoc(sessionDocRef, {
+      sessionId: sessionId.current,
+      user: user?.displayName || "Admin",
+      heartbeat: Date.now()
+    });
+    setSessionBlocked(false);
+    setActiveSessionUser(null);
+    startHeartbeat();
+  }, [user, startHeartbeat]);
 
   // ─── Aktif Oturum Kilidi (Presence Lock) ───
   useEffect(() => {
     if (!isAdmin) return;
     const sessionDocRef = doc(db, "arge", "_active_session");
-    let heartbeatInterval;
 
-    const claimSession = async () => {
+    const checkAndClaim = async () => {
       try {
         const snap = await getDoc(sessionDocRef);
         if (snap.exists()) {
           const s = snap.data();
           const elapsed = Date.now() - (s.heartbeat || 0);
-          // Eğer başka bir session aktifse ve heartbeat 60 saniyeden tazeyse
           if (s.sessionId !== sessionId.current && elapsed < 60000) {
             setSessionBlocked(true);
             setActiveSessionUser(s.user || "Bilinmeyen");
             return;
           }
         }
-        // Session'ı al
-        await setDoc(sessionDocRef, {
-          sessionId: sessionId.current,
-          user: user?.displayName || "Admin",
-          heartbeat: Date.now(),
-          startedAt: Date.now()
-        });
-        setSessionBlocked(false);
-        setActiveSessionUser(null);
-
-        // Heartbeat: her 15 saniyede oturum canlı tut
-        heartbeatInterval = setInterval(async () => {
-          try {
-            await setDoc(sessionDocRef, {
-              sessionId: sessionId.current,
-              user: user?.displayName || "Admin",
-              heartbeat: Date.now(),
-              startedAt: Date.now()
-            });
-          } catch (e) { console.warn("Heartbeat error:", e); }
-        }, 15000);
+        await claimAndStart();
       } catch (e) { console.warn("Session claim error:", e); }
     };
 
-    claimSession();
+    checkAndClaim();
 
-    // Sayfa kapanırken session'ı temizle
-    const cleanup = () => {
-      navigator.sendBeacon && deleteDoc(sessionDocRef).catch(() => {});
-    };
+    // Sayfa kapanırken session temizle
+    const cleanup = () => { deleteDoc(sessionDocRef).catch(() => {}); };
     window.addEventListener("beforeunload", cleanup);
 
     // Diğer admin'in session durumunu dinle
     const unsub = onSnapshot(sessionDocRef, (snap) => {
-      if (snap.exists()) {
-        const s = snap.data();
-        if (s.sessionId !== sessionId.current) {
-          const elapsed = Date.now() - (s.heartbeat || 0);
-          if (elapsed < 60000) {
-            setSessionBlocked(true);
-            setActiveSessionUser(s.user || "Bilinmeyen");
-          } else {
-            setSessionBlocked(false);
-            setActiveSessionUser(null);
-          }
+      if (!snap.exists()) {
+        // Diğer admin çıkış yaptı — session boş, otomatik al!
+        setSessionBlocked(false);
+        setActiveSessionUser(null);
+        claimAndStart().catch(() => {});
+        return;
+      }
+      const s = snap.data();
+      if (s.sessionId === sessionId.current) {
+        setSessionBlocked(false);
+      } else {
+        const elapsed = Date.now() - (s.heartbeat || 0);
+        if (elapsed < 60000) {
+          setSessionBlocked(true);
+          setActiveSessionUser(s.user || "Bilinmeyen");
         } else {
+          // Heartbeat eski — diğer admin muhtemelen kapattı, session'ı al
           setSessionBlocked(false);
+          setActiveSessionUser(null);
+          claimAndStart().catch(() => {});
         }
       }
     });
 
     return () => {
-      clearInterval(heartbeatInterval);
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       window.removeEventListener("beforeunload", cleanup);
       unsub();
-      // Çıkışta session'ı temizle
       deleteDoc(sessionDocRef).catch(() => {});
     };
-  }, [isAdmin, user]);
+  }, [isAdmin, user, claimAndStart]);
 
-  // Oturum kilidi — başka admin aktifken düzenlemeyi engelle
+  // Zorla oturumu al (kullanıcı "Yine de Devam Et" tıkladığında)
   const forceClaimSession = useCallback(async () => {
-    const sessionDocRef = doc(db, "arge", "_active_session");
-    await setDoc(sessionDocRef, {
-      sessionId: sessionId.current,
-      user: user?.displayName || "Admin",
-      heartbeat: Date.now(),
-      startedAt: Date.now()
-    });
-    setSessionBlocked(false);
-    setActiveSessionUser(null);
-  }, [user]);
+    await claimAndStart();
+  }, [claimAndStart]);
 
   // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
   const firestoreReady = useRef(false);
