@@ -5744,35 +5744,34 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
             </div>
             {m.isWelcome && i === messages.length - 1 && (
               <div className="mt-3 space-y-2">
+                <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
+                  className={`w-full text-left font-semibold bg-sky-500 text-white rounded-xl hover:bg-sky-600 transition-all flex items-center gap-2 shadow-md ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                  <span>🆕</span> Yeni Araştırma Konusu Öner
+                </button>
+                <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
+                  className={`w-full text-left font-semibold bg-sky-500 text-white rounded-xl hover:bg-sky-600 transition-all flex items-center gap-2 shadow-md mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                  <span>👤</span> Uygun Araştırmacı Öner
+                </button>
                 {chatCategories.map((cat, ci) => (
                   <div key={ci}>
                     <button onClick={() => cat.subs.length > 0 && handleCatClick(cat.subs[0])}
-                      className={`w-full text-left font-semibold bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm ${chatMaximized ? "px-4 py-3 text-sm" : "px-3 py-2 text-[11px]"}`}>
-                      <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-purple-200">{cat.subs.length}</span>
+                      className={`w-full text-left font-semibold bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex items-center gap-2 shadow-sm ${chatMaximized ? "px-4 py-3 text-sm" : "px-3 py-2 text-[11px]"}`}>
+                      <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-indigo-200">{cat.subs.length}</span>
                     </button>
                     <div className="flex flex-wrap gap-1 mt-1 ml-2">
                       {cat.subs.map((sub, si) => (
                         <button key={si} onClick={() => handleCatClick(sub)}
-                          className={`bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
+                          className={`bg-blue-50 text-blue-500 rounded-full hover:bg-blue-100 transition-colors border border-blue-200 ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
                       ))}
                     </div>
                   </div>
-                ))}
-                <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-2 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
-                  <span>🆕</span> Yeni Araştırma Konusu Öner
-                </button>
-                <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
-                  <span>👤</span> Uygun Araştırmacı Öner
-                </button>
-              </div>
+                ))}              </div>
             )}
             {m.role === "bot" && !m.isWelcome && m.suggestions && i === messages.length - 1 && (
               <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
                 {m.suggestions.map((s, si) => (
                   <button key={si} onClick={() => { if (s === "Başka konu öner" || s === "Yeni konu öner") { setTopicMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Başka bir konu için anahtar kelimeleri yazın..." }]); } else if (s === "Başka araştırmacı ara" || s === "Uygun araştırmacı öner") { setResearcherMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Araştırmacı aramak için anahtar kelimeleri yazın..." }]); } else { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); } }}
-                    className={`bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 cursor-pointer ${chatMaximized ? "px-3.5 py-1.5 text-xs" : "px-2.5 py-1 text-[10px]"}`}>{s}</button>
+                    className={`bg-blue-50 text-blue-500 rounded-full hover:bg-blue-100 transition-colors border border-blue-200 cursor-pointer ${chatMaximized ? "px-3.5 py-1.5 text-xs" : "px-2.5 py-1 text-[10px]"}`}>{s}</button>
                 ))}
               </div>
             )}
