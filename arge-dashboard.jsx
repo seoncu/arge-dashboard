@@ -2244,6 +2244,7 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
       });
     } else if (isT) {
       if (!form.title.trim()) return;
+      if (!form.category) { alert("Lütfen bir kategori seçiniz (Ar-Ge İçi veya Ortak Çalışma)"); return; }
       onAdd({ id: `t_${Date.now()}`, title: form.title, description: form.description, category: form.category, status: form.status, priority: form.priority, projectType: form.projectType, projectTypeDetail: form.projectTypeDetail, applicationDate: form.applicationDate, startDate: form.startDate, endDate: form.endDate, workLink: form.workLink, tags: [], researchers: [], tasks: [] });
     } else {
       if (!form.title.trim()) return;
@@ -2378,7 +2379,7 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
                   </select>
                 </div>
               </div>
-              {isT && <div><label className={labelClass}>Kategori</label><input value={form.category} onChange={e => f("category", e.target.value)} className={inputClass} placeholder="Ar-Ge İçi, Ortak Çalışma..." /></div>}
+              {isT && <div><label className={labelClass}>Kategori <span className="text-red-400">*</span></label><select value={form.category} onChange={e => f("category", e.target.value)} className={inputClass + (!form.category ? " border-red-300 bg-red-50" : "")}><option value="" disabled>Kategori seçiniz...</option><option value="Ar-Ge İçi">Ar-Ge İçi</option><option value="Ortak Çalışma">Ortak Çalışma</option></select></div>}
               {/* Proje Türü + Detay (hem konu hem proje için) */}
               <div>
                 <label className={labelClass}>{isT ? "Öngörülen Proje Türü" : "Proje Türü"}</label>
@@ -4979,6 +4980,8 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
     { role: "bot", text: "Merhaba! Ben Ar-Ge Asistanı. Aşağıdaki kategorilerden birini seçerek başlayabilirsiniz.", isWelcome: true }
   ]);
   const [input, setInput] = useState("");
+  const [topicMode, setTopicMode] = useState(false);
+  const [researcherMode, setResearcherMode] = useState(false);
   const chatRef = useRef(null);
 
   const processQuery = useCallback((q) => {
@@ -5239,6 +5242,187 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
     return "Tam e\u015fle\u015fme bulunamad\u0131. \u015eunlar\u0131 deneyebilirsiniz:\n\u2022 \u0130statistik sorgular\u0131: \"Genel \u00f6zet\", \"B\u00fct\u00e7e\", \"Unvan da\u011f\u0131l\u0131m\u0131\"\n\u2022 Anahtar kelime aramas\u0131: \"yapay zeka\", \"XR\", \"Horizon\"\n\u2022 Ki\u015fi aramas\u0131: Ara\u015ft\u0131rmac\u0131 ad\u0131 yaz\u0131n\n\n\"Yard\u0131m\" yazarak t\u00fcm kategorileri g\u00f6rebilirsiniz.";
   }, [researchers, topics, projects]);
 
+  const analyzeTopicProposal = useCallback((keyword) => {
+    const kw = keyword.toLowerCase().trim();
+    const kwWords = kw.split(/\s+/).filter(w => w.length > 2);
+
+    // Benzer konuları bul (başlık, açıklama, tag'lerde ara)
+    const similarTopics = topics.filter(t => {
+      const haystack = [t.title, t.description, ...(t.tags || []), t.category, t.projectType].filter(Boolean).join(" ").toLowerCase();
+      return kwWords.some(w => haystack.includes(w));
+    }).map(t => {
+      const statusMap = { active: "Aktif", completed: "Tamamlandı", proposed: "Önerilen", planning: "Planlama", failed: "Başarısız" };
+      return { title: t.title, status: statusMap[t.status] || t.status, category: t.category || "", id: t.id };
+    });
+
+    // İlgili araştırmacıları bul (researchAreas, mevcut konu eşleşmesi)
+    const matchedResearchers = researchers.filter(r => {
+      const areas = (r.researchAreas || []).join(" ").toLowerCase();
+      const nameInst = [r.name, r.institution, r.unit, r.eduProgram].filter(Boolean).join(" ").toLowerCase();
+      return kwWords.some(w => areas.includes(w) || nameInst.includes(w));
+    });
+
+    // Konularda görev alan araştırmacıları bul (rol + görev sayısı)
+    const resTopicMap = {};
+    similarTopics.forEach(st => {
+      const t = topics.find(t => t.id === st.id);
+      if (t) (t.researchers || []).forEach(tr => {
+        if (!resTopicMap[tr.researcherId]) resTopicMap[tr.researcherId] = { roles: {}, count: 0 };
+        resTopicMap[tr.researcherId].count++;
+        const role = tr.role || "üye";
+        resTopicMap[tr.researcherId].roles[role] = (resTopicMap[tr.researcherId].roles[role] || 0) + 1;
+      });
+    });
+    const topicResearchers = Object.entries(resTopicMap)
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([rid, info]) => ({ ...researchers.find(r => r.id === rid), _topicCount: info.count, _roles: info.roles }))
+      .filter(r => r.id && !matchedResearchers.find(mr => mr.id === r.id));
+
+    // Sonucu oluştur
+    let result = `🔎 "${keyword}" için analiz sonuçları:\n`;
+
+    if (similarTopics.length > 0) {
+      result += `\n📋 Benzer/İlgili Konular (${similarTopics.length}):\n`;
+      similarTopics.slice(0, 6).forEach((t, i) => {
+        const badge = t.status === "Aktif" ? "🟢" : t.status === "Tamamlandı" ? "🔵" : t.status === "Önerilen" ? "🟡" : "⚪";
+        result += `  ${badge} ${t.title}\n     [${t.status}]${t.category ? " · " + t.category : ""}\n`;
+      });
+      if (similarTopics.length > 6) result += `  ... ve ${similarTopics.length - 6} konu daha\n`;
+    } else {
+      result += `\n✨ Bu alanda henüz kayıtlı konu yok — yeni bir alan olabilir!\n`;
+    }
+
+    if (matchedResearchers.length > 0 || topicResearchers.length > 0) {
+      result += `\n👥 Önerilen Araştırmacılar:\n`;
+      if (matchedResearchers.length > 0) {
+        result += `\n  🎯 Araştırma alanı eşleşenler:\n`;
+        matchedResearchers.slice(0, 5).forEach((r, i) => {
+          const areas = (r.researchAreas || []).slice(0, 3).join(", ");
+          result += `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name}\n     ${areas}\n`;
+        });
+      }
+      if (topicResearchers.length > 0) {
+        result += `\n  🔗 Benzer konularda görev alanlar:\n`;
+        topicResearchers.slice(0, 5).forEach((r, i) => {
+          const roleStr = Object.entries(r._roles || {}).map(([k,v]) => k === "lead" ? "Lider" : k === "responsible" ? "Sorumlu" : k === "member" ? "Üye" : k).join(", ");
+          result += `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name} (${r._topicCount} konu · ${roleStr})\n`;
+        });
+      }
+    } else {
+      result += `\n👥 Bu alanda eşleşen araştırmacı bulunamadı.\n`;
+    }
+
+    const totalRelated = similarTopics.filter(t => t.status === "Aktif" || t.status === "Önerilen").length;
+    result += `\n💡 Öneri: `;
+    if (totalRelated > 3) {
+      result += `Bu alanda ${totalRelated} aktif/önerilen konu var. Mevcut bir konuya dahil olmayı düşünebilirsiniz.`;
+    } else if (similarTopics.length > 0) {
+      result += `Mevcut konularla sinerji oluşturulabilir. Yeni bir konu olarak eklemek ister misiniz?`;
+    } else {
+      result += `Yeni ve özgün bir alan! Konu olarak eklenmesi önerilir.`;
+    }
+
+    return result;
+  }, [researchers, topics]);
+
+  const analyzeResearcherSuggestion = useCallback((keyword) => {
+    const kw = keyword.toLowerCase().trim();
+    const kwWords = kw.split(/\s+/).filter(w => w.length > 2);
+
+    // [1] Araştırma alanı eşleşen araştırmacılar
+    const areaMatched = researchers.map(r => {
+      const areas = (r.researchAreas || []).join(" ").toLowerCase();
+      const score = kwWords.reduce((s, w) => s + (areas.includes(w) ? 2 : 0), 0);
+      return { ...r, _score: score, _matchType: "area" };
+    }).filter(r => r._score > 0).sort((a, b) => b._score - a._score);
+
+    // [2] Konularda görev alan araştırmacılar
+    const relTopics = topics.filter(t => {
+      const hay = [t.title, t.description, ...(t.tags || []), t.category, t.projectType].filter(Boolean).join(" ").toLowerCase();
+      return kwWords.some(w => hay.includes(w));
+    });
+    const roleMap = {};
+    relTopics.forEach(t => {
+      (t.researchers || []).forEach(tr => {
+        if (!roleMap[tr.researcherId]) roleMap[tr.researcherId] = { topics: [], roles: {} };
+        roleMap[tr.researcherId].topics.push(t.title);
+        const role = tr.role || "member";
+        roleMap[tr.researcherId].roles[role] = (roleMap[tr.researcherId].roles[role] || 0) + 1;
+      });
+    });
+    const topicMatched = Object.entries(roleMap)
+      .map(([rid, info]) => ({ ...researchers.find(r => r.id === rid), _topics: info.topics, _roles: info.roles, _topicCount: info.topics.length }))
+      .filter(r => r.id)
+      .sort((a, b) => b._topicCount - a._topicCount);
+
+    // [3] Projelerde yer alan araştırmacılar
+    const relProjects = projects.filter(p => {
+      const hay = [p.name, p.type, p.status, p.description, p.fundingSource].filter(Boolean).join(" ").toLowerCase();
+      return kwWords.some(w => hay.includes(w));
+    });
+    const projMap = {};
+    relProjects.forEach(p => {
+      (p.researchers || []).forEach(pr => {
+        if (!projMap[pr.researcherId]) projMap[pr.researcherId] = { projects: [], roles: {} };
+        projMap[pr.researcherId].projects.push(p.name);
+        const role = pr.role || "member";
+        projMap[pr.researcherId].roles[role] = (projMap[pr.researcherId].roles[role] || 0) + 1;
+      });
+    });
+    const projMatched = Object.entries(projMap)
+      .map(([rid, info]) => ({ ...researchers.find(r => r.id === rid), _projects: info.projects, _projRoles: info.roles, _projCount: info.projects.length }))
+      .filter(r => r.id)
+      .sort((a, b) => b._projCount - a._projCount);
+
+    // Sonucu oluştur
+    let result = `🔍 "${keyword}" için uygun araştırmacı analizi:\n`;
+    const shown = new Set();
+
+    if (areaMatched.length > 0) {
+      result += `\n🎯 Araştırma Alanı Eşleşenler (${areaMatched.length}):\n`;
+      areaMatched.slice(0, 5).forEach((r, i) => {
+        const areas = (r.researchAreas || []).slice(0, 4).join(", ");
+        result += `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name}\n     📚 ${areas}\n`;
+        if (r.institution) result += `     🏫 ${r.institution}\n`;
+        shown.add(r.id);
+      });
+    }
+
+    if (topicMatched.length > 0) {
+      result += `\n🔗 İlgili Konularda Görev Alanlar (${topicMatched.length}):\n`;
+      topicMatched.filter(r => !shown.has(r.id)).slice(0, 5).forEach((r, i) => {
+        const roleStr = Object.entries(r._roles || {}).map(([k,v]) => k === "lead" ? "Lider(" + v + ")" : k === "responsible" ? "Sorumlu(" + v + ")" : k === "member" ? "Üye(" + v + ")" : k + "(" + v + ")").join(", ");
+        result += `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name} — ${r._topicCount} konu · ${roleStr}\n`;
+        shown.add(r.id);
+      });
+    }
+
+    if (projMatched.length > 0) {
+      result += `\n📁 İlgili Projelerde Yer Alanlar (${projMatched.length}):\n`;
+      projMatched.filter(r => !shown.has(r.id)).slice(0, 4).forEach((r, i) => {
+        const roleStr = Object.entries(r._projRoles || {}).map(([k,v]) => k === "lead" ? "Yürütücü(" + v + ")" : k === "responsible" ? "Sorumlu(" + v + ")" : k === "member" ? "Üye(" + v + ")" : k + "(" + v + ")").join(", ");
+        result += `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name} — ${r._projCount} proje · ${roleStr}\n`;
+        shown.add(r.id);
+      });
+    }
+
+    if (shown.size === 0) {
+      result += `\n⚠️ Bu anahtar kelimelerle eşleşen araştırmacı bulunamadı.\n`;
+      result += `💡 Daha genel terimler deneyin veya araştırma alanlarını kontrol edin.`;
+    } else {
+      const total = shown.size;
+      result += `\n📊 Toplam ${total} benzersiz araştırmacı bulundu.`;
+      if (areaMatched.length > 0 && topicMatched.length > 0) {
+        const overlap = areaMatched.filter(a => topicMatched.find(t => t.id === a.id));
+        if (overlap.length > 0) {
+          result += `\n⭐ ${overlap.length} araştırmacı hem alan hem konu eşleşmesi gösteriyor — güçlü adaylar!`;
+        }
+      }
+    }
+
+    return result;
+  }, [researchers, topics, projects]);
+
   const getSuggestions = useCallback((q) => {
     const low = q.toLowerCase();
     if (low.includes("özet") || low.includes("genel") || low.includes("dashboard")) return ["Bütçe detayları", "Unvan dağılımı", "Aktif projeler"];
@@ -5270,8 +5454,22 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
     if (!input.trim()) return;
     const userMsg = input.trim(); setInput("");
     setMessages(prev => [...prev, { role: "user", text: userMsg }]);
-    setTimeout(() => { const response = processQuery(userMsg); const suggs = getSuggestions(userMsg); setMessages(prev => [...prev, { role: "bot", text: response, suggestions: suggs }]); }, 300);
-  }, [input, processQuery]);
+    if (topicMode) {
+      setTopicMode(false);
+      setTimeout(() => {
+        const analysis = analyzeTopicProposal(userMsg);
+        setMessages(prev => [...prev, { role: "bot", text: analysis, suggestions: ["Genel özet", "Başka konu öner", "Uygun araştırmacı öner", "Yardım"] }]);
+      }, 400);
+    } else if (researcherMode) {
+      setResearcherMode(false);
+      setTimeout(() => {
+        const analysis = analyzeResearcherSuggestion(userMsg);
+        setMessages(prev => [...prev, { role: "bot", text: analysis, suggestions: ["Genel özet", "Başka araştırmacı ara", "Yeni konu öner", "Yardım"] }]);
+      }, 400);
+    } else {
+      setTimeout(() => { const response = processQuery(userMsg); const suggs = getSuggestions(userMsg); setMessages(prev => [...prev, { role: "bot", text: response, suggestions: suggs }]); }, 300);
+    }
+  }, [input, processQuery, topicMode, researcherMode, analyzeTopicProposal, analyzeResearcherSuggestion, getSuggestions]);
 
   useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [messages]);
 
@@ -5393,12 +5591,20 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
                     </div>
                   </div>
                 ))}
+                <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
+                  className="w-full text-left px-3 py-2.5 text-[11px] font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-2">
+                  <span>🆕</span> Yeni Araştırma Konusu Öner
+                </button>
+                <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
+                  className="w-full text-left px-3 py-2.5 text-[11px] font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-1">
+                  <span>👤</span> Uygun Araştırmacı Öner
+                </button>
               </div>
             )}
             {m.role === "bot" && !m.isWelcome && m.suggestions && i === messages.length - 1 && (
               <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
                 {m.suggestions.map((s, si) => (
-                  <button key={si} onClick={() => { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); }}
+                  <button key={si} onClick={() => { if (s === "Başka konu öner" || s === "Yeni konu öner") { setTopicMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Başka bir konu için anahtar kelimeleri yazın..." }]); } else if (s === "Başka araştırmacı ara" || s === "Uygun araştırmacı öner") { setResearcherMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Araştırmacı aramak için anahtar kelimeleri yazın..." }]); } else { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); } }}
                     className="px-2.5 py-1 text-[10px] bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 cursor-pointer">{s}</button>
                 ))}
               </div>
@@ -5410,7 +5616,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
       <div className="p-3 border-t border-slate-100 flex-shrink-0">
         <div className="flex items-center gap-2">
           <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
-            placeholder="Bir soru sorun..." className="flex-1 text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-all" />
+            placeholder={topicMode ? "Konu veya anahtar kelime yazın..." : researcherMode ? "Araştırma alanı veya konu yazın..." : "Bir soru sorun..."} className="flex-1 text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-all" />
           <button onClick={handleSend} className="p-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 disabled:opacity-40" disabled={!input.trim()}><Send size={16} /></button>
         </div>
       </div>
