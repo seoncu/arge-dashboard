@@ -5936,35 +5936,40 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const forcePublishRef = useRef(null);
 
   // ─── Heartbeat: Her 10sn oturumu yenile ───
+  const myPriority = role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1;
   const startHeartbeat = useCallback(() => {
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     const sessionDocRef = doc(db, "arge", "_active_session");
     heartbeatRef.current = setInterval(async () => {
       try {
+        // Önce mevcut session'ı kontrol et
+        var snap = await getDoc(sessionDocRef);
+        if (snap.exists()) {
+          var s = snap.data();
+          if (s.sessionId !== sessionId.current) {
+            // Session başkasına ait — ben artık yazmıyorum, onSnapshot kick'i halledecek
+            if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+            return;
+          }
+        }
+        // Session benim — heartbeat'i yenile
         await setDoc(sessionDocRef, {
           sessionId: sessionId.current,
           user: user?.displayName || "Kullanıcı",
           role: role,
-          priority: role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1,
+          priority: myPriority,
           heartbeat: Date.now()
         });
       } catch (e) { console.warn("Heartbeat error:", e); }
     }, 10000);
-  }, [user, role]);
+  }, [user, role, myPriority]);
 
   // ─── Tek Oturum Sistemi (Hiyerarşik) ───
   useEffect(() => {
     const sessionDocRef = doc(db, "arge", "_active_session");
 
-    // İlk heartbeat'i hemen yaz
-    setDoc(sessionDocRef, {
-      sessionId: sessionId.current,
-      user: user?.displayName || "Kullanıcı",
-      role: role,
-      priority: role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1,
-      heartbeat: Date.now()
-    }).catch(() => {});
-
+    // NOT: İlk session yazımı AuthContext login() içinde yapılıyor.
+    // Dashboard sadece heartbeat ile devam ettiriyor.
     startHeartbeat();
 
     // Sayfa kapanırken session temizle

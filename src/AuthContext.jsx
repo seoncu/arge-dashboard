@@ -120,10 +120,11 @@ export function AuthProvider({ children }) {
           if (elapsed < 60000) {
             if (myPriority < existingPriority) {
               // Alt hiyerarşi — GİRİŞ REDDEDİLDİ
-              const roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
+              var roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
+              var contactWho = s.role === "master" ? "master yöneticinizle" : s.role === "admin" ? "yöneticinizle" : "üst yetkilinizle";
               return {
                 success: false,
-                error: "Şu anda " + roleName + ", uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün."
+                error: "Şu anda " + roleName + ", uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da " + contactWho + " görüşün."
               };
             }
             // Aynı veya üst hiyerarşi → öncekini at, oturumu al
@@ -131,15 +132,15 @@ export function AuthProvider({ children }) {
           // else: heartbeat eski (>60sn), oturum ölü → al
         }
 
-        // 3. Oturumu Firestore'a kaydet (arka planda — bekleme)
-        setDoc(sessionDocRef, {
-          sessionId,
+        // 3. Oturumu Firestore'a kaydet (timeout ile — asılmayı engelle)
+        await withTimeout(setDoc(sessionDocRef, {
+          sessionId: sessionId,
           user: found.displayName,
           username: found.username,
           role: found.role,
           priority: myPriority,
           heartbeat: Date.now(),
-        }).catch(function(e) { console.warn("Session write error:", e); });
+        }), 5000);
 
       } catch (e) {
         console.warn("Session check atlandı:", e.message || e);
