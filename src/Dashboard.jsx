@@ -5992,7 +5992,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       editingType: editingType || null,
       lastSeen: Date.now(),
     };
-    setDoc(doc(db, "arge", "_presence"), entry, { merge: true }).catch(() => {});
+    setDoc(doc(db, "arge", "_presence"), entry, { merge: true })
+      .catch((err) => console.error("[PRESENCE] Güncelleme hatası:", err));
   }, [user, role]);
 
   // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
@@ -6000,37 +6001,54 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   // onSnapshot ile tüm değişiklikler anlık yansır.
   // Roller sadece yetki belirler (kim düzenleyebilir, kim görebilir).
   const firestoreReady = useRef(false);
+  const [firestoreStatus, setFirestoreStatus] = useState("connecting"); // "connecting" | "ready" | "error"
   const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
 
   const writeToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current) return;
+    if (!firestoreReady.current) {
+      console.log("[SYNC] firestoreReady=false, yazma atlandı:", docId);
+      return;
+    }
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
+    console.log("[SYNC] Firestore'a yazılıyor:", docId);
     setSaveIndicator("saving");
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
       .then(() => {
+        console.log("[SYNC] Yazma başarılı:", docId);
         setLastSavedAt(new Date());
         setSaveIndicator("saved");
         setTimeout(() => setSaveIndicator("idle"), 2000);
       })
-      .catch(err => console.warn("Firestore yazma hatası:", docId, err));
-  }, []); // dependency yok — ref kullanıyor, stale olmaz
+      .catch(err => {
+        console.error("[SYNC] YAZMA HATASI:", docId, err);
+        setSaveIndicator("idle");
+      });
+  }, []);
 
   const writeConfigToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current) return;
+    if (!firestoreReady.current) {
+      console.log("[SYNC] firestoreReady=false, config yazma atlandı:", docId);
+      return;
+    }
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
+    console.log("[SYNC] Config yazılıyor:", docId);
     setSaveIndicator("saving");
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
       .then(() => {
+        console.log("[SYNC] Config yazma başarılı:", docId);
         setLastSavedAt(new Date());
         setSaveIndicator("saved");
         setTimeout(() => setSaveIndicator("idle"), 2000);
       })
-      .catch(err => console.warn("Firestore config yazma hatası:", docId, err));
-  }, []); // dependency yok — ref kullanıyor
+      .catch(err => {
+        console.error("[SYNC] CONFIG YAZMA HATASI:", docId, err);
+        setSaveIndicator("idle");
+      });
+  }, []);
 
   // ─── Ana veri state'leri (başlangıçta default, Firestore'dan güncellenecek) ───
   const [researchers, setResearchers] = useState(initialResearchers);
@@ -6158,7 +6176,10 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   // Otomatik senkronizasyon — her 10 saniyede Firestore SUNUCUSUNDAN güncelle
   useEffect(() => {
     const interval = setInterval(async () => {
-      if (!firestoreReady.current) return;
+      if (!firestoreReady.current) {
+        console.log("[AUTO-SYNC] firestoreReady=false, atlanıyor");
+        return;
+      }
       try {
         const reads = [
           { id: "researchers", setter: setResearchers, isConfig: false },
@@ -6173,6 +6194,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           { id: "cfg_degrees", setter: setEduDegreeOptions, isConfig: true },
           { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
         ];
+        let updatedCount = 0;
         for (const { id, setter, isConfig } of reads) {
           const snap = await getDoc(doc(db, "arge", id));
           if (snap.exists()) {
@@ -6182,12 +6204,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               const json = JSON.stringify(val);
               if (lastJson.current[id] !== json) {
                 lastJson.current[id] = json;
+                updatedCount++;
                 setter(val);
               }
             }
           }
         }
-      } catch (err) { console.warn("Auto-sync error:", err); }
+        if (updatedCount > 0) console.log("[AUTO-SYNC] " + updatedCount + " doküman güncellendi");
+      } catch (err) { console.error("[AUTO-SYNC] HATA:", err); }
     }, 10000); // 10 saniyede bir otomatik güncelle
     return () => clearInterval(interval);
   }, []);
@@ -6214,40 +6238,56 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const unsubs = [];
     const readyDocs = new Set();
 
+    const markReady = (docId) => {
+      if (!readyDocs.has(docId)) {
+        readyDocs.add(docId);
+        console.log("[SYNC] Doc hazır:", docId, "(" + readyDocs.size + "/11)");
+        if (readyDocs.size >= 11) {
+          firestoreReady.current = true;
+          setFirestoreStatus("ready");
+          console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
+        }
+      }
+    };
+
     const listen = (docId, setter, fallback, isConfig) => {
       const unsub = onSnapshot(doc(db, "arge", docId), (snap) => {
         if (snap.exists()) {
           const d = snap.data();
           const val = isConfig ? d.data : d.items;
           if (val !== undefined) {
-            // JSON karşılaştır — aynıysa setter çağırma (gereksiz re-render engelle)
             const json = JSON.stringify(val);
             if (lastJson.current[docId] !== json) {
               lastJson.current[docId] = json;
               setter(val);
+              console.log("[SYNC] onSnapshot güncelleme:", docId);
             }
           }
         } else {
-          // Doküman yok — default veriyi yaz (ilk kurulum)
+          console.log("[SYNC] Doküman yok, varsayılan yazılıyor:", docId);
           const payload = isConfig
             ? { data: fallback, updatedAt: Date.now() }
             : { items: fallback, updatedAt: Date.now() };
           lastJson.current[docId] = JSON.stringify(fallback);
           setDoc(doc(db, "arge", docId), payload).catch(() => {});
         }
-        if (!readyDocs.has(docId)) {
-          readyDocs.add(docId);
-          if (readyDocs.size >= 11) firestoreReady.current = true;
-        }
+        markReady(docId);
       }, (err) => {
-        console.warn("Firestore dinleme hatası:", docId, err);
-        if (!readyDocs.has(docId)) {
-          readyDocs.add(docId);
-          if (readyDocs.size >= 11) firestoreReady.current = true;
-        }
+        console.error("[SYNC] ❌ Dinleme HATASI:", docId, err);
+        setFirestoreStatus("error");
+        markReady(docId);
       });
       unsubs.push(unsub);
     };
+
+    // Fallback: 5 saniye sonra firestoreReady'yi zorla
+    const readyTimeout = setTimeout(() => {
+      if (!firestoreReady.current) {
+        console.warn("[SYNC] ⚠️ 5s timeout — firestoreReady zorlanıyor (" + readyDocs.size + "/11 hazır)");
+        firestoreReady.current = true;
+        setFirestoreStatus(readyDocs.size > 0 ? "ready" : "error");
+      }
+    }, 5000);
 
     listen("researchers", setResearchers, initialResearchers, false);
     listen("topics", setTopics, initialTopics, false);
@@ -6284,7 +6324,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       section: null, editingId: null, editingType: null,
       lastSeen: Date.now(),
     };
-    setDoc(doc(db, "arge", "_presence"), initEntry, { merge: true }).catch(() => {});
+    setDoc(doc(db, "arge", "_presence"), initEntry, { merge: true })
+      .then(() => console.log("[PRESENCE] İlk presence yazıldı"))
+      .catch((err) => console.error("[PRESENCE] İlk yazma HATASI:", err));
 
     // Heartbeat — 20 saniyede bir presence güncelle
     const presenceInterval = setInterval(() => {
@@ -6298,31 +6340,31 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         editingType: myPresence.current.editingType,
         lastSeen: Date.now(),
       };
-      setDoc(doc(db, "arge", "_presence"), entry, { merge: true }).catch(() => {});
+      setDoc(doc(db, "arge", "_presence"), entry, { merge: true })
+        .catch((err) => console.error("[PRESENCE] Heartbeat hatası:", err));
     }, 20000);
 
     // Diğer kullanıcıları dinle
     const presenceUnsub = onSnapshot(doc(db, "arge", "_presence"), (snap) => {
-      if (!snap.exists()) return;
+      if (!snap.exists()) {
+        console.log("[PRESENCE] _presence dokümanı yok");
+        return;
+      }
       const all = snap.data();
       const now = Date.now();
       const active = {};
-      // Aynı kullanıcıdan birden fazla tab olabilir — username bazlı birleştir
-      const byUser = {};
+      const totalEntries = Object.keys(all).length;
       Object.entries(all).forEach(([tid, info]) => {
         if (!info || !info.lastSeen) return;
-        // 60 saniyeden eski → çevrimdışı say
         if (now - info.lastSeen > 60000) return;
-        // Kendimi hariç tut
         if (tid === tabId.current) return;
         active[tid] = info;
-        // Kullanıcı bazlı birleştir (en güncel tab kazanır)
-        const uname = info.username;
-        if (!byUser[uname] || info.lastSeen > byUser[uname].lastSeen) {
-          byUser[uname] = { ...info, tabIds: [...(byUser[uname]?.tabIds || []), tid] };
-        }
       });
+      const activeCount = Object.keys(active).length;
+      console.log("[PRESENCE] Toplam kayıt:", totalEntries, "| Aktif diğer kullanıcı:", activeCount, activeCount > 0 ? Object.values(active).map(u => u.displayName) : "");
       setOnlineUsers(active);
+    }, (err) => {
+      console.error("[PRESENCE] Dinleme HATASI:", err);
     });
 
     // Sayfa kapanınca presence temizle
@@ -6338,6 +6380,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       forceReloadUnsub();
       presenceUnsub();
       clearInterval(presenceInterval);
+      clearTimeout(readyTimeout);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       handleBeforeUnload();
     };
@@ -6743,6 +6786,20 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </button>
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
+          {/* Firestore Connection Status */}
+          {firestoreStatus !== "ready" && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${
+              firestoreStatus === "connecting" ? "bg-yellow-50 text-yellow-600 animate-pulse" : "bg-red-50 text-red-600"
+            }`} title="Firestore bağlantı durumu">
+              <div className={`w-2 h-2 rounded-full ${firestoreStatus === "connecting" ? "bg-yellow-400" : "bg-red-400"}`} />
+              {firestoreStatus === "connecting" ? "Bağlanıyor..." : "Bağlantı Hatası"}
+            </div>
+          )}
+          {firestoreStatus === "ready" && (
+            <div className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-emerald-500" title="Firestore bağlı — gerçek zamanlı senkronizasyon aktif">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            </div>
+          )}
           {/* Sync Button */}
           {/* Save Indicator */}
           {canEdit && saveIndicator !== "idle" && (
