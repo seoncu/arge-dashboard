@@ -4836,6 +4836,7 @@ export default function ArGeDashboard() {
   const [projectStatusFilter, setProjectStatusFilter] = useState("");
   const [projectPriorityFilter, setProjectPriorityFilter] = useState("");
   const [researcherDeptFilter, setResearcherDeptFilter] = useState("");
+  const [aofMemberFilter, setAofMemberFilter] = useState("");
   // Advanced filters
   const [showAdvRes, setShowAdvRes] = useState(false);
   const [showResearcherStats, setShowResearcherStats] = useState(false);
@@ -5064,6 +5065,8 @@ export default function ArGeDashboard() {
     const filtered = researchers.filter(r => {
       if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase()) && !r.researchAreas.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())) && !r.institution?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (researcherDeptFilter && r.institution !== researcherDeptFilter) return false;
+      if (aofMemberFilter === "aof" && !r.isAofMember) return false;
+      if (aofMemberFilter === "other" && r.isAofMember) return false;
       if (advRes.unit && !(r.unit || "").toLowerCase().includes(advRes.unit.toLowerCase())) return false;
       if (advRes.degree && r.eduDegree !== advRes.degree) return false;
       if (advRes.status && r.eduStatus !== advRes.status) return false;
@@ -5075,20 +5078,22 @@ export default function ArGeDashboard() {
     const hasAnyActive = filtered.some(r => getActiveWorkCount(r.id) > 0);
     if (!hasAnyActive) return filtered;
     return filtered.sort((a, b) => getActiveWorkCount(b.id) - getActiveWorkCount(a.id));
-  }, [researchers, topics, searchQuery, researcherDeptFilter, advRes, getActiveWorkCount]);
+  }, [researchers, topics, searchQuery, researcherDeptFilter, aofMemberFilter, advRes, getActiveWorkCount]);
   const researcherColumnStats = useMemo(() => {
+    const aofIds = aofMemberFilter ? new Set(researchers.filter(r => aofMemberFilter === "aof" ? r.isAofMember : !r.isAofMember).map(r => r.id)) : null;
+    const matchAof = (rid) => !aofIds || aofIds.has(rid);
     const uniqueResInTopics = (status) => {
       const ids = new Set();
-      topics.filter(t => t.status === status).forEach(t => (t.researchers || []).forEach(r => ids.add(r.researcherId)));
+      topics.filter(t => t.status === status).forEach(t => (t.researchers || []).forEach(r => { if (matchAof(r.researcherId)) ids.add(r.researcherId); }));
       return ids.size;
     };
     const uniqueResInProjects = (status) => {
       const ids = new Set();
       projects.filter(p => p.status === status).forEach(p => {
-        (p.researchers || []).forEach(r => ids.add(r.researcherId));
+        (p.researchers || []).forEach(r => { if (matchAof(r.researcherId)) ids.add(r.researcherId); });
         (p.topics || []).forEach(tid => {
           const t = topics.find(x => x.id === tid);
-          if (t) (t.researchers || []).forEach(r => ids.add(r.researcherId));
+          if (t) (t.researchers || []).forEach(r => { if (matchAof(r.researcherId)) ids.add(r.researcherId); });
         });
       });
       return ids.size;
@@ -5101,7 +5106,7 @@ export default function ArGeDashboard() {
       activeProjectRes: uniqueResInProjects("active"),
       completedProjectRes: uniqueResInProjects("completed"),
     };
-  }, [topics, projects]);
+  }, [topics, projects, researchers, aofMemberFilter]);
   const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
   const filteredTopics = useMemo(() => {
     const filtered = topics.filter(t => {
@@ -5316,9 +5321,16 @@ export default function ArGeDashboard() {
                 <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>
               </div>
             </div>
-            <FilterDropdown label="Kurum" icon={Building2}
-              options={institutions.map(d => ({ value: d, label: d.length > 20 ? d.slice(0, 20) + "..." : d }))}
-              value={researcherDeptFilter} onChange={setResearcherDeptFilter} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <FilterDropdown label="Kurum" icon={Building2}
+                options={institutions.map(d => ({ value: d, label: d.length > 20 ? d.slice(0, 20) + "..." : d }))}
+                value={researcherDeptFilter} onChange={setResearcherDeptFilter} />
+              <div className="flex items-center border border-teal-200 rounded-lg overflow-hidden">
+                <button onClick={() => setAofMemberFilter("")} className={`px-2 py-1 text-[10px] font-medium transition-colors ${!aofMemberFilter ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Tümü</button>
+                <button onClick={() => setAofMemberFilter("aof")} className={`px-2 py-1 text-[10px] font-medium transition-colors border-l border-teal-200 ${aofMemberFilter === "aof" ? "bg-teal-500 text-white" : "bg-white text-teal-600 hover:bg-teal-50"}`}>AÖF</button>
+                <button onClick={() => setAofMemberFilter("other")} className={`px-2 py-1 text-[10px] font-medium transition-colors border-l border-teal-200 ${aofMemberFilter === "other" ? "bg-teal-500 text-white" : "bg-white text-slate-500 hover:bg-teal-50"}`}>Diğer</button>
+              </div>
+            </div>
             {showAdvRes && (
               <div className="bg-indigo-50/50 rounded-lg p-2.5 space-y-2 border border-indigo-100">
                 <div className="flex items-center justify-between">
