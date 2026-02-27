@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, getDoc, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -1043,7 +1043,7 @@ const Toast = ({ message, type = "success", onClose }) => {
 };
 
 // ─── RESEARCHER CARD (Compact — just name shown, click for full profile) ──
-const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized }) => {
+const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized, editingBy }) => {
   const myTopics = (topics || []).filter(t => t.researchers.some(r => r.researcherId === researcher.id));
   const proposedCount = myTopics.filter(t => t.status === "proposed").length;
   const activeCount = myTopics.filter(t => t.status === "active").length;
@@ -1063,9 +1063,17 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized }) => 
         e.dataTransfer.effectAllowed = "copy";
       }}
       onClick={(e) => { e.stopPropagation(); onClick(researcher); }}
-      className={`bg-white rounded-xl border border-slate-200 cursor-grab active:cursor-grabbing
-        hover:shadow-md hover:border-indigo-200 transition-all duration-200 group ${maximized ? "p-4" : "p-3"}`}
+      className={`bg-white rounded-xl border cursor-grab active:cursor-grabbing
+        hover:shadow-md transition-all duration-200 group relative ${maximized ? "p-4" : "p-3"} ${
+        editingBy ? `${editingBy.color.border} border-2 ring-1 ${editingBy.color.ring} shadow-md` : "border-slate-200 hover:border-indigo-200"
+      }`}
     >
+      {editingBy && (
+        <div className={`absolute -top-2.5 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold text-white ${editingBy.color.bg} shadow-sm z-10`}>
+          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+          {editingBy.displayName} düzenliyor
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <div className="relative">
           <Avatar name={researcher.name} color={researcher.color} size="md" />
@@ -1112,7 +1120,7 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized }) => 
 };
 
 // ─── RESEARCHER DETAIL MODAL (Full profile) ──────────────
-const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose, onUpdate, onSelectTopic, onDeleteResearcher }) => {
+const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose, onUpdate, onSelectTopic, onDeleteResearcher, editingBy }) => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...researcher });
   const ef = (key, val) => setForm({ ...form, [key]: val });
@@ -1139,6 +1147,12 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
       <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
         md:w-[580px] md:max-h-[85vh] bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
 
+        {editingBy && (
+          <div className={`flex items-center gap-2 px-4 py-2 text-xs font-medium text-white ${editingBy.color.bg}`}>
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span>{editingBy.displayName} de bu profili düzenliyor</span>
+          </div>
+        )}
         {/* Header with avatar — all inside gradient */}
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-5 relative flex-shrink-0">
           <div className="absolute top-3 right-3 flex gap-1.5">
@@ -1557,7 +1571,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
 };
 
 // ─── TOPIC CARD ───────────────────────────────────────────
-const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, onRemoveFromProject, maximized }) => {
+const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, onRemoveFromProject, maximized, editingBy }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[topic.status] || statusConfig.proposed;
   const prCfg = priorityConfig[topic.priority] || priorityConfig.medium;
@@ -1566,7 +1580,9 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
   const linkedProject = isProjected ? (projects || []).find(p => (p.topics || []).includes(topic.id)) : null;
   const cardStyle = getCardStyle(topic.status, topic.endDate);
   const baseBg = isProjected ? "bg-slate-100 opacity-80 hover:opacity-100" : cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
-  const baseBorder = dragOver ? "border-indigo-400 bg-indigo-50 shadow-lg ring-2 ring-indigo-200" : isProjected ? "border-slate-300" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-indigo-200";
+  const baseBorder = editingBy
+    ? `${editingBy.color.border} border-2 ring-1 ${editingBy.color.ring} shadow-md`
+    : dragOver ? "border-indigo-400 bg-indigo-50 shadow-lg ring-2 ring-indigo-200" : isProjected ? "border-slate-300" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-indigo-200";
   return (
     <div
       draggable={isAdmin}
@@ -1575,8 +1591,14 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setDragOver(false); const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id"); if (type === "researcher") onDrop(topic.id, id, e); }}
       onClick={() => onClick(topic)}
-      className={`rounded-xl border cursor-pointer transition-all duration-200 ${baseBg} ${baseBorder} ${maximized ? "p-4" : "p-3"}`}
+      className={`rounded-xl border cursor-pointer transition-all duration-200 relative ${baseBg} ${baseBorder} ${maximized ? "p-4" : "p-3"}`}
     >
+      {editingBy && (
+        <div className={`absolute -top-2.5 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold text-white ${editingBy.color.bg} shadow-sm z-10`}>
+          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+          {editingBy.displayName} düzenliyor
+        </div>
+      )}
       {cardStyle && !isProjected && (
         <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg ${cardStyle.labelClass}`}>
           <span className="text-xs">{cardStyle.icon}</span>
@@ -1637,7 +1659,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
 };
 
 // ─── PROJECT CARD ─────────────────────────────────────────
-const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject, isAdmin, maximized }) => {
+const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject, isAdmin, maximized, editingBy }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[project.status] || statusConfig.planning;
   const prCfg = priorityConfig[project.priority] || priorityConfig.medium;
@@ -1656,7 +1678,9 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
   }, [project.piCountry, project.partnerCountries]);
   const cardStyle = getCardStyle(project.status, project.endDate);
   const pBg = cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
-  const pBorder = dragOver ? "border-emerald-400 bg-emerald-50 shadow-lg ring-2 ring-emerald-200" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-emerald-200";
+  const pBorder = editingBy
+    ? `${editingBy.color.border} border-2 ring-1 ${editingBy.color.ring} shadow-md`
+    : dragOver ? "border-emerald-400 bg-emerald-50 shadow-lg ring-2 ring-emerald-200" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-emerald-200";
 
   return (
     <div
@@ -1664,8 +1688,14 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id"); if (type === "topic") onDrop(project.id, id); }}
       onClick={() => onClick(project)}
-      className={`rounded-xl border cursor-pointer transition-all duration-200 ${pBg} ${pBorder} ${maximized ? "p-4" : "p-3"}`}
+      className={`rounded-xl border cursor-pointer transition-all duration-200 relative ${pBg} ${pBorder} ${maximized ? "p-4" : "p-3"}`}
     >
+      {editingBy && (
+        <div className={`absolute -top-2.5 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold text-white ${editingBy.color.bg} shadow-sm z-10`}>
+          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+          {editingBy.displayName} düzenliyor
+        </div>
+      )}
       {cardStyle && (
         <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg ${cardStyle.labelClass}`}>
           <span className="text-xs">{cardStyle.icon}</span>
@@ -1727,7 +1757,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
 };
 
 // ─── DETAIL MODAL (Topic & Project) ──────────────────────
-const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, onClose, onUpdate, onSelectResearcher, onSelectTopic, onRemoveFromProject, onCancelProject, onDeleteTopic }) => {
+const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, onClose, onUpdate, onSelectResearcher, onSelectTopic, onRemoveFromProject, onCancelProject, onDeleteTopic, editingBy }) => {
   const knownInsts = useMemo(() => getKnownInstitutions(projects), [projects]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editing, setEditing] = useState(false);
@@ -1783,6 +1813,12 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
     <>
       <div className="fixed inset-0 bg-black/40 z-50 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+        {editingBy && (
+          <div className={`flex items-center gap-2 px-4 py-2 text-xs font-medium text-white ${editingBy.color.bg}`}>
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            <span>{editingBy.displayName} de bu öğeyi düzenliyor</span>
+          </div>
+        )}
         <div className="p-5 border-b border-slate-100">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -5925,130 +5961,44 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin" || isMaster;
   const isEditor = role === "editor";
   const canEdit = isAdmin || isEditor; // araştırmacı/konu/proje düzenleyebilir
-  const [kickedOut, setKickedOut] = useState(false);
-  const [kickedByUser, setKickedByUser] = useState("");
-  const [kickedByRole, setKickedByRole] = useState("");
   const [forceReloading, setForceReloading] = useState(false);
-  const sessionId = useRef(user?.sessionId || Math.random().toString(36).slice(2, 10));
-  const heartbeatRef = useRef(null);
-  const inactivityRef = useRef(null);
-  const kickedRef = useRef(false); // heartbeat'i durdurmak için ref
-  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 dakika
   const forcePublishRef = useRef(null);
-  const myPriority = role === "master" ? 4 : role === "admin" ? 3 : role === "editor" ? 2 : 1;
+  const tabId = useRef(Date.now() + "_" + Math.random().toString(36).slice(2));
 
-  // ─── Session verisini oluştur ───
-  const buildSessionData = useCallback(() => {
-    return {
-      sessionId: sessionId.current,
-      user: user?.displayName || "Kullanıcı",
+  // ─── Presence (Google Docs tarzı canlı gösterge) ───
+  // Renk paleti — her kullanıcıya benzersiz renk
+  const PRESENCE_COLORS = useMemo(() => [
+    { bg: "bg-blue-500", ring: "ring-blue-400", text: "text-blue-600", light: "bg-blue-50", border: "border-blue-400" },
+    { bg: "bg-emerald-500", ring: "ring-emerald-400", text: "text-emerald-600", light: "bg-emerald-50", border: "border-emerald-400" },
+    { bg: "bg-orange-500", ring: "ring-orange-400", text: "text-orange-600", light: "bg-orange-50", border: "border-orange-400" },
+    { bg: "bg-pink-500", ring: "ring-pink-400", text: "text-pink-600", light: "bg-pink-50", border: "border-pink-400" },
+    { bg: "bg-cyan-500", ring: "ring-cyan-400", text: "text-cyan-600", light: "bg-cyan-50", border: "border-cyan-400" },
+    { bg: "bg-amber-500", ring: "ring-amber-400", text: "text-amber-600", light: "bg-amber-50", border: "border-amber-400" },
+  ], []);
+  const [onlineUsers, setOnlineUsers] = useState({}); // { tabId: { username, displayName, role, section, editingId, editingType, lastSeen, color } }
+  const presenceRef = useRef(null); // zamanlayıcı temizleme
+  const myPresence = useRef({ section: null, editingId: null, editingType: null });
+
+  // Presence güncelle — Firestore'a yaz (merge: tüm kullanıcılar tek dokümanda)
+  const updatePresence = useCallback((section, editingId, editingType) => {
+    myPresence.current = { section, editingId, editingType };
+    const entry = {};
+    entry[tabId.current] = {
+      username: user?.username || "unknown",
+      displayName: user?.displayName || "Kullanıcı",
       role: role,
-      priority: myPriority,
-      heartbeat: Date.now()
+      section: section || null,
+      editingId: editingId || null,
+      editingType: editingType || null,
+      lastSeen: Date.now(),
     };
-  }, [user, role, myPriority]);
-
-  // ─── Tek Oturum Sistemi (Hiyerarşik) ───
-  //
-  // KURALLAR:
-  // - AuthContext login sırasında hiyerarşiyi kontrol eder:
-  //     alt → REDDEDİLİR (login olmaz)
-  //     eşit/üst → session yazılır, login olur
-  // - Dashboard mount olduğunda: KOŞULSUZ session yaz
-  //   (AuthContext kontrolü geçtiysen hakkın var)
-  // - Heartbeat her 10sn: kickedRef false ise yaz
-  // - onSnapshot: sessionId değişirse ve yeni gelen >= ben → kicked
-  //
-  useEffect(() => {
-    const sessionDocRef = doc(db, "arge", "_active_session");
-
-    // 1) ANINDA session'ı Firestore'a yaz — okuma yok, direkt yaz
-    //    AuthContext login() hiyerarşiyi zaten kontrol etti.
-    //    Buraya geldiysen HAKKIN VAR.
-    setDoc(sessionDocRef, buildSessionData()).catch(function(e) {
-      console.warn("İlk session yazma hatası:", e);
-    });
-
-    // 2) Heartbeat: her 10sn session'ı yenile (kicked değilse)
-    heartbeatRef.current = setInterval(function() {
-      if (kickedRef.current) return; // Atıldım, yazma
-      setDoc(sessionDocRef, buildSessionData()).catch(function(e) {
-        console.warn("Heartbeat hatası:", e);
-      });
-    }, 10000);
-
-    // 3) onSnapshot: başkası session'ı aldığında kick kontrolü
-    const unsub = onSnapshot(sessionDocRef, function(snap) {
-      if (!snap.exists()) return;
-      var s = snap.data();
-      // Session benim mi?
-      if (s.sessionId === sessionId.current) return; // Benim, sorun yok
-
-      // ─── MASTER ÖZEL KORUMA ───
-      // Master SADECE başka bir master tarafından kick edilebilir.
-      // Alt roller master'ı ASLA kick edemez.
-      if (role === "master" && s.role !== "master") {
-        // Alt rol master'ın session'ına yazmaya çalışmış → görmezden gel
-        // Heartbeat 10sn içinde ezecek.
-        return;
-      }
-
-      // Başkasının session'ı — hiyerarşi kontrolü:
-      var otherPriority = s.priority || 0;
-
-      if (otherPriority >= myPriority) {
-        // Gelen benden ÜST veya EŞİT → ben atıldım!
-        kickedRef.current = true;
-        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-        setKickedOut(true);
-        setKickedByUser(s.user || "Bilinmeyen");
-        setKickedByRole(s.role || "viewer");
-      }
-      // Gelen benden ALT → görmezden gel.
-      // Benim heartbeat onu 10sn içinde ezecek.
-      // Onun onSnapshot benim session'ı görecek ve KICK olacak.
-    });
-
-    // 4) Sayfa kapanırken session temizle
-    var cleanup = function() { deleteDoc(sessionDocRef).catch(function() {}); };
-    window.addEventListener("beforeunload", cleanup);
-
-    return function() {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      window.removeEventListener("beforeunload", cleanup);
-      unsub();
-      deleteDoc(sessionDocRef).catch(function() {});
-    };
-  }, [user, role, myPriority, buildSessionData]);
-
-  // ─── 30 Dakika İnaktivite → Sync + Logout ───
-  useEffect(() => {
-    const resetTimer = () => {
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
-      inactivityRef.current = setTimeout(async () => {
-        // Önce verileri Firestore'a kaydet
-        try {
-          if (forcePublishRef.current) await forcePublishRef.current();
-        } catch (e) { console.warn("Auto-sync before logout error:", e); }
-        // Sonra session'ı sil ve logout
-        try {
-          await deleteDoc(doc(db, "arge", "_active_session"));
-        } catch (e) {}
-        onLogout();
-      }, INACTIVITY_TIMEOUT);
-    };
-
-    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
-    events.forEach(ev => window.addEventListener(ev, resetTimer, { passive: true }));
-    resetTimer(); // İlk timer'ı başlat
-
-    return () => {
-      if (inactivityRef.current) clearTimeout(inactivityRef.current);
-      events.forEach(ev => window.removeEventListener(ev, resetTimer));
-    };
-  }, [onLogout]);
+    setDoc(doc(db, "arge", "_presence"), entry, { merge: true }).catch(() => {});
+  }, [user, role]);
 
   // ─── Firestore senkronizasyon (JSON karşılaştırma tabanlı) ───
+  // Notion gibi çoklu kullanıcı: herkes aynı anda giriş yapabilir.
+  // onSnapshot ile tüm değişiklikler anlık yansır.
+  // Roller sadece yetki belirler (kim düzenleyebilir, kim görebilir).
   const firestoreReady = useRef(false);
   const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
 
@@ -6190,7 +6140,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       ]);
       // 2. Force reload sinyali gönder — tüm diğer client'lar bunu dinliyor
       await setDoc(doc(db, "arge", "_force_reload"), {
-        sessionId: sessionId.current,
+        tabId: tabId.current,
         user: user?.displayName || "Admin",
         timestamp: Date.now()
       });
@@ -6317,14 +6267,80 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         const d = snap.data();
         const elapsed = Date.now() - (d.timestamp || 0);
         // Son 10 saniye içinde yayınlandıysa ve bu session'dan değilse → reload
-        if (elapsed < 10000 && d.sessionId !== sessionId.current) {
+        if (elapsed < 10000 && d.tabId !== tabId.current) {
           setForceReloading(true);
           setTimeout(() => window.location.reload(), 2000);
         }
       }
     });
 
-    return () => { unsubs.forEach(fn => fn()); forceReloadUnsub(); };
+    // ─── Presence dinleyicisi (Google Docs tarzı canlı gösterge) ───
+    // İlk presence yazımı
+    const initEntry = {};
+    initEntry[tabId.current] = {
+      username: user?.username || "unknown",
+      displayName: user?.displayName || "Kullanıcı",
+      role: role,
+      section: null, editingId: null, editingType: null,
+      lastSeen: Date.now(),
+    };
+    setDoc(doc(db, "arge", "_presence"), initEntry, { merge: true }).catch(() => {});
+
+    // Heartbeat — 20 saniyede bir presence güncelle
+    const presenceInterval = setInterval(() => {
+      const entry = {};
+      entry[tabId.current] = {
+        username: user?.username || "unknown",
+        displayName: user?.displayName || "Kullanıcı",
+        role: role,
+        section: myPresence.current.section,
+        editingId: myPresence.current.editingId,
+        editingType: myPresence.current.editingType,
+        lastSeen: Date.now(),
+      };
+      setDoc(doc(db, "arge", "_presence"), entry, { merge: true }).catch(() => {});
+    }, 20000);
+
+    // Diğer kullanıcıları dinle
+    const presenceUnsub = onSnapshot(doc(db, "arge", "_presence"), (snap) => {
+      if (!snap.exists()) return;
+      const all = snap.data();
+      const now = Date.now();
+      const active = {};
+      // Aynı kullanıcıdan birden fazla tab olabilir — username bazlı birleştir
+      const byUser = {};
+      Object.entries(all).forEach(([tid, info]) => {
+        if (!info || !info.lastSeen) return;
+        // 60 saniyeden eski → çevrimdışı say
+        if (now - info.lastSeen > 60000) return;
+        // Kendimi hariç tut
+        if (tid === tabId.current) return;
+        active[tid] = info;
+        // Kullanıcı bazlı birleştir (en güncel tab kazanır)
+        const uname = info.username;
+        if (!byUser[uname] || info.lastSeen > byUser[uname].lastSeen) {
+          byUser[uname] = { ...info, tabIds: [...(byUser[uname]?.tabIds || []), tid] };
+        }
+      });
+      setOnlineUsers(active);
+    });
+
+    // Sayfa kapanınca presence temizle
+    const handleBeforeUnload = () => {
+      const entry = {};
+      entry[tabId.current] = { lastSeen: 0 };
+      setDoc(doc(db, "arge", "_presence"), entry, { merge: true }).catch(() => {});
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      unsubs.forEach(fn => fn());
+      forceReloadUnsub();
+      presenceUnsub();
+      clearInterval(presenceInterval);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      handleBeforeUnload();
+    };
   }, []);
 
   // ─── Firestore'a yazma (state değiştiğinde, sadece kullanıcı eylemi sonrası) ───
@@ -6339,6 +6355,52 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   useEffect(() => { writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt, writeConfigToFirestore]);
+
+  // ─── Presence güncelle (düzenleme durumu değiştiğinde) ───
+  useEffect(() => {
+    if (selectedItem && selectedType) {
+      updatePresence(selectedType === "topic" ? "topics" : "projects", selectedItem.id, selectedType);
+    } else if (selectedResearcher) {
+      updatePresence("researchers", selectedResearcher.id, "researcher");
+    } else {
+      updatePresence(null, null, null);
+    }
+  }, [selectedItem, selectedType, selectedResearcher, updatePresence]);
+
+  // ─── Diğer kullanıcıların düzenleme bilgisini hesapla ───
+  const editingByOthers = useMemo(() => {
+    // { itemId: { displayName, role, color } } — her öğe için bakan kişi
+    const map = {};
+    const colorIndex = {};
+    let ci = 0;
+    Object.values(onlineUsers).forEach((u) => {
+      if (!u.editingId) return;
+      if (!colorIndex[u.username]) {
+        colorIndex[u.username] = PRESENCE_COLORS[ci % PRESENCE_COLORS.length];
+        ci++;
+      }
+      map[u.editingId] = {
+        displayName: u.displayName,
+        role: u.role,
+        username: u.username,
+        color: colorIndex[u.username],
+      };
+    });
+    return map;
+  }, [onlineUsers, PRESENCE_COLORS]);
+
+  // Online kullanıcı listesi (benzersiz username bazlı)
+  const onlineUsersList = useMemo(() => {
+    const byUser = {};
+    let ci = 0;
+    Object.values(onlineUsers).forEach((u) => {
+      if (!byUser[u.username] || u.lastSeen > byUser[u.username].lastSeen) {
+        if (!byUser[u.username]) ci++;
+        byUser[u.username] = { ...u, color: PRESENCE_COLORS[(ci - 1) % PRESENCE_COLORS.length] };
+      }
+    });
+    return Object.values(byUser);
+  }, [onlineUsers, PRESENCE_COLORS]);
 
   // Sync module-level config refs for sub-components
   roleConfig = roleConfigSt;
@@ -6708,6 +6770,29 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             title="Ayarlar">
             <Wrench size={18} />
           </button>}
+          {/* Online Users (Google Docs tarzı) */}
+          {onlineUsersList.length > 0 && (
+            <div className="flex items-center gap-1">
+              <div className="flex -space-x-2">
+                {onlineUsersList.slice(0, 4).map((u, i) => (
+                  <div
+                    key={u.username}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${u.color.bg} ring-2 ring-white shadow-sm`}
+                    title={`${u.displayName} (${u.role === "master" ? "Master" : u.role === "admin" ? "Yönetici" : u.role === "editor" ? "Editör" : "Görüntüleyici"})${u.editingId ? " — düzenliyor" : " — çevrimiçi"}`}
+                  >
+                    {(u.displayName || "?")[0]}
+                  </div>
+                ))}
+                {onlineUsersList.length > 4 && (
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 bg-slate-200 ring-2 ring-white">
+                    +{onlineUsersList.length - 4}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 ml-1">{onlineUsersList.length} çevrimiçi</span>
+            </div>
+          )}
+          {onlineUsersList.length > 0 && <div className="w-px h-6 bg-slate-200" />}
           {/* Session Status Indicator */}
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
             isMaster
@@ -6749,25 +6834,6 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         </div>
       </header>
 
-      {/* KICKED OUT OVERLAY — Başka biri oturumu aldığında */}
-      {kickedOut && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${kickedByRole === "master" ? "bg-red-100" : "bg-amber-100"}`}>
-              {kickedByRole === "master" ? <span className="text-3xl">👑</span> : <AlertTriangle size={32} className="text-amber-500" />}
-            </div>
-            <h2 className="text-lg font-bold text-slate-800">Oturumunuz Sonlandırıldı</h2>
-            <p className="text-sm text-slate-600">
-              <strong className={kickedByRole === "master" ? "text-red-600" : "text-indigo-600"}>{kickedByUser}</strong>
-              {kickedByRole === "master" ? " (Master Yönetici)" : kickedByRole === "admin" ? " (Yönetici)" : ""} giriş yaptı.
-              <span className="block mt-1 text-slate-400 text-xs">Aynı anda yalnızca bir kullanıcı oturum açabilir.</span>
-            </p>
-            <button onClick={onLogout} className="w-full px-4 py-2.5 text-sm font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors">
-              Giriş Ekranına Dön
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* FORCE RELOAD OVERLAY */}
       {forceReloading && (
@@ -6897,7 +6963,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "researchers" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "researchers" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={canEdit} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} />)}
+            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={canEdit} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} editingBy={editingByOthers[r.id]} />)}
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
             </div>
           </div>
@@ -6953,7 +7019,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "topics" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "topics" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={canEdit} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} />)}
+            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={canEdit} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} editingBy={editingByOthers[t.id]} />)}
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
             </div>
           </div>
@@ -7004,7 +7070,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               if (type === "topic") handleCreateProjectFromTopic(id);
             }}>
             <div className={maximizedCol === "projects" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} isAdmin={canEdit} onDrop={handleTopicDropOnProject} onCancelProject={handleCancelProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} maximized={maximizedCol === "projects"} />)}
+            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} isAdmin={canEdit} onDrop={handleTopicDropOnProject} onCancelProject={handleCancelProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} maximized={maximizedCol === "projects"} editingBy={editingByOthers[p.id]} />)}
             {filteredProjects.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Proje bulunamadı</p>}
             </div>
             {projectColDragOver && (
@@ -7021,8 +7087,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* MODALS */}
       {rolePopup && <RoleSelectPopup position={rolePopup.position} onSelect={handleRoleSelect} onCancel={() => setRolePopup(null)} />}
-      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
-      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} />}
+      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} editingBy={editingByOthers[selectedResearcher.id]} />}
+      {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} editingBy={editingByOthers[selectedItem.id]} />}
       {addModal && canEdit && <AddItemModal type={addModal} allTopics={topics} projects={projects} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
       {showCalendar && <CalendarModal topics={topics} projects={projects} onClose={() => setShowCalendar(false)} />}
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}

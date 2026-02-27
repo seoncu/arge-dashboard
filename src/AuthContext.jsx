@@ -1,23 +1,20 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "./firebase";
 
 const AuthContext = createContext(null);
 
 // Basit SHA-256 hash (Web Crypto API)
 async function hashPassword(password) {
-  const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  var msgBuffer = new TextEncoder().encode(password);
+  var hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  var hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
 }
 
-// Rol hiyerarşisi: master(4) > admin(3) > editor(2) > viewer(1)
-const ROLE_PRIORITY = { master: 4, admin: 3, editor: 2, viewer: 1 };
-const ROLE_NAMES = { master: "Master Yönetici", admin: "Yönetici", editor: "Editör", viewer: "Görüntüleyici" };
+// Rol yetkileri: master > admin > editor > viewer
+// Artık hiyerarşi GİRİŞ ENGELİ değil, sadece YETKİ belirler.
+// Herkes aynı anda giriş yapabilir (Notion gibi).
 
-// Kullanıcılar
-const USERS = [
+var USERS = [
   {
     username: "master",
     passwordHash: null,
@@ -48,40 +45,46 @@ const USERS = [
   },
 ];
 
-// Hash'leri başlatmak için (ilk yükleme)
-let usersReady = null;
+// Hash'leri başlatmak için
+var usersReady = null;
 async function getUsers() {
   if (usersReady) return usersReady;
   usersReady = Promise.all(
-    USERS.map(async (u) => ({
-      ...u,
-      passwordHash: await hashPassword(u.plainForInit),
-    }))
+    USERS.map(async function(u) {
+      return {
+        username: u.username,
+        passwordHash: await hashPassword(u.plainForInit),
+        plainForInit: u.plainForInit,
+        role: u.role,
+        displayName: u.displayName,
+      };
+    })
   );
   return usersReady;
 }
 
-// Firestore çağrısına timeout ekle — asılma sorununu çözer
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Firestore zaman aşımı")), ms)
-    ),
-  ]);
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  var _state = useState(null);
+  var user = _state[0];
+  var setUser = _state[1];
+  var _loading = useState(true);
+  var loading = _loading[0];
+  var setLoading = _loading[1];
 
   // Oturum kontrolü (localStorage)
-  useEffect(() => {
-    const saved = localStorage.getItem("arge_auth");
+  useEffect(function() {
+    var saved = localStorage.getItem("arge_auth");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
+        var parsed = JSON.parse(saved);
         if (parsed && parsed.username && parsed.role) {
+          // Eski kayıtlarda tag yoksa ekle
+          if (!parsed.displayName || !parsed.displayName.includes("#")) {
+            var tag = Math.floor(1000 + Math.random() * 9000);
+            parsed.displayName = (parsed.baseDisplayName || parsed.displayName || parsed.username) + " #" + tag;
+            parsed.baseDisplayName = parsed.baseDisplayName || parsed.displayName;
+            localStorage.setItem("arge_auth", JSON.stringify(parsed));
+          }
           setUser(parsed);
         }
       } catch (e) {
@@ -91,75 +94,31 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = async (username, password) => {
+  var login = async function(username, password) {
     try {
-      // 1. Kullanıcı doğrulama (lokal — Firestore'a bağlı değil)
-      const users = await getUsers();
-      const pwHash = await hashPassword(password);
-      const found = users.find(
-        (u) => u.username === username && u.passwordHash === pwHash
-      );
+      var users = await getUsers();
+      var pwHash = await hashPassword(password);
+      var found = users.find(function(u) {
+        return u.username === username && u.passwordHash === pwHash;
+      });
       if (!found) {
         return { success: false, error: "Kullanıcı adı veya şifre hatalı" };
       }
 
-      const myPriority = ROLE_PRIORITY[found.role] || 0;
-      const sessionId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
-      // 2. Hiyerarşik oturum kontrolü (Firestore — 5sn timeout)
-      try {
-        const sessionDocRef = doc(db, "arge", "_active_session");
-        const snap = await withTimeout(getDoc(sessionDocRef), 5000);
-
-        if (snap.exists()) {
-          const s = snap.data();
-          const elapsed = Date.now() - (s.heartbeat || 0);
-          const existingPriority = ROLE_PRIORITY[s.role] || 0;
-
-          // Oturum hâlâ aktif mi? (60sn heartbeat timeout)
-          if (elapsed < 60000) {
-            if (myPriority < existingPriority) {
-              // Alt hiyerarşi — GİRİŞ REDDEDİLDİ
-              var roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
-              var contactWho = s.role === "master" ? "master yöneticinizle" : s.role === "admin" ? "yöneticinizle" : "üst yetkilinizle";
-              return {
-                success: false,
-                error: "Şu anda " + roleName + ", uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da " + contactWho + " görüşün."
-              };
-            }
-            // Aynı veya üst hiyerarşi → öncekini at, oturumu al
-          }
-          // else: heartbeat eski (>60sn), oturum ölü → al
-        }
-
-        // 3. Oturumu Firestore'a kaydet (timeout ile — asılmayı engelle)
-        await withTimeout(setDoc(sessionDocRef, {
-          sessionId: sessionId,
-          user: found.displayName,
-          username: found.username,
-          role: found.role,
-          priority: myPriority,
-          heartbeat: Date.now(),
-        }), 5000);
-
-      } catch (e) {
-        console.warn("Session check atlandı:", e.message || e);
-        // Firestore hatası veya timeout — login'e devam et
-      }
-
-      // 4. Local session oluştur — BU HER ZAMAN ÇALIŞIR
+      // Her giriş benzersiz — aynı hesabı paylaşan kişiler ayırt edilsin
+      var tag = Math.floor(1000 + Math.random() * 9000); // 4 haneli rastgele: 1000-9999
       var session = {
         username: found.username,
         role: found.role,
-        displayName: found.displayName,
-        sessionId: sessionId,
+        displayName: found.displayName + " #" + tag,
+        baseDisplayName: found.displayName,
       };
       setUser(session);
       localStorage.setItem("arge_auth", JSON.stringify(session));
       return { success: true };
 
     } catch (err) {
-      console.error("Login genel hata:", err);
+      console.error("Login hatası:", err);
       return { success: false, error: "Giriş hatası: " + (err.message || "Bilinmeyen hata") };
     }
   };
