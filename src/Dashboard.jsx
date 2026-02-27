@@ -5843,6 +5843,20 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
                   className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
                   <span>👤</span> Uygun Araştırmacı Öner
                 </button>
+                <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
+                  <button onClick={() => handleCatClick("Genel özet")}
+                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-indigo-500 to-violet-400 text-white rounded-lg hover:from-indigo-600 hover:to-violet-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
+                    📊 Genel Özet
+                  </button>
+                  <button onClick={() => handleCatClick("Proje türü dağılımı")}
+                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-violet-500 to-purple-400 text-white rounded-lg hover:from-violet-600 hover:to-purple-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
+                    📋 Proje Dağılımı
+                  </button>
+                  <button onClick={() => handleCatClick("En çok konuya sahip araştırmacılar")}
+                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-purple-500 to-indigo-400 text-white rounded-lg hover:from-purple-600 hover:to-indigo-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
+                    🏆 En Aktifler
+                  </button>
+                </div>
                 {chatCategories.map((cat, ci) => (
                   <div key={ci}>
                     <button onClick={() => cat.subs.length > 0 && handleCatClick(cat.subs[0])}
