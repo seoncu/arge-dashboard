@@ -5700,22 +5700,29 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   // ─── Firestore senkronizasyon yardımcıları ───
   const writeTimers = useRef({});
   const firestoreReady = useRef(false);
+  const pendingWrites = useRef(new Set()); // Yerel değişiklik bekleyenler
   const totalListeners = 11; // 4 veri + 7 config doküman
 
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
+    pendingWrites.current.add(docId);
     if (writeTimers.current[docId]) clearTimeout(writeTimers.current[docId]);
     writeTimers.current[docId] = setTimeout(() => {
-      setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() }).catch(err => console.warn("Firestore yazma hatası:", docId, err));
-    }, 600);
+      setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
+        .then(() => { pendingWrites.current.delete(docId); })
+        .catch(err => { pendingWrites.current.delete(docId); console.warn("Firestore yazma hatası:", docId, err); });
+    }, 300);
   }, []);
 
   const writeConfigToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
+    pendingWrites.current.add(docId);
     if (writeTimers.current[docId]) clearTimeout(writeTimers.current[docId]);
     writeTimers.current[docId] = setTimeout(() => {
-      setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() }).catch(err => console.warn("Firestore config yazma hatası:", docId, err));
-    }, 600);
+      setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
+        .then(() => { pendingWrites.current.delete(docId); })
+        .catch(err => { pendingWrites.current.delete(docId); console.warn("Firestore config yazma hatası:", docId, err); });
+    }, 300);
   }, []);
 
   // ─── Ana veri state'leri (başlangıçta default, Firestore'dan güncellenecek) ───
@@ -5770,6 +5777,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const listen = (docId, setter, fallback, isConfig) => {
       let isFirst = true;
       const unsub = onSnapshot(doc(db, "arge", docId), (snap) => {
+        // Yerel değişiklik bekleniyorsa dışarıdan gelen veriyi yok say
+        if (!isFirst && pendingWrites.current.has(docId)) return;
         if (snap.exists()) {
           const d = snap.data();
           const val = isConfig ? d.data : d.items;
@@ -5783,7 +5792,6 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           isFirst = false;
           firstLoad.add(docId);
           if (firstLoad.size >= totalListeners) {
-            // Tüm dokümanlar yüklendi — artık yazma aktif
             firestoreReady.current = true;
           }
         }
