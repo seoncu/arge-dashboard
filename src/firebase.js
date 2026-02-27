@@ -1,6 +1,6 @@
 // ─── Firebase Konfigürasyonu ───────────────────────────────
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAWQN5caYDCTzl9al4vc85ejhsY4PCZJVM",
@@ -12,10 +12,15 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
-// NOT: enableIndexedDbPersistence KALDIRILDI!
-// Lokal cache, çoklu tarayıcı senkronizasyonunu engelliyor.
-// Persistence olmadan: setDoc → doğrudan sunucu, onSnapshot → sunucudan push, getDoc → sunucudan çek.
+// initializeFirestore ile özel ayarlar:
+// - experimentalAutoDetectLongPolling: WebSocket bloklandığında otomatik Long Polling'e geçer
+//   (üniversite ağları, kurumsal proxy'ler, bazı firewall'lar WebSocket'i engeller)
+// - Persistence KAPALI: lokal cache çoklu tarayıcı senkronizasyonunu engelliyordu
+const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+});
+
+console.log("[FIREBASE] Firestore başlatıldı (autoDetectLongPolling: ON)");
 
 export { db };

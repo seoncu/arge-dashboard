@@ -6098,6 +6098,34 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [lastSavedAt, setLastSavedAt] = useState(null); // Son kayıt zamanı
   const [saveIndicator, setSaveIndicator] = useState("idle"); // "idle" | "saving" | "saved"
 
+  // ─── Bağlantı Testi — Firestore'a yaz ve oku ───
+  const testConnection = useCallback(async () => {
+    const testId = "_conn_test";
+    const testVal = Date.now();
+    console.log("[TEST] Bağlantı testi başlıyor...");
+    setToast({ type: "info", message: "Firestore bağlantı testi..." });
+    try {
+      // 1. Yaz
+      await setDoc(doc(db, "arge", testId), { v: testVal, by: user?.displayName || "?" });
+      console.log("[TEST] Yazma OK:", testVal);
+      // 2. Oku
+      const snap = await getDoc(doc(db, "arge", testId));
+      if (snap.exists() && snap.data().v === testVal) {
+        console.log("[TEST] ✅ Okuma OK — Firestore bağlantısı ÇALIŞIYOR");
+        setToast({ type: "success", message: "✅ Firestore bağlantısı çalışıyor! Yazma ve okuma başarılı." });
+        setFirestoreStatus("ready");
+        firestoreReady.current = true;
+      } else {
+        console.error("[TEST] ❌ Okuma başarısız — yazılan değer okunamadı");
+        setToast({ type: "error", message: "❌ Firestore yazma tamam ama okuma başarısız!" });
+      }
+    } catch (err) {
+      console.error("[TEST] ❌ Bağlantı testi BAŞARISIZ:", err);
+      setToast({ type: "error", message: "❌ Firestore bağlantı hatası: " + err.message });
+      setFirestoreStatus("error");
+    }
+  }, [user]);
+
   // ─── Manuel Senkronizasyon (Yayınla/Güncelle) ───
   const forceSync = useCallback(async () => {
     setSyncStatus("syncing");
@@ -6212,7 +6240,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         }
         if (updatedCount > 0) console.log("[AUTO-SYNC] " + updatedCount + " doküman güncellendi");
       } catch (err) { console.error("[AUTO-SYNC] HATA:", err); }
-    }, 10000); // 10 saniyede bir otomatik güncelle
+    }, 5000); // 5 saniyede bir otomatik güncelle
     return () => clearInterval(interval);
   }, []);
 
@@ -6786,20 +6814,21 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </button>
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
-          {/* Firestore Connection Status */}
-          {firestoreStatus !== "ready" && (
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium ${
-              firestoreStatus === "connecting" ? "bg-yellow-50 text-yellow-600 animate-pulse" : "bg-red-50 text-red-600"
-            }`} title="Firestore bağlantı durumu">
-              <div className={`w-2 h-2 rounded-full ${firestoreStatus === "connecting" ? "bg-yellow-400" : "bg-red-400"}`} />
-              {firestoreStatus === "connecting" ? "Bağlanıyor..." : "Bağlantı Hatası"}
-            </div>
-          )}
-          {firestoreStatus === "ready" && (
-            <div className="flex items-center gap-1 px-1.5 py-1 text-[10px] text-emerald-500" title="Firestore bağlı — gerçek zamanlı senkronizasyon aktif">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            </div>
-          )}
+          {/* Firestore Connection Status — tıklayınca bağlantı testi yapar */}
+          <button onClick={testConnection} className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all hover:shadow-sm ${
+            firestoreStatus === "connecting" ? "bg-yellow-50 text-yellow-600 animate-pulse hover:bg-yellow-100"
+              : firestoreStatus === "error" ? "bg-red-50 text-red-600 hover:bg-red-100"
+              : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+          }`} title="Tıklayın: Firestore bağlantı testi yapılır">
+            <div className={`w-2 h-2 rounded-full ${
+              firestoreStatus === "connecting" ? "bg-yellow-400"
+                : firestoreStatus === "error" ? "bg-red-400"
+                : "bg-emerald-400"
+            }`} />
+            {firestoreStatus === "connecting" ? "Bağlanıyor..."
+              : firestoreStatus === "error" ? "Hata! (Test Et)"
+              : "Bağlı"}
+          </button>
           {/* Sync Button */}
           {/* Save Indicator */}
           {canEdit && saveIndicator !== "idle" && (
