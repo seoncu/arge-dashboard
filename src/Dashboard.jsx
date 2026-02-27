@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, getDoc, getDocFromServer, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, deleteDoc } from "firebase/firestore";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -6120,7 +6120,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
       ];
       for (const { id, setter, isConfig } of reads) {
-        const snap = await getDocFromServer(doc(db, "arge", id));
+        const snap = await getDoc(doc(db, "arge", id));
         if (snap.exists()) {
           const d = snap.data();
           const val = isConfig ? d.data : d.items;
@@ -6195,7 +6195,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
         ];
         for (const { id, setter, isConfig } of reads) {
-          const snap = await getDocFromServer(doc(db, "arge", id));
+          const snap = await getDoc(doc(db, "arge", id));
           if (snap.exists()) {
             const d = snap.data();
             const val = isConfig ? d.data : d.items;
