@@ -2697,7 +2697,7 @@ const SettingsModal = ({
   onResetDefaults, onClose,
   onExportData, onImportData, onResetAllData,
   quickLinks, onQuickLinksChange,
-  onForceSync, syncStatus
+  onForceSync, syncStatus, onForcePublish
 }) => {
   const [activeTab, setActiveTab] = useState("roles");
   const fileInputRef = useRef(null);
@@ -3125,6 +3125,16 @@ const SettingsModal = ({
                   className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-all flex items-center gap-2 ${syncStatus === "syncing" ? "bg-indigo-400 cursor-not-allowed" : syncStatus === "done" ? "bg-emerald-500" : "bg-indigo-500 hover:bg-indigo-600"}`}>
                   <RefreshCw size={14} className={syncStatus === "syncing" ? "animate-spin" : ""} />
                   {syncStatus === "syncing" ? "Senkronize ediliyor..." : syncStatus === "done" ? "Senkronize edildi!" : "Senkronize Et"}
+                </button>
+              </div>
+
+              {/* Zorunlu Yayınla */}
+              <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2"><Upload size={15} />Zorunlu Yayınla</h4>
+                <p className="text-xs text-amber-600 mb-3">Tüm verileri Firestore'a yazar ve açık olan tüm ekranlara "Sayfa Güncelleniyor" bildirimi gönderip sayfayı yeniler. Senkronizasyon sorunu yaşanıyorsa kullanın.</p>
+                <button onClick={onForcePublish}
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2">
+                  <Upload size={14} />Tüm Ekranlara Yayınla
                 </button>
               </div>
 
@@ -5914,6 +5924,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin";
   const [sessionBlocked, setSessionBlocked] = useState(false);
   const [activeSessionUser, setActiveSessionUser] = useState(null);
+  const [viewOnlyMode, setViewOnlyMode] = useState(false);
+  const [forceReloading, setForceReloading] = useState(false);
   const sessionId = useRef(Math.random().toString(36).slice(2, 10));
   const heartbeatRef = useRef(null);
 
@@ -6016,22 +6028,22 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
 
   const writeToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current) return;
+    if (!firestoreReady.current || viewOnlyMode) return;
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore yazma hatası:", docId, err));
-  }, []);
+  }, [viewOnlyMode]);
 
   const writeConfigToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current) return;
+    if (!firestoreReady.current || viewOnlyMode) return;
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore config yazma hatası:", docId, err));
-  }, []);
+  }, [viewOnlyMode]);
 
   // ─── Ana veri state'leri (başlangıçta default, Firestore'dan güncellenecek) ───
   const [researchers, setResearchers] = useState(initialResearchers);
@@ -6135,6 +6147,39 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     }
   }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt]);
 
+  // ─── Zorunlu Yayınla — tüm client'lara bildirim gönder ───
+  const forcePublish = useCallback(async () => {
+    setSyncStatus("syncing");
+    try {
+      // 1. Tüm verileri Firestore'a yaz
+      await Promise.all([
+        setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
+      ]);
+      // 2. Force reload sinyali gönder — tüm diğer client'lar bunu dinliyor
+      await setDoc(doc(db, "arge", "_force_reload"), {
+        sessionId: sessionId.current,
+        user: user?.displayName || "Admin",
+        timestamp: Date.now()
+      });
+      setSyncStatus("done");
+      setToast({ type: "success", message: "Veriler yayınlandı! Tüm ekranlar güncelleniyor..." });
+      setTimeout(() => setSyncStatus("idle"), 3000);
+    } catch (err) {
+      setSyncStatus("idle");
+      setToast({ type: "error", message: "Yayınlama hatası: " + err.message });
+    }
+  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+
   // Otomatik senkronizasyon — her 30 saniyede Firestore'dan güncelle
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -6223,7 +6268,21 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     listen("cfg_categories", setCategoryOptions, DEFAULT_CATEGORY_OPTIONS, true);
     listen("cfg_degrees", setEduDegreeOptions, DEFAULT_EDU_DEGREES, true);
     listen("cfg_edustatus", setEduStatusOptions, DEFAULT_EDU_STATUSES, true);
-    return () => unsubs.forEach(fn => fn());
+
+    // ─── Force Reload dinleyicisi ───
+    const forceReloadUnsub = onSnapshot(doc(db, "arge", "_force_reload"), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        const elapsed = Date.now() - (d.timestamp || 0);
+        // Son 10 saniye içinde yayınlandıysa ve bu session'dan değilse → reload
+        if (elapsed < 10000 && d.sessionId !== sessionId.current) {
+          setForceReloading(true);
+          setTimeout(() => window.location.reload(), 2000);
+        }
+      }
+    });
+
+    return () => { unsubs.forEach(fn => fn()); forceReloadUnsub(); };
   }, []);
 
   // ─── Firestore'a yazma (state değiştiğinde, sadece kullanıcı eylemi sonrası) ───
@@ -6580,6 +6639,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </button>
             {showQuickLinks && <QuickLinksPanel links={quickLinks} onChange={setQuickLinks} onClose={() => setShowQuickLinks(false)} />}
           </div>
+          {/* Sync Button */}
+          {isAdmin && !viewOnlyMode && <button onClick={forceSync} disabled={syncStatus === "syncing"}
+            className={`p-2 rounded-lg transition-all ${syncStatus === "done" ? "bg-emerald-100 text-emerald-600" : syncStatus === "syncing" ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-500"}`}
+            title="Senkronize Et">
+            <RefreshCw size={18} className={syncStatus === "syncing" ? "animate-spin" : ""} />
+          </button>}
           {/* Settings Button */}
           {isAdmin && <button onClick={() => { setShowSettings(true); setShowDeadlines(false); }}
             className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
@@ -6603,7 +6668,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       </header>
 
       {/* SESSION LOCK OVERLAY */}
-      {sessionBlocked && isAdmin && (
+      {sessionBlocked && isAdmin && !viewOnlyMode && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
@@ -6618,12 +6683,33 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
                 Çıkış Yap
               </button>
-              <button onClick={forceClaimSession} className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors">
-                Yine de Devam Et
+              <button onClick={() => { setViewOnlyMode(true); setSessionBlocked(false); }} className="px-4 py-2 text-sm font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors flex items-center gap-2">
+                <Eye size={14} /> Görüntüleme Modunda Devam Et
               </button>
             </div>
-            <p className="text-[10px] text-slate-400">Diğer kullanıcı çıkış yaptığında oturum otomatik açılacaktır.</p>
+            <p className="text-[10px] text-slate-400">Görüntüleme modunda verileri görebilir ancak düzenleyemezsiniz. Diğer kullanıcının değişiklikleri otomatik yansır.</p>
           </div>
+        </div>
+      )}
+
+      {/* FORCE RELOAD OVERLAY */}
+      {forceReloading && (
+        <div className="fixed inset-0 z-[60] bg-gradient-to-br from-indigo-900/90 to-purple-900/90 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto">
+              <RefreshCw size={32} className="text-indigo-500 animate-spin" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-800">Sayfa Güncelleniyor</h2>
+            <p className="text-sm text-slate-500">Yönetici verileri yayınladı. Sayfa yeniden yükleniyor...</p>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW-ONLY BANNER */}
+      {viewOnlyMode && (
+        <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center justify-center gap-2 flex-shrink-0">
+          <Eye size={14} className="text-amber-600" />
+          <span className="text-xs font-medium text-amber-700">Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor. Değişiklikler otomatik yansır.</span>
         </div>
       )}
 
@@ -6937,7 +7023,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           setEduStatusOptions(DEFAULT_EDU_STATUSES);
           showToast("Tüm veriler sıfırlandı", "warning");
         }}
-        onForceSync={forceSync} syncStatus={syncStatus}
+        onForceSync={forceSync} syncStatus={syncStatus} onForcePublish={forcePublish}
         onClose={() => setShowSettings(false)}
       />}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
