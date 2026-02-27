@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
         if (parsed && parsed.username && parsed.role) {
           setUser(parsed);
         }
-      } catch {
+      } catch (e) {
         localStorage.removeItem("arge_auth");
       }
     }
@@ -82,68 +82,73 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (username, password) => {
-    // 1. Kullanıcı doğrulama
-    const users = await getUsers();
-    const pwHash = await hashPassword(password);
-    const found = users.find(
-      (u) => u.username === username && u.passwordHash === pwHash
-    );
-    if (!found) {
-      return { success: false, error: "Kullanıcı adı veya şifre hatalı" };
-    }
-
-    const myPriority = ROLE_PRIORITY[found.role] || 0;
-    const sessionId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
-    // 2. Hiyerarşik oturum kontrolü (Firestore)
     try {
-      const sessionDocRef = doc(db, "arge", "_active_session");
-      const snap = await getDoc(sessionDocRef);
-
-      if (snap.exists()) {
-        const s = snap.data();
-        const elapsed = Date.now() - (s.heartbeat || 0);
-        const existingPriority = ROLE_PRIORITY[s.role] || 0;
-
-        // Oturum hâlâ aktif mi? (60sn heartbeat timeout)
-        if (elapsed < 60000) {
-          if (myPriority < existingPriority) {
-            // Alt hiyerarşi — GİRİŞ REDDEDİLDİ
-            const roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
-            return {
-              success: false,
-              error: `⚠️ Şu anda ${roleName}, uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün.`
-            };
-          }
-          // Aynı veya üst hiyerarşi → öncekini at, oturumu al
-        }
-        // else: heartbeat eski (>60sn), oturum ölü → al
+      // 1. Kullanıcı doğrulama
+      const users = await getUsers();
+      const pwHash = await hashPassword(password);
+      const found = users.find(
+        (u) => u.username === username && u.passwordHash === pwHash
+      );
+      if (!found) {
+        return { success: false, error: "Kullanıcı adı veya şifre hatalı" };
       }
 
-      // 3. Oturumu Firestore'a kaydet
-      await setDoc(sessionDocRef, {
-        sessionId,
-        user: found.displayName,
+      const myPriority = ROLE_PRIORITY[found.role] || 0;
+      const sessionId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+      // 2. Hiyerarşik oturum kontrolü (Firestore)
+      try {
+        const sessionDocRef = doc(db, "arge", "_active_session");
+        const snap = await getDoc(sessionDocRef);
+
+        if (snap.exists()) {
+          const s = snap.data();
+          const elapsed = Date.now() - (s.heartbeat || 0);
+          const existingPriority = ROLE_PRIORITY[s.role] || 0;
+
+          // Oturum hâlâ aktif mi? (60sn heartbeat timeout)
+          if (elapsed < 60000) {
+            if (myPriority < existingPriority) {
+              // Alt hiyerarşi — GİRİŞ REDDEDİLDİ
+              const roleName = (ROLE_NAMES[s.role] || s.role).toLowerCase();
+              return {
+                success: false,
+                error: `Şu anda ${roleName}, uygulamayı kullandığından sisteme giriş yapılamaz. Lütfen daha sonra deneyin ya da master yöneticinizle görüşün.`
+              };
+            }
+            // Aynı veya üst hiyerarşi → öncekini at, oturumu al
+          }
+          // else: heartbeat eski (>60sn), oturum ölü → al
+        }
+
+        // 3. Oturumu Firestore'a kaydet
+        await setDoc(sessionDocRef, {
+          sessionId,
+          user: found.displayName,
+          username: found.username,
+          role: found.role,
+          priority: myPriority,
+          heartbeat: Date.now(),
+        });
+      } catch (e) {
+        console.warn("Session claim error:", e);
+        // Firestore hatası olsa bile login'e izin ver
+      }
+
+      // 4. Local session oluştur
+      const session = {
         username: found.username,
         role: found.role,
-        priority: myPriority,
-        heartbeat: Date.now(),
-      });
-    } catch (e) {
-      console.warn("Session claim error:", e);
-      // Firestore hatası olsa bile login'e izin ver
+        displayName: found.displayName,
+        sessionId,
+      };
+      setUser(session);
+      localStorage.setItem("arge_auth", JSON.stringify(session));
+      return { success: true };
+    } catch (err) {
+      console.error("Login genel hata:", err);
+      return { success: false, error: "Giriş hatası: " + (err.message || "Bilinmeyen hata") };
     }
-
-    // 4. Local session oluştur
-    const session = {
-      username: found.username,
-      role: found.role,
-      displayName: found.displayName,
-      sessionId,
-    };
-    setUser(session);
-    localStorage.setItem("arge_auth", JSON.stringify(session));
-    return { success: true };
   };
 
   const logout = () => {

@@ -18,11 +18,17 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError("");
-    const result = await login(username.trim(), password);
-    if (!result.success) {
-      setError(result.error);
+    try {
+      const result = await login(username.trim(), password);
+      if (!result.success) {
+        setError(result.error);
+      }
+    } catch (err) {
+      console.error("Login hatası:", err);
+      setError("Giriş sırasında bir hata oluştu: " + (err.message || "Bilinmeyen hata"));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
