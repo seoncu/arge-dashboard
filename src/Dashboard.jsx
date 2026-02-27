@@ -881,6 +881,16 @@ const taskStatusConfig = {
 };
 const DEFAULT_EDU_DEGREES = ["Lisans", "Yüksek Lisans", "Doktora", "Doçentlik", "Profesörlük"];
 const DEFAULT_EDU_STATUSES = ["Devam Ediyor", "Mezun", "Doktora Devam Ediyor", "Doçentlik Aşamasında"];
+const COUNTRIES = [
+  "Türkiye","Almanya","ABD","İngiltere","Fransa","İtalya","İspanya","Hollanda","Belçika","İsveç",
+  "Norveç","Danimarka","Finlandiya","Avusturya","İsviçre","Polonya","Çekya","Macaristan","Romanya","Bulgaristan",
+  "Yunanistan","Portekiz","İrlanda","Hırvatistan","Slovenya","Slovakya","Litvanya","Letonya","Estonya","Lüksemburg",
+  "Malta","Kıbrıs","Japonya","Çin","Güney Kore","Hindistan","Kanada","Avustralya","Brezilya","Meksika",
+  "Arjantin","Rusya","Ukrayna","Gürcistan","Azerbaycan","Kazakistan","İsrail","Mısır","Güney Afrika","Nijerya",
+  "Fas","Tunus","Suudi Arabistan","BAE","Katar","Pakistan","Endonezya","Malezya","Singapur","Tayland",
+  "Vietnam","Filipinler","Yeni Zelanda","Şili","Kolombiya","Peru","Sırbistan","Bosna Hersek","Karadağ","Arnavutluk",
+  "Kuzey Makedonya","Kosova","Moldova","Belarus","İzlanda","Tayvan"
+].sort((a,b) => a.localeCompare(b, "tr"));
 const DEFAULT_CATEGORY_OPTIONS = ["Ar-Ge İçi", "Ortak Çalışma", "Diğer"];
 
 // Module-level config refs (synced from component state on each render)
@@ -1850,6 +1860,29 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Bütçe (₺)</label>
                   <input type="number" value={editForm.budget ?? ""} onChange={e => eff("budget", e.target.value)} className={eInputD} />
                 </div>
+                <div><label className="block text-xs font-medium text-slate-500 mb-1">Yürütücü Kurum</label>
+                  <input value={editForm.piInstitution || ""} onChange={e => eff("piInstitution", e.target.value)} className={eInputD} placeholder="Proje yürütücüsünün kurumu" />
+                </div>
+                <div><label className="block text-xs font-medium text-slate-500 mb-1">Yürütücü Ülke</label>
+                  <select value={editForm.piCountry || "Türkiye"} onChange={e => eff("piCountry", e.target.value)} className={eInputD}>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div><label className="block text-xs font-medium text-slate-500 mb-1">Ortak Kurumlar (virgülle ayırın)</label>
+                  <input value={Array.isArray(editForm.partnerInstitutions) ? editForm.partnerInstitutions.join(", ") : (editForm.partnerInstitutions || "")} onChange={e => eff("partnerInstitutions", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} className={eInputD} />
+                </div>
+                <div><label className="block text-xs font-medium text-slate-500 mb-1">Ortak Ülkeler</label>
+                  <div className="border border-slate-200 rounded-lg p-2 max-h-24 overflow-y-auto bg-slate-50 space-y-0.5">
+                    {COUNTRIES.map(c => (
+                      <label key={c} className={`flex items-center gap-2 px-2 py-0.5 rounded cursor-pointer text-xs ${(editForm.partnerCountries || []).includes(c) ? "bg-violet-50 text-violet-700 font-medium" : "hover:bg-white text-slate-600"}`}>
+                        <input type="checkbox" checked={(editForm.partnerCountries || []).includes(c)}
+                          onChange={e => { if (e.target.checked) eff("partnerCountries", [...(editForm.partnerCountries || []), c]); else eff("partnerCountries", (editForm.partnerCountries || []).filter(x => x !== c)); }}
+                          className="w-3 h-3 rounded border-slate-300 text-violet-500" />
+                        {c}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </>}
               <div><label className="block text-xs font-medium text-slate-500 mb-1">Başlangıç Tarihi</label>
                 <input type="date" value={editForm.startDate || ""} onChange={e => eff("startDate", e.target.value)} className={eInputD} />
@@ -1869,6 +1902,10 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
               {isProject && item.budget > 0 && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Bütçe</p><p className="text-sm font-medium text-slate-700">₺{item.budget.toLocaleString("tr-TR")}</p></div>}
               {isProject && item.type && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Proje Türü</p><p className="text-sm font-medium text-slate-700">{item.type}{item.projectTypeDetail ? ` — ${item.projectTypeDetail}` : ""}</p></div>}
               {isProject && item.fundingSource && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Fon Kaynağı</p><p className="text-sm font-medium text-slate-700">{item.fundingSource}</p></div>}
+              {isProject && item.piInstitution && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Yürütücü Kurum</p><p className="text-sm font-medium text-indigo-700">{item.piInstitution}</p></div>}
+              {isProject && item.piCountry && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Yürütücü Ülke</p><p className="text-sm font-medium text-indigo-700">{item.piCountry}</p></div>}
+              {isProject && (item.partnerInstitutions || []).length > 0 && <div className="bg-violet-50 rounded-lg p-2.5 col-span-2"><p className="text-xs text-violet-400 mb-0.5">Ortak Kurumlar</p><p className="text-sm font-medium text-violet-700">{item.partnerInstitutions.join(", ")}</p></div>}
+              {isProject && (item.partnerCountries || []).length > 0 && <div className="bg-violet-50 rounded-lg p-2.5 col-span-2"><p className="text-xs text-violet-400 mb-0.5">Ortak Ülkeler</p><div className="flex flex-wrap gap-1 mt-1">{item.partnerCountries.map(c => <Badge key={c} className="bg-violet-100 text-violet-700">{c}</Badge>)}</div></div>}
             </div>
           )}
 
@@ -2109,6 +2146,7 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
     title: "", description: "", status: type === "project" ? "planning" : "proposed",
     priority: "medium", category: "", applicationDate: "", startDate: "", endDate: "",
     budget: "", fundingSource: "", projectType: "", projectTypeDetail: "", workLink: "",
+    piInstitution: "", piCountry: "Türkiye", partnerInstitutions: "", partnerCountries: [],
     // researcher
     name: "", rTitle: "", institution: "", unit: "",
     eduUniversity: "", eduProgram: "", eduDegree: "Yüksek Lisans", eduStatus: "Devam Ediyor",
@@ -2148,7 +2186,11 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
     } else {
       if (!form.title.trim()) return;
       if (selectedTopics.length === 0) { setTopicError("Bir proje en az bir konuyla ilişkilendirilmelidir!"); return; }
-      onAdd({ id: `p_${Date.now()}`, title: form.title, description: form.description, type: form.projectType, projectTypeDetail: form.projectTypeDetail, status: form.status, priority: form.priority, startDate: form.startDate, endDate: form.endDate, budget: parseFloat(form.budget) || 0, fundingSource: form.fundingSource, workLink: form.workLink, topics: selectedTopics, tasks: [], researchers: [] });
+      onAdd({ id: `p_${Date.now()}`, title: form.title, description: form.description, type: form.projectType, projectTypeDetail: form.projectTypeDetail, status: form.status, priority: form.priority, startDate: form.startDate, endDate: form.endDate, budget: parseFloat(form.budget) || 0, fundingSource: form.fundingSource, workLink: form.workLink, topics: selectedTopics, tasks: [], researchers: [],
+        piInstitution: form.piInstitution, piCountry: form.piCountry,
+        partnerInstitutions: form.partnerInstitutions.split(",").map(s => s.trim()).filter(Boolean),
+        partnerCountries: form.partnerCountries || [],
+      });
     }
     onClose();
   };
@@ -2299,6 +2341,38 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={labelClass}>Fon Kaynağı</label><input value={form.fundingSource} onChange={e => f("fundingSource", e.target.value)} className={inputClass} placeholder="TÜBİTAK 1001, Horizon..." /></div>
                   <div><label className={labelClass}>Bütçe (₺)</label><input value={form.budget} onChange={e => f("budget", e.target.value)} className={inputClass} type="number" /></div>
+                </div>
+                {/* Proje Yürütücüsü Kurum & Ülke */}
+                <div className="bg-indigo-50/50 rounded-lg p-3 border border-indigo-100 space-y-2 mt-2">
+                  <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Proje Yürütücüsü Bilgileri</p>
+                  <div><label className={labelClass}>Yürütücü Kurum</label><input value={form.piInstitution} onChange={e => f("piInstitution", e.target.value)} className={inputClass} placeholder="Proje yürütücüsünün bağlı olduğu kurum" /></div>
+                  <div><label className={labelClass}>Yürütücü Ülke</label>
+                    <select value={form.piCountry} onChange={e => f("piCountry", e.target.value)} className={inputClass}>
+                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {/* Ortak Kurumlar & Ülkeler */}
+                <div className="bg-violet-50/50 rounded-lg p-3 border border-violet-100 space-y-2">
+                  <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wider">Ortak Kurum & Ülkeler</p>
+                  <div><label className={labelClass}>Ortak Kurumlar</label><input value={form.partnerInstitutions} onChange={e => f("partnerInstitutions", e.target.value)} className={inputClass} placeholder="Virgülle ayırarak: Kurum1, Kurum2, ..." /></div>
+                  <div><label className={labelClass}>Ortak Ülkeler (çoklu seçim)</label>
+                    <div className="border border-slate-200 rounded-lg p-2 max-h-28 overflow-y-auto bg-white space-y-0.5">
+                      {COUNTRIES.map(c => (
+                        <label key={c} className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-xs transition-colors ${(form.partnerCountries || []).includes(c) ? "bg-violet-50 text-violet-700 font-medium" : "hover:bg-slate-50 text-slate-600"}`}>
+                          <input type="checkbox" checked={(form.partnerCountries || []).includes(c)}
+                            onChange={e => { if (e.target.checked) f("partnerCountries", [...(form.partnerCountries || []), c]); else f("partnerCountries", (form.partnerCountries || []).filter(x => x !== c)); }}
+                            className="w-3 h-3 rounded border-slate-300 text-violet-500 focus:ring-violet-200" />
+                          {c}
+                        </label>
+                      ))}
+                    </div>
+                    {(form.partnerCountries || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {form.partnerCountries.map(c => <Badge key={c} className="bg-violet-100 text-violet-700">{c} <button onClick={() => f("partnerCountries", form.partnerCountries.filter(x => x !== c))} className="ml-1 hover:text-red-500">×</button></Badge>)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>}
               {isT && <div><label className={labelClass}>Başvuru Tarihi</label><input type="date" value={form.applicationDate} onChange={e => f("applicationDate", e.target.value)} className={inputClass} /></div>}
@@ -3815,6 +3889,92 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
+              {/* Ülke Dağılımı */}
+              {(() => {
+                const fp = filteredProjects;
+                const piCountryMap = {};
+                const partnerCountryMap = {};
+                const allCountrySet = new Set();
+                let projectsWithCountry = 0;
+                fp.forEach(p => {
+                  if (p.piCountry) { piCountryMap[p.piCountry] = (piCountryMap[p.piCountry] || 0) + 1; allCountrySet.add(p.piCountry); projectsWithCountry++; }
+                  (p.partnerCountries || []).forEach(c => { partnerCountryMap[c] = (partnerCountryMap[c] || 0) + 1; allCountrySet.add(c); });
+                });
+                const piEntries = Object.entries(piCountryMap).sort((a, b) => b[1] - a[1]);
+                const partnerEntries = Object.entries(partnerCountryMap).sort((a, b) => b[1] - a[1]);
+                const piBarColors = { "Türkiye": "#ef4444", "Almanya": "#1e293b", "ABD": "#3b82f6", "İngiltere": "#6366f1", "Fransa": "#2563eb", "İtalya": "#16a34a" };
+                return (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2"><MapPin size={14} className="text-rose-500" />Ülke & Kurum Dağılımı</h3>
+                    {/* Özet kartlar */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-rose-50 rounded-xl p-3 border border-rose-100 text-center">
+                        <p className="text-2xl font-bold text-rose-700">{allCountrySet.size}</p>
+                        <p className="text-[10px] text-rose-400 mt-0.5">Tekil Ülke</p>
+                      </div>
+                      <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100 text-center">
+                        <p className="text-2xl font-bold text-indigo-700">{projectsWithCountry}</p>
+                        <p className="text-[10px] text-indigo-400 mt-0.5">Ülke Bilgisi Olan Proje</p>
+                      </div>
+                      <div className="bg-violet-50 rounded-xl p-3 border border-violet-100 text-center">
+                        <p className="text-2xl font-bold text-violet-700">{Object.keys(partnerCountryMap).length}</p>
+                        <p className="text-[10px] text-violet-400 mt-0.5">İşbirliği Yapılan Ülke</p>
+                      </div>
+                    </div>
+                    {/* Yürütücü ülke dağılımı */}
+                    {piEntries.length > 0 && (
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-indigo-500" />Proje Yürütücü Ülke Dağılımı</h4>
+                        <SimpleBarChart data={piEntries.map(([c, v]) => ({ label: c, value: v, color: piBarColors[c] || "#6366f1" }))} height={130} />
+                      </div>
+                    )}
+                    {/* Ortak ülke dağılımı */}
+                    {partnerEntries.length > 0 && (
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-violet-500" />Ortak Ülke Dağılımı (İşbirliği)</h4>
+                        <SimpleBarChart data={partnerEntries.map(([c, v]) => ({ label: c, value: v, color: "#8b5cf6" }))} height={130} />
+                      </div>
+                    )}
+                    {/* Detay tablosu */}
+                    {(piEntries.length > 0 || partnerEntries.length > 0) && (
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <h4 className="text-xs font-semibold text-slate-600 mb-3">Ülke Detay Tablosu</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead><tr className="text-left border-b border-slate-200">
+                              <th className="pb-2 font-semibold text-slate-500">Ülke</th>
+                              <th className="pb-2 font-semibold text-indigo-500 text-center">Yürütücü</th>
+                              <th className="pb-2 font-semibold text-violet-500 text-center">Ortak</th>
+                              <th className="pb-2 font-semibold text-slate-500 text-center">Toplam</th>
+                            </tr></thead>
+                            <tbody>
+                              {[...allCountrySet].sort((a, b) => {
+                                const ta = (piCountryMap[a] || 0) + (partnerCountryMap[a] || 0);
+                                const tb = (piCountryMap[b] || 0) + (partnerCountryMap[b] || 0);
+                                return tb - ta;
+                              }).map(c => (
+                                <tr key={c} className="border-b border-slate-100 hover:bg-white/50">
+                                  <td className="py-1.5 font-medium text-slate-700">{c}</td>
+                                  <td className="text-center text-indigo-600">{piCountryMap[c] || 0}</td>
+                                  <td className="text-center text-violet-600">{partnerCountryMap[c] || 0}</td>
+                                  <td className="text-center font-bold text-slate-700">{(piCountryMap[c] || 0) + (partnerCountryMap[c] || 0)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                    {piEntries.length === 0 && partnerEntries.length === 0 && (
+                      <div className="text-center py-8 text-slate-400">
+                        <MapPin size={32} className="mx-auto mb-2 text-slate-300" />
+                        <p className="text-sm">Henüz projelere ülke bilgisi eklenmemiş.</p>
+                        <p className="text-xs text-slate-300 mt-1">Proje detaylarından yürütücü ve ortak ülke bilgilerini ekleyebilirsiniz.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
