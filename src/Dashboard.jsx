@@ -5902,13 +5902,15 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin";
   // ─── Firestore senkronizasyon yardımcıları ───
   const firestoreReady = useRef(false);
-  const localVersion = useRef({}); // Her doküman için yerel versiyon numarası
-  const fromFirestore = useRef(new Set()); // Firestore'dan gelen güncelleme flag'i
+  const localVersion = useRef({});
+  const lastSyncedJson = useRef({}); // Write-back loop engelleme: son sync edilen veri
   const totalListeners = 11; // 4 veri + 7 config doküman
 
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
-    if (fromFirestore.current.has(docId)) { fromFirestore.current.delete(docId); return; }
+    const json = JSON.stringify(data);
+    if (lastSyncedJson.current[docId] === json) return;
+    lastSyncedJson.current[docId] = json;
     const ver = (localVersion.current[docId] || 0) + 1;
     localVersion.current[docId] = ver;
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now(), _v: ver })
@@ -5917,7 +5919,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
   const writeConfigToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
-    if (fromFirestore.current.has(docId)) { fromFirestore.current.delete(docId); return; }
+    const json = JSON.stringify(data);
+    if (lastSyncedJson.current[docId] === json) return;
+    lastSyncedJson.current[docId] = json;
     const ver = (localVersion.current[docId] || 0) + 1;
     localVersion.current[docId] = ver;
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now(), _v: ver })
@@ -5980,16 +5984,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           const d = snap.data();
           const remoteVer = d._v || 0;
           const localVer = localVersion.current[docId] || 0;
-          // Kendi yazdığımız veriyi geri okumayı atla (zaten state güncel)
-          if (!isFirst && remoteVer <= localVer) {
-            // Sadece başka bir client'tan gelen güncellemeleri uygula
-            if (remoteVer < localVer) { /* kendi yazımız, atla */ }
-            else { /* aynı versiyon, atla */ }
+          // Kendi yazdığımız veriyi geri okumayı atla
+          if (!isFirst && remoteVer < localVer) {
+            // Kesinlikle kendi yazımız (daha düşük versiyon), atla
           } else {
             const val = isConfig ? d.data : d.items;
             if (val !== undefined) {
               localVersion.current[docId] = remoteVer;
-              fromFirestore.current.add(docId);
+              lastSyncedJson.current[docId] = JSON.stringify(val);
               setter(val);
             }
           }
