@@ -5835,27 +5835,29 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
             </div>
             {m.isWelcome && i === messages.length - 1 && (
               <div className="mt-3 space-y-2 bg-gradient-to-b from-slate-50/50 to-white rounded-xl p-2 -mx-1">
-                <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
-                  <span>🆕</span> Yeni Araştırma Konusu Öner
-                </button>
-                <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
-                  className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
-                  <span>👤</span> Uygun Araştırmacı Öner
-                </button>
-                <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
-                  <button onClick={() => handleCatClick("Genel özet")}
-                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-indigo-500 to-violet-400 text-white rounded-lg hover:from-indigo-600 hover:to-violet-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
-                    📊 Genel Özet
+                <div>
+                  <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
+                    className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                    <span>🆕</span> Yeni Araştırma Konusu Öner
                   </button>
-                  <button onClick={() => handleCatClick("Proje türü dağılımı")}
-                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-violet-500 to-purple-400 text-white rounded-lg hover:from-violet-600 hover:to-purple-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
-                    📋 Proje Dağılımı
+                  <div className="flex flex-wrap gap-1 mt-1 ml-2">
+                    {["Yapay Zeka & Eğitim", "XR / AR", "Öğrenme Analitikleri"].map((sub, si) => (
+                      <button key={si} onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: `🆕 "${sub}" alanında yeni bir konu mu düşünüyorsunuz? Harika!\n\nBu alandaki spesifik araştırma fikrinizi veya anahtar kelimeleri yazın...` }]); }}
+                        className={`bg-gradient-to-r from-violet-50 to-indigo-50 text-violet-600 border-violet-200 hover:from-violet-100 hover:to-indigo-100 rounded-full transition-all border hover:shadow-sm ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
+                    className={`w-full text-left font-semibold bg-gradient-to-r from-violet-600 to-indigo-500 text-white rounded-xl hover:from-violet-700 hover:to-indigo-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-200/50 hover:shadow-xl hover:shadow-indigo-300/50 hover:scale-[1.02] ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
+                    <span>👤</span> Uygun Araştırmacı Öner
                   </button>
-                  <button onClick={() => handleCatClick("En çok konuya sahip araştırmacılar")}
-                    className={`flex-1 min-w-[90px] text-center font-medium bg-gradient-to-r from-purple-500 to-indigo-400 text-white rounded-lg hover:from-purple-600 hover:to-indigo-500 transition-all shadow-sm hover:shadow-md hover:scale-[1.02] ${chatMaximized ? "px-3 py-2.5 text-xs" : "px-2.5 py-2 text-[10px]"}`}>
-                    🏆 En Aktifler
-                  </button>
+                  <div className="flex flex-wrap gap-1 mt-1 ml-2">
+                    {["Proje Yürütücüsü", "Veri Analisti", "Alan Uzmanı"].map((sub, si) => (
+                      <button key={si} onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: `👤 "${sub}" rolüne uygun araştırmacı mı arıyorsunuz?\n\nBu role uygun spesifik alan veya anahtar kelimeleri yazın...` }]); }}
+                        className={`bg-gradient-to-r from-violet-50 to-indigo-50 text-violet-600 border-violet-200 hover:from-violet-100 hover:to-indigo-100 rounded-full transition-all border hover:shadow-sm ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
+                    ))}
+                  </div>
                 </div>
                 {chatCategories.map((cat, ci) => (
                   <div key={ci}>
@@ -5901,10 +5903,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   // ─── Firestore senkronizasyon yardımcıları ───
   const firestoreReady = useRef(false);
   const localVersion = useRef({}); // Her doküman için yerel versiyon numarası
+  const fromFirestore = useRef(new Set()); // Firestore'dan gelen güncelleme flag'i
   const totalListeners = 11; // 4 veri + 7 config doküman
 
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
+    if (fromFirestore.current.has(docId)) { fromFirestore.current.delete(docId); return; }
     const ver = (localVersion.current[docId] || 0) + 1;
     localVersion.current[docId] = ver;
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now(), _v: ver })
@@ -5913,6 +5917,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
   const writeConfigToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) return;
+    if (fromFirestore.current.has(docId)) { fromFirestore.current.delete(docId); return; }
     const ver = (localVersion.current[docId] || 0) + 1;
     localVersion.current[docId] = ver;
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now(), _v: ver })
@@ -5984,6 +5989,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             const val = isConfig ? d.data : d.items;
             if (val !== undefined) {
               localVersion.current[docId] = remoteVer;
+              fromFirestore.current.add(docId);
               setter(val);
             }
           }
