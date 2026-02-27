@@ -891,6 +891,19 @@ const COUNTRIES = [
   "Vietnam","Filipinler","Yeni Zelanda","Şili","Kolombiya","Peru","Sırbistan","Bosna Hersek","Karadağ","Arnavutluk",
   "Kuzey Makedonya","Kosova","Moldova","Belarus","İzlanda","Tayvan"
 ].sort((a,b) => a.localeCompare(b, "tr"));
+
+const DEFAULT_INSTITUTION = "ANADOLU ÜNİVERSİTESİ AÇIKÖĞRETİM FAKÜLTESİ";
+const toUpperTR = s => s.toLocaleUpperCase("tr-TR");
+
+// Tüm projelerden bilinen kurumları çıkar (autocomplete için)
+const getKnownInstitutions = (projects) => {
+  const set = new Set([DEFAULT_INSTITUTION]);
+  (projects || []).forEach(p => {
+    if (p.piInstitution) set.add(toUpperTR(p.piInstitution));
+    (p.partnerInstitutions || []).forEach(i => set.add(toUpperTR(i)));
+  });
+  return [...set].sort((a, b) => a.localeCompare(b, "tr"));
+};
 const DEFAULT_CATEGORY_OPTIONS = ["Ar-Ge İçi", "Ortak Çalışma", "Diğer"];
 
 // Module-level config refs (synced from component state on each render)
@@ -1627,6 +1640,10 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
     projectTopics.forEach(t => t.researchers.forEach(r => ids.add(r.researcherId)));
     return allResearchers.filter(r => ids.has(r.id));
   }, [project.researchers, projectTopics, allResearchers]);
+  const hasInternational = useMemo(() => {
+    const countries = [project.piCountry, ...(project.partnerCountries || [])].filter(Boolean);
+    return countries.some(c => c !== "Türkiye");
+  }, [project.piCountry, project.partnerCountries]);
   const cardStyle = getCardStyle(project.status, project.endDate);
   const pBg = cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
   const pBorder = dragOver ? "border-emerald-400 bg-emerald-50 shadow-lg ring-2 ring-emerald-200" : cardStyle ? cardStyle.border : "border-slate-200 hover:border-emerald-200";
@@ -1652,6 +1669,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <Badge className={stCfg.color}><span className={`w-1.5 h-1.5 rounded-full ${stCfg.dot} mr-1`} />{stCfg.label}</Badge>
         <Badge className={prCfg.color}>{prCfg.icon} {prCfg.label}</Badge>
+        {hasInternational && <Badge className="bg-blue-50 text-blue-600 border border-blue-200"><Globe size={11} className="mr-0.5" />Uluslararası</Badge>}
         {project.fundingSource && <Badge className="bg-violet-50 text-violet-600">{project.fundingSource}</Badge>}
         {project.type && <Badge className="bg-sky-50 text-sky-600">{project.type}</Badge>}
       </div>
@@ -1700,6 +1718,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
 
 // ─── DETAIL MODAL (Topic & Project) ──────────────────────
 const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, onClose, onUpdate, onSelectResearcher, onSelectTopic, onRemoveFromProject, onCancelProject, onDeleteTopic }) => {
+  const knownInsts = useMemo(() => getKnownInstitutions(projects), [projects]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ ...item });
@@ -1710,6 +1729,10 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const handleSaveEdit = () => {
     const cleaned = { ...editForm };
     if (cleaned.budget !== undefined) cleaned.budget = parseFloat(cleaned.budget) || 0;
+    if (cleaned.piInstitution) cleaned.piInstitution = toUpperTR(cleaned.piInstitution);
+    if (typeof cleaned.partnerInstitutions === "string") cleaned.partnerInstitutions = cleaned.partnerInstitutions.split(",").map(s => toUpperTR(s.trim())).filter(Boolean);
+    if (Array.isArray(cleaned.partnerInstitutions)) cleaned.partnerInstitutions = cleaned.partnerInstitutions.map(s => toUpperTR(s));
+    if (!Array.isArray(cleaned.partnerCountries)) cleaned.partnerCountries = [];
     onUpdate({ ...item, ...cleaned }); setEditing(false);
   };
   const handleCancelEdit = () => { setEditForm({ ...item }); setEditing(false); };
@@ -1860,16 +1883,18 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Bütçe (₺)</label>
                   <input type="number" value={editForm.budget ?? ""} onChange={e => eff("budget", e.target.value)} className={eInputD} />
                 </div>
-                <div><label className="block text-xs font-medium text-slate-500 mb-1">Yürütücü Kurum</label>
-                  <input value={editForm.piInstitution || ""} onChange={e => eff("piInstitution", e.target.value)} className={eInputD} placeholder="Proje yürütücüsünün kurumu" />
+                <div className="col-span-2"><label className="block text-xs font-medium text-slate-500 mb-1">Yürütücü Kurum</label>
+                  <input list="inst-list-edit" value={editForm.piInstitution || ""} onChange={e => eff("piInstitution", toUpperTR(e.target.value))} onBlur={e => eff("piInstitution", toUpperTR(e.target.value))} className={eInputD} placeholder="Kurum adı yazın veya seçin..." />
+                  <datalist id="inst-list-edit">{knownInsts.map(i => <option key={i} value={i} />)}</datalist>
                 </div>
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Yürütücü Ülke</label>
                   <select value={editForm.piCountry || "Türkiye"} onChange={e => eff("piCountry", e.target.value)} className={eInputD}>
                     {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                <div><label className="block text-xs font-medium text-slate-500 mb-1">Ortak Kurumlar (virgülle ayırın)</label>
-                  <input value={Array.isArray(editForm.partnerInstitutions) ? editForm.partnerInstitutions.join(", ") : (editForm.partnerInstitutions || "")} onChange={e => eff("partnerInstitutions", e.target.value.split(",").map(s => s.trim()).filter(Boolean))} className={eInputD} />
+                <div className="col-span-2"><label className="block text-xs font-medium text-slate-500 mb-1">Ortak Kurumlar (virgülle ayırın)</label>
+                  <input list="inst-list-partner-edit" value={Array.isArray(editForm.partnerInstitutions) ? editForm.partnerInstitutions.join(", ") : (editForm.partnerInstitutions || "")} onChange={e => eff("partnerInstitutions", e.target.value.split(",").map(s => toUpperTR(s.trim())).filter(Boolean))} onBlur={e => { if (Array.isArray(editForm.partnerInstitutions)) eff("partnerInstitutions", editForm.partnerInstitutions.map(s => toUpperTR(s))); }} className={eInputD} />
+                  <datalist id="inst-list-partner-edit">{knownInsts.map(i => <option key={i} value={i} />)}</datalist>
                 </div>
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Ortak Ülkeler</label>
                   <div className="border border-slate-200 rounded-lg p-2 max-h-24 overflow-y-auto bg-slate-50 space-y-0.5">
@@ -1902,10 +1927,23 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
               {isProject && item.budget > 0 && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Bütçe</p><p className="text-sm font-medium text-slate-700">₺{item.budget.toLocaleString("tr-TR")}</p></div>}
               {isProject && item.type && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Proje Türü</p><p className="text-sm font-medium text-slate-700">{item.type}{item.projectTypeDetail ? ` — ${item.projectTypeDetail}` : ""}</p></div>}
               {isProject && item.fundingSource && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Fon Kaynağı</p><p className="text-sm font-medium text-slate-700">{item.fundingSource}</p></div>}
-              {isProject && item.piInstitution && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Yürütücü Kurum</p><p className="text-sm font-medium text-indigo-700">{item.piInstitution}</p></div>}
-              {isProject && item.piCountry && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Yürütücü Ülke</p><p className="text-sm font-medium text-indigo-700">{item.piCountry}</p></div>}
-              {isProject && (item.partnerInstitutions || []).length > 0 && <div className="bg-violet-50 rounded-lg p-2.5 col-span-2"><p className="text-xs text-violet-400 mb-0.5">Ortak Kurumlar</p><p className="text-sm font-medium text-violet-700">{item.partnerInstitutions.join(", ")}</p></div>}
-              {isProject && (item.partnerCountries || []).length > 0 && <div className="bg-violet-50 rounded-lg p-2.5 col-span-2"><p className="text-xs text-violet-400 mb-0.5">Ortak Ülkeler</p><div className="flex flex-wrap gap-1 mt-1">{item.partnerCountries.map(c => <Badge key={c} className="bg-violet-100 text-violet-700">{c}</Badge>)}</div></div>}
+            </div>
+          )}
+
+          {/* Kurum & Ülke Bilgileri (project only, view mode) */}
+          {!editing && isProject && (item.piInstitution || item.piCountry || (item.partnerInstitutions || []).length > 0 || (item.partnerCountries || []).length > 0) && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Globe size={13} /> Kurum & Ülke Bilgileri
+                {[item.piCountry, ...(item.partnerCountries || [])].filter(Boolean).some(c => c !== "Türkiye") && (
+                  <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"><Globe size={10} />Uluslararası Proje</span>
+                )}
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                {item.piInstitution && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Kurum</p><p className="text-sm font-semibold text-indigo-700">{item.piInstitution}</p></div>}
+                {item.piCountry && <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100"><p className="text-xs text-indigo-400 mb-1 font-medium">Yürütücü Ülke</p><p className="text-sm font-semibold text-indigo-700">{item.piCountry}</p></div>}
+                {(item.partnerInstitutions || []).length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Kurumlar</p><div className="flex flex-wrap gap-1.5">{item.partnerInstitutions.map((inst, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{inst}</span>)}</div></div>}
+                {(item.partnerCountries || []).length > 0 && <div className="bg-violet-50 rounded-lg p-3 border border-violet-100 col-span-2"><p className="text-xs text-violet-400 mb-1.5 font-medium">Ortak Ülkeler</p><div className="flex flex-wrap gap-1.5">{item.partnerCountries.map((c, i) => <span key={i} className="px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">{c}</span>)}</div></div>}
+              </div>
             </div>
           )}
 
@@ -2141,12 +2179,14 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
 };
 
 // ─── ADD ITEM MODAL (expanded researcher form) ───────────
-const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
+const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
+  const knownInsts = useMemo(() => getKnownInstitutions(projects), [projects]);
   const [form, setForm] = useState({
     title: "", description: "", status: type === "project" ? "planning" : "proposed",
     priority: "medium", category: "", applicationDate: "", startDate: "", endDate: "",
     budget: "", fundingSource: "", projectType: "", projectTypeDetail: "", workLink: "",
     piInstitution: "", piCountry: "Türkiye", partnerInstitutions: "", partnerCountries: [],
+    ourInstitution: DEFAULT_INSTITUTION, isOurPI: true,
     // researcher
     name: "", rTitle: "", institution: "", unit: "",
     eduUniversity: "", eduProgram: "", eduDegree: "Yüksek Lisans", eduStatus: "Devam Ediyor",
@@ -2186,9 +2226,22 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
     } else {
       if (!form.title.trim()) return;
       if (selectedTopics.length === 0) { setTopicError("Bir proje en az bir konuyla ilişkilendirilmelidir!"); return; }
+      const ourInst = toUpperTR(form.ourInstitution || DEFAULT_INSTITUTION);
+      let finalPiInst = toUpperTR(form.piInstitution || "");
+      let finalPartnerInsts = form.partnerInstitutions.split(",").map(s => toUpperTR(s.trim())).filter(Boolean);
+      if (form.isOurPI) {
+        finalPiInst = ourInst;
+        // eğer kullanıcı ayrıca piInstitution'a başka kurum girdiyse, onu ortaklara ekle
+        if (form.piInstitution && toUpperTR(form.piInstitution) !== ourInst && !finalPartnerInsts.includes(toUpperTR(form.piInstitution))) {
+          finalPartnerInsts = [toUpperTR(form.piInstitution), ...finalPartnerInsts];
+        }
+      } else {
+        // biz yürütücü değiliz, ortaklara ekle
+        if (!finalPartnerInsts.includes(ourInst)) finalPartnerInsts = [ourInst, ...finalPartnerInsts];
+      }
       onAdd({ id: `p_${Date.now()}`, title: form.title, description: form.description, type: form.projectType, projectTypeDetail: form.projectTypeDetail, status: form.status, priority: form.priority, startDate: form.startDate, endDate: form.endDate, budget: parseFloat(form.budget) || 0, fundingSource: form.fundingSource, workLink: form.workLink, topics: selectedTopics, tasks: [], researchers: [],
-        piInstitution: form.piInstitution, piCountry: form.piCountry,
-        partnerInstitutions: form.partnerInstitutions.split(",").map(s => s.trim()).filter(Boolean),
+        piInstitution: finalPiInst, piCountry: form.piCountry,
+        partnerInstitutions: finalPartnerInsts,
         partnerCountries: form.partnerCountries || [],
       });
     }
@@ -2342,20 +2395,49 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics }) => {
                   <div><label className={labelClass}>Fon Kaynağı</label><input value={form.fundingSource} onChange={e => f("fundingSource", e.target.value)} className={inputClass} placeholder="TÜBİTAK 1001, Horizon..." /></div>
                   <div><label className={labelClass}>Bütçe (₺)</label><input value={form.budget} onChange={e => f("budget", e.target.value)} className={inputClass} type="number" /></div>
                 </div>
-                {/* Proje Yürütücüsü Kurum & Ülke */}
-                <div className="bg-indigo-50/50 rounded-lg p-3 border border-indigo-100 space-y-2 mt-2">
-                  <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Proje Yürütücüsü Bilgileri</p>
-                  <div><label className={labelClass}>Yürütücü Kurum</label><input value={form.piInstitution} onChange={e => f("piInstitution", e.target.value)} className={inputClass} placeholder="Proje yürütücüsünün bağlı olduğu kurum" /></div>
-                  <div><label className={labelClass}>Yürütücü Ülke</label>
+                {/* Kurumumuz & Yürütücü */}
+                <div className="bg-teal-50/60 rounded-lg p-3 border border-teal-200 space-y-2 mt-2">
+                  <p className="text-[10px] font-semibold text-teal-600 uppercase tracking-wider">Kurumumuz</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-600 font-medium flex-1">{form.ourInstitution || DEFAULT_INSTITUTION}</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input type="checkbox" checked={form.isOurPI} onChange={e => f("isOurPI", e.target.checked)}
+                        className="w-4 h-4 rounded border-teal-300 text-teal-600 focus:ring-teal-200" />
+                      <span className="text-xs font-semibold text-teal-700">Yürütücü</span>
+                    </label>
+                  </div>
+                  {!form.isOurPI && <p className="text-[10px] text-teal-500">Kurumumuz bu projede ortak kurum olarak kaydedilecek.</p>}
+                </div>
+                {/* Proje Yürütücüsü Kurum & Ülke (yürütücü biz değilsek) */}
+                {!form.isOurPI && (
+                  <div className="bg-indigo-50/50 rounded-lg p-3 border border-indigo-100 space-y-2">
+                    <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Proje Yürütücüsü (Dış Kurum)</p>
+                    <div><label className={labelClass}>Yürütücü Kurum</label>
+                      <input list="inst-list-add" value={form.piInstitution} onChange={e => f("piInstitution", toUpperTR(e.target.value))} onBlur={e => f("piInstitution", toUpperTR(e.target.value))} className={inputClass} placeholder="Kurum adı yazın veya seçin..." />
+                      <datalist id="inst-list-add">{knownInsts.map(i => <option key={i} value={i} />)}</datalist>
+                    </div>
+                    <div><label className={labelClass}>Yürütücü Ülke</label>
+                      <select value={form.piCountry} onChange={e => f("piCountry", e.target.value)} className={inputClass}>
+                        {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {form.isOurPI && (
+                  <div className="bg-indigo-50/50 rounded-lg p-3 border border-indigo-100 space-y-2">
+                    <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">Yürütücü Ülke</p>
                     <select value={form.piCountry} onChange={e => f("piCountry", e.target.value)} className={inputClass}>
                       {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                </div>
+                )}
                 {/* Ortak Kurumlar & Ülkeler */}
                 <div className="bg-violet-50/50 rounded-lg p-3 border border-violet-100 space-y-2">
                   <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wider">Ortak Kurum & Ülkeler</p>
-                  <div><label className={labelClass}>Ortak Kurumlar</label><input value={form.partnerInstitutions} onChange={e => f("partnerInstitutions", e.target.value)} className={inputClass} placeholder="Virgülle ayırarak: Kurum1, Kurum2, ..." /></div>
+                  <div><label className={labelClass}>Ortak Kurumlar</label>
+                    <input list="inst-list-partner-add" value={form.partnerInstitutions} onChange={e => f("partnerInstitutions", toUpperTR(e.target.value))} onBlur={e => f("partnerInstitutions", toUpperTR(e.target.value))} className={inputClass} placeholder="Virgülle ayırarak: KURUM1, KURUM2, ..." />
+                    <datalist id="inst-list-partner-add">{knownInsts.map(i => <option key={i} value={i} />)}</datalist>
+                  </div>
                   <div><label className={labelClass}>Ortak Ülkeler (çoklu seçim)</label>
                     <div className="border border-slate-200 rounded-lg p-2 max-h-28 overflow-y-auto bg-white space-y-0.5">
                       {COUNTRIES.map(c => (
@@ -3267,6 +3349,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
   // Time stats
   const [timeView, setTimeView] = useState("year"); // "year" or "month"
   const [timeSelectedYear, setTimeSelectedYear] = useState("");
+  const [selectedInstitution, setSelectedInstitution] = useState("");
 
   const availableYears = useMemo(() => {
     const ySet = new Set();
@@ -3852,6 +3935,61 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
 
           {activeTab === "projects" && (
             <div className="space-y-6">
+              {/* Uluslararası Proje İstatistikleri */}
+              {(() => {
+                const isIntl = p => [p.piCountry, ...(p.partnerCountries || [])].filter(Boolean).some(c => c !== "Türkiye");
+                const intlProjects = filteredProjects.filter(isIntl);
+                const intlByStatus = { proposed: 0, active: 0, completed: 0 };
+                const allByStatus = { proposed: 0, active: 0, completed: 0 };
+                intlProjects.forEach(p => { const st = p.status === "planning" ? "proposed" : (p.status || "proposed"); if (intlByStatus[st] !== undefined) intlByStatus[st]++; });
+                filteredProjects.forEach(p => { const st = p.status === "planning" ? "proposed" : (p.status || "proposed"); if (allByStatus[st] !== undefined) allByStatus[st]++; });
+                const intlTotal = intlProjects.length;
+                const allTotal = filteredProjects.length;
+                return (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                    <h3 className="text-sm font-semibold text-blue-800 flex items-center gap-2 mb-3"><Globe size={15} className="text-blue-600" />Uluslararası Ortaklı Projeler</h3>
+                    <div className="grid grid-cols-4 gap-3 mb-3">
+                      {[
+                        { label: "Toplam", intl: intlTotal, all: allTotal, bg: "bg-slate-50", color: "text-slate-700", border: "border-slate-200" },
+                        { label: "Önerilen", intl: intlByStatus.proposed, all: allByStatus.proposed, bg: "bg-amber-50", color: "text-amber-700", border: "border-amber-200" },
+                        { label: "Aktif", intl: intlByStatus.active, all: allByStatus.active, bg: "bg-blue-50", color: "text-blue-700", border: "border-blue-300" },
+                        { label: "Tamamlanan", intl: intlByStatus.completed, all: allByStatus.completed, bg: "bg-emerald-50", color: "text-emerald-700", border: "border-emerald-200" },
+                      ].map(s => (
+                        <div key={s.label} className={`${s.bg} rounded-xl p-3 border ${s.border} text-center`}>
+                          <p className="text-[10px] text-slate-500 mb-1">{s.label}</p>
+                          <div className="flex items-baseline justify-center gap-1">
+                            <span className={`text-xl font-bold ${s.color}`}>{s.intl}</span>
+                            <span className="text-slate-400 text-xs">/ {s.all}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{s.all > 0 ? Math.round(s.intl / s.all * 100) : 0}% uluslararası</p>
+                        </div>
+                      ))}
+                    </div>
+                    {intlTotal > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-white/70 rounded-lg p-3">
+                          <p className="text-[10px] font-medium text-slate-500 mb-2">Uluslararası vs Ulusal (Pie)</p>
+                          <SimplePieChart data={[
+                            { label: "Uluslararası", value: intlTotal, color: "#3b82f6" },
+                            { label: "Ulusal", value: allTotal - intlTotal, color: "#e2e8f0" },
+                          ]} size={110} />
+                        </div>
+                        <div className="bg-white/70 rounded-lg p-3">
+                          <p className="text-[10px] font-medium text-slate-500 mb-2">Durum Bazlı Karşılaştırma</p>
+                          <SimpleBarChart data={[
+                            { label: "Önerilen (U)", value: intlByStatus.proposed, color: "#f59e0b" },
+                            { label: "Önerilen (T)", value: allByStatus.proposed, color: "#fde68a" },
+                            { label: "Aktif (U)", value: intlByStatus.active, color: "#3b82f6" },
+                            { label: "Aktif (T)", value: allByStatus.active, color: "#93c5fd" },
+                            { label: "Tamamlanan (U)", value: intlByStatus.completed, color: "#10b981" },
+                            { label: "Tamamlanan (T)", value: allByStatus.completed, color: "#6ee7b7" },
+                          ]} height={140} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-50 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-slate-700 mb-3">Proje Durumu {yearFilter ? `(${yearFilter})` : "(Tümü)"}</h3>
@@ -3889,63 +4027,144 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
-              {/* Ülke Dağılımı */}
+              {/* Ülke & Kurum Dağılımı — Detaylı */}
               {(() => {
                 const fp = filteredProjects;
-                const piCountryMap = {};
-                const partnerCountryMap = {};
-                const allCountrySet = new Set();
-                let projectsWithCountry = 0;
+                // --- Genel maps ---
+                const piCountryMap = {}; const partnerCountryMap = {}; const allCountrySet = new Set();
+                const piInstMap = {}; const partnerInstMap = {}; const allInstSet = new Set();
+                let projectsWithCountry = 0; let projectsWithInst = 0;
+                // --- Durum bazlı maps ---
+                const statusCountryMap = { proposed: {}, active: {}, completed: {} };
+                const statusInstMap = { proposed: {}, active: {}, completed: {} };
                 fp.forEach(p => {
-                  if (p.piCountry) { piCountryMap[p.piCountry] = (piCountryMap[p.piCountry] || 0) + 1; allCountrySet.add(p.piCountry); projectsWithCountry++; }
-                  (p.partnerCountries || []).forEach(c => { partnerCountryMap[c] = (partnerCountryMap[c] || 0) + 1; allCountrySet.add(c); });
+                  const st = (p.status === "planning") ? "proposed" : (p.status || "proposed");
+                  if (p.piCountry) {
+                    piCountryMap[p.piCountry] = (piCountryMap[p.piCountry] || 0) + 1;
+                    allCountrySet.add(p.piCountry);
+                    projectsWithCountry++;
+                    if (statusCountryMap[st]) { statusCountryMap[st][p.piCountry] = (statusCountryMap[st][p.piCountry] || 0) + 1; }
+                  }
+                  (p.partnerCountries || []).forEach(c => {
+                    partnerCountryMap[c] = (partnerCountryMap[c] || 0) + 1;
+                    allCountrySet.add(c);
+                  });
+                  if (p.piInstitution) {
+                    piInstMap[p.piInstitution] = (piInstMap[p.piInstitution] || 0) + 1;
+                    allInstSet.add(p.piInstitution);
+                    projectsWithInst++;
+                    if (statusInstMap[st]) { statusInstMap[st][p.piInstitution] = (statusInstMap[st][p.piInstitution] || 0) + 1; }
+                  }
+                  (p.partnerInstitutions || []).forEach(inst => {
+                    partnerInstMap[inst] = (partnerInstMap[inst] || 0) + 1;
+                    allInstSet.add(inst);
+                  });
                 });
-                const piEntries = Object.entries(piCountryMap).sort((a, b) => b[1] - a[1]);
-                const partnerEntries = Object.entries(partnerCountryMap).sort((a, b) => b[1] - a[1]);
-                const piBarColors = { "Türkiye": "#ef4444", "Almanya": "#1e293b", "ABD": "#3b82f6", "İngiltere": "#6366f1", "Fransa": "#2563eb", "İtalya": "#16a34a" };
+                const piCountryEntries = Object.entries(piCountryMap).sort((a, b) => b[1] - a[1]);
+                const partnerCountryEntries = Object.entries(partnerCountryMap).sort((a, b) => b[1] - a[1]);
+                const piInstEntries = Object.entries(piInstMap).sort((a, b) => b[1] - a[1]);
+                const partnerInstEntries = Object.entries(partnerInstMap).sort((a, b) => b[1] - a[1]);
+                const hasCountry = allCountrySet.size > 0;
+                const hasInst = allInstSet.size > 0;
+                const proposed = statusCountryMap.proposed; const active = statusCountryMap.active; const completed = statusCountryMap.completed;
+                const proposedInst = statusInstMap.proposed; const activeInst = statusInstMap.active; const completedInst = statusInstMap.completed;
+                // Durum bazlı pie data oluştur
+                const makePie = (map, colors) => Object.entries(map).sort((a,b) => b[1]-a[1]).map(([label, value], i) => ({ label, value, color: colors[i % colors.length] }));
+                const cPalette = ["#6366f1","#8b5cf6","#a78bfa","#c4b5fd","#3b82f6","#60a5fa","#93c5fd","#06b6d4","#14b8a6","#10b981","#f59e0b","#ef4444","#ec4899","#f97316"];
+                const iPalette = ["#0ea5e9","#0284c7","#0369a1","#1d4ed8","#4f46e5","#7c3aed","#9333ea","#c026d3","#db2777","#e11d48","#f97316","#84cc16","#14b8a6","#06b6d4"];
+                if (!hasCountry && !hasInst) return (
+                  <div className="text-center py-8 text-slate-400">
+                    <MapPin size={32} className="mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm">Henüz projelere ülke/kurum bilgisi eklenmemiş.</p>
+                    <p className="text-xs text-slate-300 mt-1">Proje detaylarından yürütücü ve ortak bilgilerini ekleyebilirsiniz.</p>
+                  </div>
+                );
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2"><MapPin size={14} className="text-rose-500" />Ülke & Kurum Dağılımı</h3>
+
                     {/* Özet kartlar */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="bg-rose-50 rounded-xl p-3 border border-rose-100 text-center">
                         <p className="text-2xl font-bold text-rose-700">{allCountrySet.size}</p>
                         <p className="text-[10px] text-rose-400 mt-0.5">Tekil Ülke</p>
                       </div>
                       <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100 text-center">
                         <p className="text-2xl font-bold text-indigo-700">{projectsWithCountry}</p>
-                        <p className="text-[10px] text-indigo-400 mt-0.5">Ülke Bilgisi Olan Proje</p>
+                        <p className="text-[10px] text-indigo-400 mt-0.5">Ülke Bilgili Proje</p>
+                      </div>
+                      <div className="bg-sky-50 rounded-xl p-3 border border-sky-100 text-center">
+                        <p className="text-2xl font-bold text-sky-700">{allInstSet.size}</p>
+                        <p className="text-[10px] text-sky-400 mt-0.5">Tekil Kurum</p>
                       </div>
                       <div className="bg-violet-50 rounded-xl p-3 border border-violet-100 text-center">
                         <p className="text-2xl font-bold text-violet-700">{Object.keys(partnerCountryMap).length}</p>
-                        <p className="text-[10px] text-violet-400 mt-0.5">İşbirliği Yapılan Ülke</p>
+                        <p className="text-[10px] text-violet-400 mt-0.5">İşbirliği Ülke</p>
                       </div>
                     </div>
-                    {/* Yürütücü ülke dağılımı */}
-                    {piEntries.length > 0 && (
-                      <div className="bg-slate-50 rounded-xl p-4">
-                        <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-indigo-500" />Proje Yürütücü Ülke Dağılımı</h4>
-                        <SimpleBarChart data={piEntries.map(([c, v]) => ({ label: c, value: v, color: piBarColors[c] || "#6366f1" }))} height={130} />
+
+                    {/* ── ÜLKE DAĞILIMLARI ── */}
+                    {hasCountry && (<>
+                      {/* Genel Yürütücü Ülke + Pie */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-indigo-500" />Yürütücü Ülke Dağılımı (Tümü)</h4>
+                          <SimplePieChart data={makePie(piCountryMap, cPalette)} size={130} />
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-indigo-500" />Yürütücü Ülke (Bar)</h4>
+                          <SimpleBarChart data={piCountryEntries.map(([c, v]) => ({ label: c, value: v, color: "#6366f1" }))} height={Math.max(100, piCountryEntries.length * 26)} />
+                        </div>
                       </div>
-                    )}
-                    {/* Ortak ülke dağılımı */}
-                    {partnerEntries.length > 0 && (
-                      <div className="bg-slate-50 rounded-xl p-4">
-                        <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-violet-500" />Ortak Ülke Dağılımı (İşbirliği)</h4>
-                        <SimpleBarChart data={partnerEntries.map(([c, v]) => ({ label: c, value: v, color: "#8b5cf6" }))} height={130} />
+
+                      {/* Durum bazlı ülke pie'ları */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[
+                          { key: "proposed", label: "Önerilen Proje Ülke Dağılımı", data: proposed, color: "#f59e0b", bg: "bg-amber-50", border: "border-amber-100" },
+                          { key: "active", label: "Aktif Proje Ülke Dağılımı", data: active, color: "#3b82f6", bg: "bg-blue-50", border: "border-blue-100" },
+                          { key: "completed", label: "Tamamlanan Proje Ülke Dağılımı", data: completed, color: "#10b981", bg: "bg-emerald-50", border: "border-emerald-100" },
+                        ].map(s => {
+                          const entries = Object.entries(s.data).sort((a,b) => b[1]-a[1]);
+                          return (
+                            <div key={s.key} className={`${s.bg} rounded-xl p-4 border ${s.border}`}>
+                              <h4 className="text-[11px] font-semibold text-slate-600 mb-2">{s.label}</h4>
+                              {entries.length > 0 ? (
+                                <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: cPalette[i % cPalette.length] }))} size={110} />
+                              ) : (
+                                <p className="text-xs text-slate-400 text-center py-4">Veri yok</p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                    {/* Detay tablosu */}
-                    {(piEntries.length > 0 || partnerEntries.length > 0) && (
+
+                      {/* Ortak ülke dağılımı */}
+                      {partnerCountryEntries.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+                            <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-violet-500" />Ortak Ülke (Pie)</h4>
+                            <SimplePieChart data={makePie(partnerCountryMap, cPalette)} size={130} />
+                          </div>
+                          <div className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+                            <h4 className="text-xs font-semibold text-slate-600 mb-3 flex items-center gap-1.5"><Globe size={12} className="text-violet-500" />Ortak Ülke (Bar)</h4>
+                            <SimpleBarChart data={partnerCountryEntries.map(([c, v]) => ({ label: c, value: v, color: "#8b5cf6" }))} height={Math.max(100, partnerCountryEntries.length * 26)} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ülke detay tablosu */}
                       <div className="bg-slate-50 rounded-xl p-4">
                         <h4 className="text-xs font-semibold text-slate-600 mb-3">Ülke Detay Tablosu</h4>
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead><tr className="text-left border-b border-slate-200">
                               <th className="pb-2 font-semibold text-slate-500">Ülke</th>
-                              <th className="pb-2 font-semibold text-indigo-500 text-center">Yürütücü</th>
+                              <th className="pb-2 font-semibold text-amber-500 text-center">Önerilen</th>
+                              <th className="pb-2 font-semibold text-blue-500 text-center">Aktif</th>
+                              <th className="pb-2 font-semibold text-emerald-500 text-center">Tamamlanan</th>
+                              <th className="pb-2 font-semibold text-indigo-500 text-center">Yürütücü Top.</th>
                               <th className="pb-2 font-semibold text-violet-500 text-center">Ortak</th>
-                              <th className="pb-2 font-semibold text-slate-500 text-center">Toplam</th>
+                              <th className="pb-2 font-semibold text-slate-600 text-center">Genel Top.</th>
                             </tr></thead>
                             <tbody>
                               {[...allCountrySet].sort((a, b) => {
@@ -3955,8 +4174,11 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                               }).map(c => (
                                 <tr key={c} className="border-b border-slate-100 hover:bg-white/50">
                                   <td className="py-1.5 font-medium text-slate-700">{c}</td>
-                                  <td className="text-center text-indigo-600">{piCountryMap[c] || 0}</td>
-                                  <td className="text-center text-violet-600">{partnerCountryMap[c] || 0}</td>
+                                  <td className="text-center text-amber-600">{proposed[c] || "-"}</td>
+                                  <td className="text-center text-blue-600">{active[c] || "-"}</td>
+                                  <td className="text-center text-emerald-600">{completed[c] || "-"}</td>
+                                  <td className="text-center font-semibold text-indigo-600">{piCountryMap[c] || "-"}</td>
+                                  <td className="text-center text-violet-600">{partnerCountryMap[c] || "-"}</td>
                                   <td className="text-center font-bold text-slate-700">{(piCountryMap[c] || 0) + (partnerCountryMap[c] || 0)}</td>
                                 </tr>
                               ))}
@@ -3964,14 +4186,229 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                           </table>
                         </div>
                       </div>
-                    )}
-                    {piEntries.length === 0 && partnerEntries.length === 0 && (
-                      <div className="text-center py-8 text-slate-400">
-                        <MapPin size={32} className="mx-auto mb-2 text-slate-300" />
-                        <p className="text-sm">Henüz projelere ülke bilgisi eklenmemiş.</p>
-                        <p className="text-xs text-slate-300 mt-1">Proje detaylarından yürütücü ve ortak ülke bilgilerini ekleyebilirsiniz.</p>
+                    </>)}
+
+                    {/* ── KURUM DAĞILIMLARI ── */}
+                    {hasInst && (<>
+                      <div className="border-t border-slate-200 pt-4">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-4"><Building2 size={14} className="text-sky-500" />Yürütücü Kurum İstatistikleri</h3>
                       </div>
-                    )}
+
+                      {/* Genel Yürütücü Kurum */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <h4 className="text-xs font-semibold text-slate-600 mb-3">Yürütücü Kurum Dağılımı (Pie)</h4>
+                          <SimplePieChart data={makePie(piInstMap, iPalette)} size={130} />
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-4">
+                          <h4 className="text-xs font-semibold text-slate-600 mb-3">Yürütücü Kurum Dağılımı (Bar)</h4>
+                          <SimpleBarChart data={piInstEntries.map(([c, v]) => ({ label: c, value: v, color: "#0ea5e9" }))} height={Math.max(100, piInstEntries.length * 26)} />
+                        </div>
+                      </div>
+
+                      {/* Durum bazlı kurum pie'ları */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {[
+                          { key: "proposed", label: "Önerilen Proje Kurum Dağılımı", data: proposedInst, bg: "bg-amber-50", border: "border-amber-100" },
+                          { key: "active", label: "Aktif Proje Kurum Dağılımı", data: activeInst, bg: "bg-blue-50", border: "border-blue-100" },
+                          { key: "completed", label: "Tamamlanan Proje Kurum Dağılımı", data: completedInst, bg: "bg-emerald-50", border: "border-emerald-100" },
+                        ].map(s => {
+                          const entries = Object.entries(s.data).sort((a,b) => b[1]-a[1]);
+                          return (
+                            <div key={s.key} className={`${s.bg} rounded-xl p-4 border ${s.border}`}>
+                              <h4 className="text-[11px] font-semibold text-slate-600 mb-2">{s.label}</h4>
+                              {entries.length > 0 ? (
+                                <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: iPalette[i % iPalette.length] }))} size={110} />
+                              ) : (
+                                <p className="text-xs text-slate-400 text-center py-4">Veri yok</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Ortak kurum dağılımı */}
+                      {partnerInstEntries.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-sky-50 rounded-xl p-4 border border-sky-100">
+                            <h4 className="text-xs font-semibold text-slate-600 mb-3">Ortak Kurum Dağılımı (Pie)</h4>
+                            <SimplePieChart data={makePie(partnerInstMap, iPalette)} size={130} />
+                          </div>
+                          <div className="bg-sky-50 rounded-xl p-4 border border-sky-100">
+                            <h4 className="text-xs font-semibold text-slate-600 mb-3">Ortak Kurum Dağılımı (Bar)</h4>
+                            <SimpleBarChart data={partnerInstEntries.map(([c, v]) => ({ label: c, value: v, color: "#0284c7" }))} height={Math.max(100, partnerInstEntries.length * 26)} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Kurum detay tablosu */}
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <h4 className="text-xs font-semibold text-slate-600 mb-3">Kurum Detay Tablosu</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead><tr className="text-left border-b border-slate-200">
+                              <th className="pb-2 font-semibold text-slate-500">Kurum</th>
+                              <th className="pb-2 font-semibold text-amber-500 text-center">Önerilen</th>
+                              <th className="pb-2 font-semibold text-blue-500 text-center">Aktif</th>
+                              <th className="pb-2 font-semibold text-emerald-500 text-center">Tamamlanan</th>
+                              <th className="pb-2 font-semibold text-sky-500 text-center">Yürütücü Top.</th>
+                              <th className="pb-2 font-semibold text-cyan-500 text-center">Ortak</th>
+                              <th className="pb-2 font-semibold text-slate-600 text-center">Genel Top.</th>
+                            </tr></thead>
+                            <tbody>
+                              {[...allInstSet].sort((a, b) => {
+                                const ta = (piInstMap[a] || 0) + (partnerInstMap[a] || 0);
+                                const tb = (piInstMap[b] || 0) + (partnerInstMap[b] || 0);
+                                return tb - ta;
+                              }).map(inst => (
+                                <tr key={inst} className={`border-b border-slate-100 hover:bg-white/50 cursor-pointer ${selectedInstitution === inst ? "bg-sky-50 ring-1 ring-sky-200" : ""}`} onClick={() => setSelectedInstitution(selectedInstitution === inst ? "" : inst)}>
+                                  <td className="py-1.5 font-medium text-slate-700">{inst} {selectedInstitution === inst && <span className="text-sky-500 text-[10px]">(seçili)</span>}</td>
+                                  <td className="text-center text-amber-600">{proposedInst[inst] || "-"}</td>
+                                  <td className="text-center text-blue-600">{activeInst[inst] || "-"}</td>
+                                  <td className="text-center text-emerald-600">{completedInst[inst] || "-"}</td>
+                                  <td className="text-center font-semibold text-sky-600">{piInstMap[inst] || "-"}</td>
+                                  <td className="text-center text-cyan-600">{partnerInstMap[inst] || "-"}</td>
+                                  <td className="text-center font-bold text-slate-700">{(piInstMap[inst] || 0) + (partnerInstMap[inst] || 0)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Kurum Bazlı Detay Drill-Down */}
+                      <div className="border-t border-slate-200 pt-4">
+                        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3"><Building2 size={14} className="text-teal-500" />Kurum Bazlı Detay Raporu</h3>
+                        <select value={selectedInstitution} onChange={e => setSelectedInstitution(e.target.value)} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-300">
+                          <option value="">Kurum seçin...</option>
+                          {[...allInstSet].sort((a, b) => a.localeCompare(b, "tr")).map(inst => <option key={inst} value={inst}>{inst} ({piInstMap[inst] || 0} yürütücü, {partnerInstMap[inst] || 0} ortak)</option>)}
+                        </select>
+                        {selectedInstitution && (() => {
+                          const instProjects = fp.filter(p => p.piInstitution === selectedInstitution || (p.partnerInstitutions || []).includes(selectedInstitution));
+                          const instByStatus = { proposed: [], active: [], completed: [] };
+                          instProjects.forEach(p => { const st = p.status === "planning" ? "proposed" : (p.status || "proposed"); if (instByStatus[st]) instByStatus[st].push(p); });
+                          // Ülke dağılımı (bu kurum bazında)
+                          const instCountryMap = {}; const instCountryByStatus = { proposed: {}, active: {}, completed: {} };
+                          instProjects.forEach(p => {
+                            const st = p.status === "planning" ? "proposed" : (p.status || "proposed");
+                            if (p.piCountry) { instCountryMap[p.piCountry] = (instCountryMap[p.piCountry] || 0) + 1; if (instCountryByStatus[st]) instCountryByStatus[st][p.piCountry] = (instCountryByStatus[st][p.piCountry] || 0) + 1; }
+                            (p.partnerCountries || []).forEach(c => { instCountryMap[c] = (instCountryMap[c] || 0) + 1; });
+                          });
+                          // Ortak kurum dağılımı (bu kurum bazında)
+                          const instPartnerMap = {}; const instPartnerByStatus = { proposed: {}, active: {}, completed: {} };
+                          instProjects.forEach(p => {
+                            const st = p.status === "planning" ? "proposed" : (p.status || "proposed");
+                            (p.partnerInstitutions || []).filter(i => i !== selectedInstitution).forEach(i => {
+                              instPartnerMap[i] = (instPartnerMap[i] || 0) + 1;
+                              if (instPartnerByStatus[st]) instPartnerByStatus[st][i] = (instPartnerByStatus[st][i] || 0) + 1;
+                            });
+                            if (p.piInstitution && p.piInstitution !== selectedInstitution) {
+                              instPartnerMap[p.piInstitution] = (instPartnerMap[p.piInstitution] || 0) + 1;
+                              if (instPartnerByStatus[st]) instPartnerByStatus[st][p.piInstitution] = (instPartnerByStatus[st][p.piInstitution] || 0) + 1;
+                            }
+                          });
+                          const instCountryEntries = Object.entries(instCountryMap).sort((a,b) => b[1]-a[1]);
+                          const instPartnerEntries = Object.entries(instPartnerMap).sort((a,b) => b[1]-a[1]);
+                          return (
+                            <div className="space-y-4 bg-gradient-to-br from-sky-50 to-indigo-50 rounded-xl p-4 border border-sky-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building2 size={16} className="text-sky-600" />
+                                <h4 className="text-sm font-bold text-sky-800">{selectedInstitution}</h4>
+                                <span className="text-xs text-sky-500 ml-auto">{instProjects.length} proje</span>
+                              </div>
+                              {/* Durum kartları */}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="bg-amber-50 rounded-lg p-2 border border-amber-100 text-center">
+                                  <p className="text-lg font-bold text-amber-700">{instByStatus.proposed.length}</p>
+                                  <p className="text-[10px] text-amber-500">Önerilen</p>
+                                </div>
+                                <div className="bg-blue-50 rounded-lg p-2 border border-blue-100 text-center">
+                                  <p className="text-lg font-bold text-blue-700">{instByStatus.active.length}</p>
+                                  <p className="text-[10px] text-blue-500">Aktif</p>
+                                </div>
+                                <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100 text-center">
+                                  <p className="text-lg font-bold text-emerald-700">{instByStatus.completed.length}</p>
+                                  <p className="text-[10px] text-emerald-500">Tamamlanan</p>
+                                </div>
+                              </div>
+                              {/* Ülke dağılımları — durum bazlı pie */}
+                              {instCountryEntries.length > 0 && (<>
+                                <h4 className="text-xs font-semibold text-slate-600 flex items-center gap-1.5 mt-2"><Globe size={12} className="text-indigo-500" />Ülke Dağılımı</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="bg-white/70 rounded-lg p-3">
+                                    <p className="text-[10px] font-medium text-slate-500 mb-2">Genel Ülke (Pie)</p>
+                                    <SimplePieChart data={makePie(instCountryMap, cPalette)} size={100} />
+                                  </div>
+                                  <div className="bg-white/70 rounded-lg p-3">
+                                    <p className="text-[10px] font-medium text-slate-500 mb-2">Genel Ülke (Bar)</p>
+                                    <SimpleBarChart data={instCountryEntries.map(([c,v]) => ({label:c, value:v, color:"#6366f1"}))} height={Math.max(80, instCountryEntries.length * 22)} />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {[
+                                    {label: "Önerilen Ülke", data: instCountryByStatus.proposed, bg: "bg-amber-50/80", border: "border-amber-100"},
+                                    {label: "Aktif Ülke", data: instCountryByStatus.active, bg: "bg-blue-50/80", border: "border-blue-100"},
+                                    {label: "Tamamlanan Ülke", data: instCountryByStatus.completed, bg: "bg-emerald-50/80", border: "border-emerald-100"},
+                                  ].map(s => {
+                                    const e = Object.entries(s.data).sort((a,b)=>b[1]-a[1]);
+                                    return (<div key={s.label} className={`${s.bg} rounded-lg p-2 border ${s.border}`}>
+                                      <p className="text-[10px] font-semibold text-slate-600 mb-1">{s.label}</p>
+                                      {e.length > 0 ? <SimplePieChart data={e.map(([label,value],i)=>({label,value,color:cPalette[i%cPalette.length]}))} size={80} /> : <p className="text-[10px] text-slate-400 text-center py-2">—</p>}
+                                    </div>);
+                                  })}
+                                </div>
+                              </>)}
+                              {/* Ortak kurum dağılımları — durum bazlı pie */}
+                              {instPartnerEntries.length > 0 && (<>
+                                <h4 className="text-xs font-semibold text-slate-600 flex items-center gap-1.5 mt-2"><Building2 size={12} className="text-cyan-500" />İşbirliği Yapılan Kurumlar</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="bg-white/70 rounded-lg p-3">
+                                    <p className="text-[10px] font-medium text-slate-500 mb-2">Genel Ortak Kurum (Pie)</p>
+                                    <SimplePieChart data={makePie(instPartnerMap, iPalette)} size={100} />
+                                  </div>
+                                  <div className="bg-white/70 rounded-lg p-3">
+                                    <p className="text-[10px] font-medium text-slate-500 mb-2">Genel Ortak Kurum (Bar)</p>
+                                    <SimpleBarChart data={instPartnerEntries.map(([c,v]) => ({label:c, value:v, color:"#0ea5e9"}))} height={Math.max(80, instPartnerEntries.length * 22)} />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {[
+                                    {label: "Önerilen Kurum", data: instPartnerByStatus.proposed, bg: "bg-amber-50/80", border: "border-amber-100"},
+                                    {label: "Aktif Kurum", data: instPartnerByStatus.active, bg: "bg-blue-50/80", border: "border-blue-100"},
+                                    {label: "Tamamlanan Kurum", data: instPartnerByStatus.completed, bg: "bg-emerald-50/80", border: "border-emerald-100"},
+                                  ].map(s => {
+                                    const e = Object.entries(s.data).sort((a,b)=>b[1]-a[1]);
+                                    return (<div key={s.label} className={`${s.bg} rounded-lg p-2 border ${s.border}`}>
+                                      <p className="text-[10px] font-semibold text-slate-600 mb-1">{s.label}</p>
+                                      {e.length > 0 ? <SimplePieChart data={e.map(([label,value],i)=>({label,value,color:iPalette[i%iPalette.length]}))} size={80} /> : <p className="text-[10px] text-slate-400 text-center py-2">—</p>}
+                                    </div>);
+                                  })}
+                                </div>
+                              </>)}
+                              {/* Proje listesi */}
+                              <div className="bg-white/70 rounded-lg p-3">
+                                <p className="text-[10px] font-medium text-slate-500 mb-2">Proje Listesi</p>
+                                <div className="space-y-1">
+                                  {instProjects.map(p => (
+                                    <div key={p.id} className="flex items-center gap-2 text-xs">
+                                      <span className={`w-2 h-2 rounded-full ${p.status === "completed" ? "bg-emerald-400" : p.status === "active" ? "bg-blue-400" : "bg-amber-400"}`} />
+                                      <span className="font-medium text-slate-700 truncate flex-1">{p.title}</span>
+                                      <span className="text-slate-400">{p.piCountry || "—"}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {!selectedInstitution && (
+                          <div className="text-center py-6 text-slate-400">
+                            <Building2 size={28} className="mx-auto mb-2 text-slate-300" />
+                            <p className="text-xs">Yukarıdan bir kurum seçin veya tablodaki bir kuruma tıklayın.</p>
+                          </div>
+                        )}
+                      </div>
+                    </>)}
                   </div>
                 );
               })()}
@@ -5050,7 +5487,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       {rolePopup && <RoleSelectPopup position={rolePopup.position} onSelect={handleRoleSelect} onCancel={() => setRolePopup(null)} />}
       {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} />}
       {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={isAdmin} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} />}
-      {addModal && isAdmin && <AddItemModal type={addModal} allTopics={topics} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
+      {addModal && isAdmin && <AddItemModal type={addModal} allTopics={topics} projects={projects} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
       {showCalendar && <CalendarModal topics={topics} projects={projects} onClose={() => setShowCalendar(false)} />}
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}
       {showTableView && <TableViewModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowTableView(false)} />}
