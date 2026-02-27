@@ -8,7 +8,7 @@ import {
   Globe, Phone, Mail, GraduationCap, Building2, Wrench, Award,
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
-  Table2, Download, Upload, DatabaseBackup
+  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -2500,6 +2500,53 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
 };
 
 // ─── SETTINGS MODAL ──────────────────────────────────────
+
+// ─── ACADEMIC REPORT HTML GENERATOR ─────────────────────
+const generateAcademicReportHTML = () => {
+  const today = new Date().toLocaleDateString("tr-TR");
+  return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><title>Ar-Ge Dashboard Akademik Rapor</title>
+<style>body{font-family:'Times New Roman',serif;max-width:700px;margin:40px auto;padding:20px;line-height:1.8;color:#222}
+h1{text-align:center;font-size:18px;margin-bottom:4px}h2{text-align:center;font-size:15px;font-weight:normal;color:#555;margin-bottom:20px}
+h3{font-size:14px;margin-top:24px;border-bottom:1px solid #ccc;padding-bottom:4px}
+p{text-align:justify;font-size:12px;margin:8px 0}
+.meta{text-align:center;font-size:11px;color:#777;margin-bottom:30px}
+.ref{font-size:11px;color:#555}
+@media print{body{margin:0;padding:15px}}</style></head><body>
+<h1>Yapay Zeka Destekli Ar-Ge Yönetim Paneli:<br/>Tasarım, Geliştirme ve Uygulama Süreci</h1>
+<h2>Anadolu Üniversitesi | Açıköğretim Fakültesi | Ar-Ge Birimi</h2>
+<p class="meta">Rapor Tarihi: ${today} | Sefa Emre Öncü</p>
+<h3>1. Özet (Abstract)</h3>
+<p>Bu çalışma, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge Birimi için geliştirilen web tabanlı araştırma yönetim panelinin tasarım ve geliştirme sürecini akademik perspektiften ele almaktadır. Proje, büyük dil modelleri (LLM) destekli yazılım geliştirme metodolojisinin uygulamalı bir örneğini sunmakta olup, insan-yapay zeka işbirliğine dayalı hibrit bir geliştirme modeli izlenmiştir. Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI modelleri (Opus 4, Sonnet 4.5) kullanılmış; iteratif prompt mühendisliği, otomatik kod üretimi ve yapısal doğrulama süreçleri uygulanmıştır.</p>
+<h3>2. Giriş</h3>
+<p>Akademik araştırma yönetimi, çok sayıda araştırmacı, araştırma konusu ve projenin eşzamanlı koordinasyonunu gerektiren karmaşık bir süreçtir. Mevcut ticari çözümler (Notion, Trello, Asana vb.) genel amaçlı proje yönetim araçları olup, araştırma birimine özgü gereksinimleri (unvan takibi, AÖF üyelik filtreleme, rol tabanlı liderlik puanlaması, uluslararası ortaklık yönetimi vb.) tam olarak karşılayamamaktadır.</p>
+<p>Bu proje, Notion platformundan bağımsız, tamamen özelleştirilmiş bir web tabanlı yönetim paneline geçiş sürecini ve bu süreçte yapay zeka teknolojilerinin yazılım geliştirmedeki rolünü incelemektedir.</p>
+<h3>3. Yöntem ve Teknolojiler</h3>
+<p><strong>3.1. Geliştirme Ortamı ve Araçlar:</strong> React 18 (kullanıcı arayüzü kütüphanesi), Vite 6.x (derleme sistemi), Tailwind CSS (utility-first stil çerçevesi), Lucide React (ikon kütüphanesi) ve Vercel (dağıtım platformu) kullanılmıştır. Uygulama, tek sayfa uygulaması (SPA) mimarisinde geliştirilmiştir.</p>
+<p><strong>3.2. Yapay Zeka Destekli Geliştirme Süreci:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli kullanılmıştır. Kullanılan modeller: Claude Opus 4 (karmaşık mimari kararlar ve çok adımlı geliştirme) ve Claude Sonnet 4.5 (hızlı iterasyon ve kod düzenleme). Geliştirme, iki farklı arayüz üzerinden yürütülmüştür: (a) Claude Cowork — masaüstü agent modu ile dosya yönetimi ve otomatik düzenleme, (b) Claude Code — komut satırı tabanlı agent aracı ile Git entegrasyonu ve toplu değişiklik.</p>
+<p><strong>3.3. Prompt Mühendisliği Metodolojisi:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi (context window) yönetimi ile oturum sürekliliği sağlanmıştır. Oturum özetleme (session summarization) tekniği ile uzun geliştirme süreçleri arasında bilgi kaybı minimize edilmiştir.</p>
+<h3>4. Sistem Mimarisi</h3>
+<p><strong>4.1. Veri Katmanı:</strong> Sunucu tarafı veritabanı yerine tarayıcı localStorage API'si kullanılmıştır. JSON serileştirme/deserileştirme ile veri kalıcılığı sağlanmış, başlangıç verileri ile otomatik migrasyon desteği eklenmiştir. itemWithDefaults deseni ile geriye dönük uyumluluk korunmaktadır.</p>
+<p><strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), HTML5 Drag & Drop API ile sürükle-bırak etkileşimi, React useMemo hook'u ile optimize edilmiş gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
+<p><strong>4.3. Kimlik Doğrulama:</strong> Web Crypto API (SHA-256) tabanlı parola hash'leme, admin/viewer rol ayrımı, localStorage session yönetimi.</p>
+<h3>5. Geliştirilen Özellikler</h3>
+<p>Araştırmacı profil yönetimi (unvan, kurum, eğitim bilgileri, araştırma alanları), konu ve proje yaşam döngüsü takibi, rol tabanlı yetkilendirme, kapsamlı istatistik modalları (6 sekme), liderlik tablosu (ağırlıklı puanlama), takvim görünümü, uluslararası ortaklık ve ülke takibi, AÖF öğretim üyesi filtreleme sistemi, unvan dağılımı analizi, sütun tam ekran modu, JSON veri dışa/içe aktarım, yapılandırılabilir roller/durumlar/öncelikler, hızlı bağlantı yönetimi ve kural tabanlı akıllı sohbet asistanı.</p>
+<h3>6. AI/LLM Kullanım Detayları</h3>
+<p><strong>6.1. Kod Üretimi:</strong> Tüm React bileşenleri, CSS stilleri ve JavaScript mantığı Claude AI tarafından üretilmiştir. İnsan rolü; gereksinim tanımlama, tasarım yönlendirme ve kalite kontrolden oluşmuştur.</p>
+<p><strong>6.2. Hata Ayıklama:</strong> JSX yapısal analizi (brace balance kontrolü), Vercel build hatalarının kök neden analizi, fragment wrapper düzeltmeleri gibi teknik sorunlar AI agent tarafından tespit ve çözülmüştür.</p>
+<p><strong>6.3. Otomasyon:</strong> Python betikleri ile toplu kod değişiklikleri (34 araştırmacıya alan ekleme), dual-file parity (auth/standalone dosyaların eşzamanlı güncellenmesi) AI tarafından otomatikleştirilmiştir.</p>
+<p><strong>6.4. Doğrulama:</strong> Her değişiklik sonrası otomatik brace/paren/bracket balance kontrolü, import doğrulama ve yapısal tutarlılık testleri uygulanmıştır.</p>
+<h3>7. Sonuç ve Değerlendirme</h3>
+<p>Bu çalışma, büyük dil modellerinin akademik yazılım geliştirme süreçlerinde etkin ve verimli bir şekilde kullanılabileceğini göstermektedir. Claude AI'ın iteratif geliştirme, hata düzeltme, kod optimizasyonu ve çoklu dosya eşitleme konularındaki katkıları, geliştirme süresini önemli ölçüde kısaltmıştır. İnsan-AI işbirliğine dayalı hibrit model, özellikle alan bilgisi gerektiren özelleştirilmiş uygulamaların geliştirilmesinde yüksek potansiyel taşımaktadır.</p>
+<h3>Kaynakça</h3>
+<p class="ref">[1] Anthropic. (2025). Claude AI Documentation. https://docs.anthropic.com<br/>
+[2] Meta. (2024). React 18 Documentation. https://react.dev<br/>
+[3] Evan You et al. (2024). Vite - Next Generation Frontend Tooling. https://vitejs.dev<br/>
+[4] Tailwind Labs. (2024). Tailwind CSS Framework. https://tailwindcss.com<br/>
+[5] Vercel Inc. (2025). Vercel Deployment Platform. https://vercel.com<br/>
+[6] Lucide. (2024). Lucide Icons. https://lucide.dev</p>
+</body></html>`;
+};
+
 const SettingsModal = ({
   roleConfig, onRoleConfigChange,
   statusConfig, onStatusConfigChange,
@@ -2525,6 +2572,7 @@ const SettingsModal = ({
     { key: "education", label: "Eğitim", icon: GraduationCap },
     { key: "links", label: "Bağlantılar", icon: Link2 },
     { key: "data", label: "Veri", icon: DatabaseBackup },
+    { key: "report", label: "Akademik Rapor", icon: FileText },
   ];
 
   const PALETTE = [
@@ -2930,6 +2978,66 @@ const SettingsModal = ({
                 <button onClick={onResetAllData} className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
                   <Trash2 size={14} />Her Şeyi Sıfırla
                 </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "report" && (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+                <h3 className="text-sm font-bold text-indigo-800 flex items-center gap-2 mb-2"><FileText size={16} />Ar-Ge Dashboard Akademik Raporu</h3>
+                <p className="text-xs text-slate-600 mb-3">Bu rapor, Ar-Ge Dashboard uygulamasının geliştirilme sürecini, kullanılan yapay zeka teknolojilerini ve metodolojisini akademik formatta açıklamaktadır.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    const html = generateAcademicReportHTML();
+                    const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'ArGe_Dashboard_Akademik_Rapor.doc'; a.click();
+                    URL.revokeObjectURL(url);
+                  }} className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                    <Download size={14} />Word İndir (.doc)
+                  </button>
+                  <button onClick={() => {
+                    const html = generateAcademicReportHTML();
+                    const w = window.open('', '_blank');
+                    w.document.write(html);
+                    w.document.close();
+                    setTimeout(() => { w.print(); }, 500);
+                  }} className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
+                    <Download size={14} />PDF İndir (Yazdır)
+                  </button>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4 max-h-[60vh] overflow-y-auto">
+                <div className="prose prose-sm max-w-none">
+                  <h2 className="text-base font-bold text-slate-800 text-center mb-1">Yapay Zeka Destekli Ar-Ge Yönetim Paneli:</h2>
+                  <h3 className="text-sm font-semibold text-slate-600 text-center mb-3">Tasarım, Geliştirme ve Uygulama Süreci</h3>
+                  <p className="text-[10px] text-slate-400 text-center mb-4">Anadolu Üniversitesi | Açıköğretim Fakültesi | Ar-Ge Birimi<br/>Rapor Tarihi: {new Date().toLocaleDateString("tr-TR")}</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">1. Özet (Abstract)</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge Birimi için geliştirilen web tabanlı araştırma yönetim panelinin tasarım ve geliştirme sürecini akademik perspektiften ele almaktadır. Proje, büyük dil modelleri (LLM) destekli yazılım geliştirme metodolojisinin uygulamalı bir örneğini sunmaktadır.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">2. Giriş</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Akademik araştırma yönetimi, çok sayıda araştırmacı, konu ve projenin koordinasyonunu gerektirmektedir. Mevcut ticari çözümler (Notion, Trello vb.) genel amaçlı olup, Ar-Ge birimine özgü ihtiyaçları karşılamamaktadır. Bu çalışmada, Notion platformundan bağımsız, özelleştirilmiş bir yönetim paneline geçiş süreci ve bu süreçte yapay zeka teknolojilerinin rolü ele alınmaktadır.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">3. Yöntem ve Teknolojiler</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.1. Geliştirme Ortamı:</strong> React 18, Vite 6.x build sistemi, Tailwind CSS utility-first framework ve Lucide React ikon kütüphanesi kullanılmıştır. Uygulama, tek sayfa uygulaması (SPA) mimarisinde geliştirilmiş olup, Vercel platformu üzerinden dağıtılmaktadır.</p>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.2. Yapay Zeka Destekli Geliştirme:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli (Claude Opus 4 ve Claude Sonnet 4.5) kullanılmıştır. Cowork (masaüstü agent modu) ve Claude Code (komut satırı agent aracı) üzerinden iteratif geliştirme yapılmıştır.</p>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>3.3. Prompt Mühendisliği:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi yönetimi ile tutarlılık sağlanmıştır. Oturum sürekliliği (session continuity) tekniği ile uzun geliştirme süreçleri yönetilmiştir.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">4. Sistem Mimarisi</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>4.1. Veri Katmanı:</strong> localStorage tabanlı kalıcı veri saklama, JSON serileştirme/deserileştirme, başlangıç verileri ile otomatik migrasyon desteği. <strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), sürükle-bırak etkileşimi, gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">5. Özellikler</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Araştırmacı yönetimi, konu ve proje takibi, rol tabanlı yetkilendirme (admin/viewer), detaylı istatistik modalları, liderlik tablosu, takvim görünümü, uluslararası ortaklık takibi, AÖF üyelik filtreleme, unvan dağılımı analizi, sütun tam ekran modu, veri dışa/içe aktarım ve kural tabanlı akıllı sohbet asistanı (chatbot).</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">6. AI/LLM Kullanım Detayları</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Kod üretimi, hata ayıklama, JSX yapısal analiz, Python otomasyonu ile toplu değişiklik, brace balance doğrulama, dual-file parity (auth/standalone eşitleme) süreçlerinin tamamında Claude AI agent olarak kullanılmıştır. İnsan-AI işbirliğine dayalı hibrit geliştirme modeli uygulanmıştır.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">7. Sonuç</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">Bu çalışma, büyük dil modellerinin akademik yazılım geliştirme süreçlerinde etkin bir şekilde kullanılabileceğini göstermektedir. Claude AI'ın iteratif geliştirme, hata düzeltme ve kod optimizasyonu konularındaki katkıları, geliştirme süresini önemli ölçüde kısaltmıştır.</p>
+                  <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">Kaynakça</h4>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    [1] Anthropic. (2025). Claude AI Documentation. https://docs.anthropic.com<br/>
+                    [2] Meta. (2024). React 18 Documentation. https://react.dev<br/>
+                    [3] Evan You et al. (2024). Vite Build Tool. https://vitejs.dev<br/>
+                    [4] Tailwind Labs. (2024). Tailwind CSS. https://tailwindcss.com<br/>
+                    [5] Vercel. (2025). Vercel Deployment Platform. https://vercel.com
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -3451,6 +3559,22 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     };
   }, [topics, projects, aofResearcherIds]);
 
+  // Title (unvan) distribution
+  const titleDistribution = useMemo(() => {
+    const filteredRes = aofResearcherIds ? researchers.filter(r => aofResearcherIds.has(r.id)) : researchers;
+    const counts = {};
+    const order = ["Prof.Dr.", "Doç.Dr.", "Dr.Öğr.Üyesi", "Öğr.Gör.Dr.", "Arş.Gör.Dr.", "Arş.Gör.", "Belirtilmemiş"];
+    const colors = { "Prof.Dr.": "#6366f1", "Doç.Dr.": "#8b5cf6", "Dr.Öğr.Üyesi": "#3b82f6", "Öğr.Gör.Dr.": "#10b981", "Arş.Gör.Dr.": "#14b8a6", "Arş.Gör.": "#f59e0b", "Belirtilmemiş": "#94a3b8" };
+    filteredRes.forEach(r => {
+      const t = (r.title && r.title.trim()) ? r.title.trim() : "Belirtilmemiş";
+      counts[t] = (counts[t] || 0) + 1;
+    });
+    const sorted = order.filter(t => counts[t]).map(t => ({ title: t, count: counts[t], color: colors[t] || "#94a3b8" }));
+    Object.keys(counts).forEach(t => { if (!order.includes(t)) sorted.push({ title: t, count: counts[t], color: "#94a3b8" }); });
+    const max = Math.max(...sorted.map(s => s.count), 1);
+    return { items: sorted, max, total: filteredRes.length };
+  }, [researchers, aofResearcherIds]);
+
   const statCard = (label, value, icon, color) => (
     <div className={`${color} rounded-xl p-3 flex items-center gap-3`}>
       <div className="p-2 bg-white/60 rounded-lg">{icon}</div>
@@ -3568,6 +3692,27 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </div>
                 </div>
               </div>
+              {/* Unvan Dağılımı */}
+              {titleDistribution.items.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Unvan Dağılımı</p>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="space-y-2">
+                    {titleDistribution.items.map(item => (
+                      <div key={item.title} className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-600 w-28 text-right flex-shrink-0">{item.title}</span>
+                        <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                          <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((item.count / titleDistribution.max) * 100, 12)}%`, backgroundColor: item.color }}>
+                            <span className="text-[10px] font-bold text-white">{item.count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-3 text-right">Toplam: {titleDistribution.total} araştırmacı</p>
+                </div>
+              </div>
+              )}
               {/* Grafikler */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-slate-50 rounded-xl p-4">
@@ -3632,6 +3777,21 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </div>
                 </div>
               </div>
+              {/* Unvan Dağılımı */}
+              {titleDistribution.items.length > 0 && (
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><GraduationCap size={14} className="text-indigo-500" />Unvan Dağılımı</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                  {titleDistribution.items.map(item => (
+                    <div key={item.title} className="text-center p-3 bg-white rounded-lg border border-slate-100">
+                      <p className="text-2xl font-bold" style={{ color: item.color }}>{item.count}</p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-medium">{item.title}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 text-right">Toplam: {titleDistribution.total} araştırmacı</p>
+              </div>
+              )}
               {/* Researcher activity table */}
               <div className="bg-slate-50 rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Araştırmacı Aktivite Tablosu</h3>
@@ -4812,6 +4972,452 @@ const CalendarModal = ({ topics, projects, onClose }) => {
   );
 };
 
+// ─── AR-GE CHATBOT (KURAL TABANLI) ─────────────────────
+const ArGeChatbot = ({ researchers, topics, projects }) => {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "bot", text: "Merhaba! Ben Ar-Ge Asistanı. Aşağıdaki kategorilerden birini seçerek başlayabilirsiniz.", isWelcome: true }
+  ]);
+  const [input, setInput] = useState("");
+  const chatRef = useRef(null);
+
+  const processQuery = useCallback((q) => {
+    const low = q.toLowerCase().replace(/[?!.,]/g, "").trim();
+    const hasWord = (...words) => words.some(w => low.includes(w));
+    const yearMatch = low.match(/\b(20\d{2})\b/);
+    const year = yearMatch ? yearMatch[1] : null;
+    const filterByYear = (items, y) => items.filter(i => (i.startDate || i.createdAt || "").startsWith(y));
+    const countByStatus = (items, s) => items.filter(i => i.status === s).length;
+    const countByType = (items, t) => items.filter(i => (i.type || "").toLowerCase() === t.toLowerCase()).length;
+    const topResearchers = (metric, label, n = 3) => {
+      const sorted = metric.sort((a, b) => b.count - a.count).filter(m => m.count > 0);
+      if (sorted.length === 0) return "Bu kriterde sonu\u00e7 bulunamad\u0131.";
+      return sorted.slice(0, n).map((c, i) => `${i+1}. ${c.name} (${c.count} ${label})`).join("\n");
+    };
+
+    // ── SELAMLAMA ──
+    if (hasWord("merhaba", "selam", "hey", "g\u00fcnayd\u0131n", "iyi g\u00fcnler", "nas\u0131ls\u0131n")) return "Merhaba! Size Ar-Ge verileri hakk\u0131nda yard\u0131mc\u0131 olabilirim. Ne sormak istersiniz?";
+
+    // ── GENEL \u00d6ZET ──
+    if (hasWord("\u00f6zet", "genel", "dashboard", "panel", "durum ne", "rapor ver")) {
+      const at = countByStatus(topics, "active"); const ap = countByStatus(projects, "active");
+      const ct = countByStatus(topics, "completed"); const cp = countByStatus(projects, "completed");
+      const pt = countByStatus(topics, "proposed"); const pp = countByStatus(projects, "proposed") + countByStatus(projects, "planning");
+      const budget = projects.reduce((s, p) => s + (parseFloat(p.budget) || 0), 0);
+      const aofCount = researchers.filter(r => r.isAofMember).length;
+      return `Dashboard \u00d6zeti:\n\u2022 ${researchers.length} ara\u015ft\u0131rmac\u0131 (${aofCount} A\u00d6F \u00fcyesi)\n\u2022 ${topics.length} konu (${pt} \u00f6nerilen, ${at} aktif, ${ct} tamamlanan)\n\u2022 ${projects.length} proje (${pp} \u00f6nerilen, ${ap} aktif, ${cp} tamamlanan)\n\u2022 Toplam b\u00fct\u00e7e: \u20ba${budget.toLocaleString("tr-TR")}`;
+    }
+
+    // ── ARA\u015eTIRMACI SAYISI ──
+    if (hasWord("ka\u00e7") && hasWord("ara\u015ft\u0131rmac\u0131", "ki\u015fi", "\u00fcye", "akademisyen")) {
+      if (hasWord("a\u00f6f")) return `A\u00d6F \u00f6\u011fretim \u00fcyesi olan ${researchers.filter(r => r.isAofMember).length} ara\u015ft\u0131rmac\u0131 bulunmaktad\u0131r.`;
+      if (hasWord("prof")) return `Sistemde ${researchers.filter(r => (r.title || "").includes("Prof")).length} Prof.Dr. bulunmaktad\u0131r.`;
+      if (hasWord("do\u00e7")) return `Sistemde ${researchers.filter(r => (r.title || "").includes("Do\u00e7")).length} Do\u00e7.Dr. bulunmaktad\u0131r.`;
+      return `Sistemde toplam ${researchers.length} ara\u015ft\u0131rmac\u0131 kay\u0131tl\u0131d\u0131r.`;
+    }
+
+    // ── KONU SAYISI ──
+    if (hasWord("ka\u00e7") && hasWord("konu", "ara\u015ft\u0131rma konusu", "topic")) {
+      let items = topics; if (year) items = filterByYear(items, year);
+      if (hasWord("aktif")) return `${year ? year + " y\u0131l\u0131nda " : ""}${countByStatus(items, "active")} aktif konu bulunmaktad\u0131r.`;
+      if (hasWord("tamamla")) return `${year ? year + " y\u0131l\u0131nda " : ""}${countByStatus(items, "completed")} tamamlanan konu bulunmaktad\u0131r.`;
+      if (hasWord("\u00f6neril")) return `${year ? year + " y\u0131l\u0131nda " : ""}${countByStatus(items, "proposed")} \u00f6nerilen konu bulunmaktad\u0131r.`;
+      return `${year ? year + " y\u0131l\u0131nda " : "Toplam "}${items.length} konu bulunmaktad\u0131r.`;
+    }
+
+    // ── PROJE SAYISI ──
+    if (hasWord("ka\u00e7") && hasWord("proje", "project")) {
+      let items = projects; if (year) items = filterByYear(items, year);
+      if (hasWord("bap")) return `${year ? year+"'den beri " : ""}${countByType(items, "BAP")} BAP projesi bulunmaktad\u0131r.`;
+      if (hasWord("t\u00fcbitak", "tubitak")) return `${year ? year+"'den beri " : ""}${countByType(items, "T\u00dcB\u0130TAK")} T\u00dcB\u0130TAK projesi bulunmaktad\u0131r.`;
+      if (hasWord("horizon")) return `${year ? year+"'den beri " : ""}${countByType(items, "Horizon")} Horizon projesi bulunmaktad\u0131r.`;
+      if (hasWord("erasmus")) return `${year ? year+"'den beri " : ""}${countByType(items, "Erasmus+")} Erasmus+ projesi bulunmaktad\u0131r.`;
+      if (hasWord("digital")) return `${year ? year+"'den beri " : ""}${countByType(items, "DIGITAL")} DIGITAL projesi bulunmaktad\u0131r.`;
+      if (hasWord("uluslararas\u0131")) return `${year ? year+"'den beri " : ""}${items.filter(p => (p.partnerCountries || []).length > 0).length} uluslararas\u0131 ortakl\u0131\u011f\u0131 olan proje bulunmaktad\u0131r.`;
+      if (hasWord("aktif")) return `${year ? year + " y\u0131l\u0131nda " : ""}${countByStatus(items, "active")} aktif proje bulunmaktad\u0131r.`;
+      if (hasWord("tamamla")) return `${year ? year + " y\u0131l\u0131nda " : ""}${countByStatus(items, "completed")} tamamlanan proje bulunmaktad\u0131r.`;
+      return `${year ? year + "'den beri " : "Toplam "}${items.length} proje bulunmaktad\u0131r.`;
+    }
+
+    // ── PROJE T\u00dcR\u00dc DA\u011eILIMI ──
+    if (hasWord("proje t\u00fcr", "proje da\u011f\u0131l\u0131m", "t\u00fcr da\u011f\u0131l\u0131m")) {
+      const counts = {};
+      projects.forEach(p => { const t = p.type || "Belirtilmemi\u015f"; counts[t] = (counts[t] || 0) + 1; });
+      const lines = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `\u2022 ${k}: ${v} proje`).join("\n");
+      return `Proje T\u00fcr\u00fc Da\u011f\u0131l\u0131m\u0131:\n${lines}`;
+    }
+
+    // ── BAP SPESIFIK ──
+    if (hasWord("bap")) {
+      let items = projects.filter(p => (p.type || "").toLowerCase() === "bap"); if (year) items = filterByYear(items, year);
+      const active = items.filter(p => p.status === "active").length; const completed = items.filter(p => p.status === "completed").length;
+      return `${year ? year+"'den beri " : "Toplam "}${items.length} BAP projesi var (${active} aktif, ${completed} tamamlanan).`;
+    }
+
+    // ── T\u00dcB\u0130TAK SPESIFIK ──
+    if (hasWord("t\u00fcbitak", "tubitak")) {
+      let items = projects.filter(p => (p.type || "").toLowerCase().includes("t\u00fcbitak")); if (year) items = filterByYear(items, year);
+      return `${year ? year+"'den beri " : "Toplam "}${items.length} T\u00dcB\u0130TAK projesi bulunmaktad\u0131r.`;
+    }
+
+    // ── EN \u00c7OK KONU ──
+    if (hasWord("en \u00e7ok", "en fazla") && hasWord("konu", "topic")) {
+      const counts = researchers.map(r => ({ name: (r.title ? r.title + " " : "") + r.name, count: topics.filter(t => (t.researchers || []).some(tr => tr.researcherId === r.id)).length }));
+      return `En \u00e7ok konuya sahip ara\u015ft\u0131rmac\u0131lar:\n${topResearchers(counts, "konu", 5)}`;
+    }
+
+    // ── EN \u00c7OK PROJE ──
+    if (hasWord("en \u00e7ok", "en fazla") && hasWord("proje")) {
+      const counts = researchers.map(r => {
+        const rTopics = topics.filter(t => (t.researchers || []).some(tr => tr.researcherId === r.id));
+        const rTopicIds = new Set(rTopics.map(t => t.id));
+        return { name: (r.title ? r.title + " " : "") + r.name, count: projects.filter(p => (p.topics || []).some(tid => rTopicIds.has(tid))).length };
+      });
+      return `En \u00e7ok projeye sahip ara\u015ft\u0131rmac\u0131lar:\n${topResearchers(counts, "proje", 5)}`;
+    }
+
+    // ── EN Y\u00dcKSEK B\u00dcT\u00c7E ──
+    if (hasWord("en y\u00fcksek", "en b\u00fcy\u00fck") && hasWord("b\u00fct\u00e7e", "butce")) {
+      const sorted = [...projects].filter(p => parseFloat(p.budget) > 0).sort((a, b) => parseFloat(b.budget) - parseFloat(a.budget));
+      if (sorted.length === 0) return "B\u00fct\u00e7esi belirlenmi\u015f proje bulunamad\u0131.";
+      const top3 = sorted.slice(0, 3).map((p, i) => `${i+1}. ${p.title} (\u20ba${parseFloat(p.budget).toLocaleString("tr-TR")})`).join("\n");
+      return `En y\u00fcksek b\u00fct\u00e7eli projeler:\n${top3}`;
+    }
+
+    // ── B\u00dcT\u00c7E ──
+    if (hasWord("b\u00fct\u00e7e", "butce", "toplam b\u00fct\u00e7e", "mali", "finansman")) {
+      let items = projects; if (year) items = filterByYear(items, year);
+      const total = items.reduce((s, p) => s + (parseFloat(p.budget) || 0), 0);
+      const avg = items.length > 0 ? total / items.length : 0;
+      const maxP = items.reduce((m, p) => (parseFloat(p.budget) || 0) > (parseFloat(m.budget) || 0) ? p : m, items[0]);
+      return `${year ? year + " y\u0131l\u0131 " : ""}Proje B\u00fct\u00e7e \u00d6zeti:\n\u2022 Toplam: \u20ba${total.toLocaleString("tr-TR")}\n\u2022 Ortalama: \u20ba${Math.round(avg).toLocaleString("tr-TR")}\n\u2022 Proje say\u0131s\u0131: ${items.length}${maxP ? "\n\u2022 En y\u00fcksek: " + maxP.title : ""}`;
+    }
+
+    // ── UNVAN DA\u011eILIMI ──
+    if (hasWord("unvan", "\u00fcnvan", "akademik kadro", "profes\u00f6r", "do\u00e7ent")) {
+      const counts = {};
+      researchers.forEach(r => { const t = (r.title && r.title.trim()) ? r.title.trim() : "Belirtilmemi\u015f"; counts[t] = (counts[t] || 0) + 1; });
+      const lines = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `\u2022 ${k}: ${v} ki\u015fi`).join("\n");
+      return `Unvan Da\u011f\u0131l\u0131m\u0131:\n${lines}\nToplam: ${researchers.length} ara\u015ft\u0131rmac\u0131`;
+    }
+
+    // ── KURUM DA\u011eILIMI ──
+    if (hasWord("kurum", "birim", "fak\u00fclte", "b\u00f6l\u00fcm")) {
+      const counts = {};
+      researchers.forEach(r => { const inst = r.institution || "Belirtilmemi\u015f"; counts[inst] = (counts[inst] || 0) + 1; });
+      const lines = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `\u2022 ${k}: ${v} ki\u015fi`).join("\n");
+      return `Kurum Da\u011f\u0131l\u0131m\u0131:\n${lines}`;
+    }
+
+    // ── A\u00d6F \u00dcYELERI ──
+    if (hasWord("a\u00f6f", "a\u00e7\u0131k\u00f6\u011fretim")) {
+      const aof = researchers.filter(r => r.isAofMember); const diger = researchers.filter(r => !r.isAofMember);
+      const aofNames = aof.slice(0, 5).map(r => (r.title ? r.title + " " : "") + r.name).join(", ");
+      return `A\u00d6F \u00d6\u011fretim \u00dcyesi: ${aof.length} ki\u015fi\nDi\u011fer: ${diger.length} ki\u015fi\n\n\u00d6rnek A\u00d6F \u00fcyeleri: ${aofNames}${aof.length > 5 ? " ve di\u011ferleri..." : ""}`;
+    }
+
+    // ── GOREV / TASK ──
+    if (hasWord("g\u00f6rev", "task", "yap\u0131lacak")) {
+      const allTasks = [...topics, ...projects].flatMap(x => x.tasks || []);
+      const done = allTasks.filter(t => t.status === "done").length;
+      const todo = allTasks.filter(t => t.status === "todo").length;
+      const inProgress = allTasks.filter(t => t.status === "in_progress").length;
+      return `G\u00f6rev \u00d6zeti:\n\u2022 Toplam: ${allTasks.length} g\u00f6rev\n\u2022 Tamamlanan: ${done}\n\u2022 Devam eden: ${inProgress}\n\u2022 Bekleyen: ${todo}\n\u2022 Tamamlanma oran\u0131: %${allTasks.length > 0 ? Math.round(done / allTasks.length * 100) : 0}`;
+    }
+
+    // ── DURUM BAZLI ──
+    if (hasWord("aktif")) { return `Aktif durumda:\n\u2022 ${countByStatus(topics, "active")} konu\n\u2022 ${countByStatus(projects, "active")} proje`; }
+    if (hasWord("tamamla", "bitir", "biten", "tamamlanan")) { return `Tamamlanan:\n\u2022 ${countByStatus(topics, "completed")} konu\n\u2022 ${countByStatus(projects, "completed")} proje`; }
+    if (hasWord("\u00f6nerilen", "\u00f6neri", "bekleyen")) { return `\u00d6nerilen/Bekleyen:\n\u2022 ${countByStatus(topics, "proposed")} konu\n\u2022 ${countByStatus(projects, "proposed") + countByStatus(projects, "planning")} proje`; }
+    if (hasWord("ba\u015far\u0131s\u0131z", "iptal", "ba\u015far\u0131lamayan")) { return `Ba\u015far\u0131s\u0131z/\u0130ptal:\n\u2022 ${countByStatus(topics, "failed")} konu\n\u2022 ${countByStatus(projects, "failed")} proje`; }
+
+    // ── ULUSLARARASI ──
+    if (hasWord("uluslararas\u0131", "international", "yabanc\u0131", "\u00fclke", "ortakl\u0131k")) {
+      const intl = projects.filter(p => (p.partnerCountries || []).length > 0);
+      const countries = new Set(); intl.forEach(p => (p.partnerCountries || []).forEach(c => countries.add(c)));
+      return `Uluslararas\u0131 Ortakl\u0131klar:\n\u2022 ${intl.length} uluslararas\u0131 proje\n\u2022 ${countries.size} farkl\u0131 \u00fclke${countries.size > 0 ? "\n\u2022 \u00dclkeler: " + [...countries].join(", ") : ""}`;
+    }
+
+    // ── ROL DA\u011eILIMI ──
+    if (hasWord("rol", "y\u00fcr\u00fct\u00fcc\u00fc", "sorumlu", "lider")) {
+      const roleCounts = {};
+      topics.forEach(t => (t.researchers || []).forEach(r => { if (r.role) roleCounts[r.role] = (roleCounts[r.role] || 0) + 1; }));
+      const lines = Object.entries(roleCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `\u2022 ${k}: ${v} atama`).join("\n");
+      return `Konulardaki Rol Da\u011f\u0131l\u0131m\u0131:\n${lines || "Rol atas\u0131 bulunamad\u0131."}`;
+    }
+
+    // ── SON EKLENEN ──
+    if (hasWord("son eklenen", "yeni", "en son")) {
+      const sorted = [...topics, ...projects].filter(i => i.createdAt).sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      const top5 = sorted.slice(0, 5).map((item, i) => `${i+1}. ${item.title} (${item.createdAt || "?"})`).join("\n");
+      return `Son Eklenen \u00d6\u011feler:\n${top5 || "Tarih bilgisi olan \u00f6\u011fe bulunamad\u0131."}`;
+    }
+
+    // ── KARI\u015eTIRMA: KONU vs PROJE ──
+    if (hasWord("kar\u015f\u0131la\u015ft\u0131r", "k\u0131yasla", "fark")) {
+      return `Konu vs Proje Kar\u015f\u0131la\u015ft\u0131rmas\u0131:\n\n\u2022 Konular (${topics.length}):\n  Aktif: ${countByStatus(topics, "active")} | Tamamlanan: ${countByStatus(topics, "completed")} | \u00d6nerilen: ${countByStatus(topics, "proposed")}\n\n\u2022 Projeler (${projects.length}):\n  Aktif: ${countByStatus(projects, "active")} | Tamamlanan: ${countByStatus(projects, "completed")} | \u00d6nerilen: ${countByStatus(projects, "proposed") + countByStatus(projects, "planning")}`;
+    }
+
+    // ── VERIMLILIK ──
+    if (hasWord("verimlilik", "performans", "ba\u015far\u0131", "oran")) {
+      const topicSuccess = topics.length > 0 ? Math.round(countByStatus(topics, "completed") / topics.length * 100) : 0;
+      const projectSuccess = projects.length > 0 ? Math.round(countByStatus(projects, "completed") / projects.length * 100) : 0;
+      const allTasks = [...topics, ...projects].flatMap(x => x.tasks || []);
+      const taskRate = allTasks.length > 0 ? Math.round(allTasks.filter(t => t.status === "done").length / allTasks.length * 100) : 0;
+      return `Verimlilik Metrikleri:\n\u2022 Konu tamamlanma oran\u0131: %${topicSuccess}\n\u2022 Proje tamamlanma oran\u0131: %${projectSuccess}\n\u2022 G\u00f6rev tamamlanma oran\u0131: %${taskRate}\n\u2022 Ara\u015ft\u0131rmac\u0131 ba\u015f\u0131na ortalama konu: ${(topics.length / Math.max(researchers.length, 1)).toFixed(1)}`;
+    }
+
+    // ── PI DENEYIMI ──
+    if (hasWord("y\u00fcr\u00fct\u00fcc\u00fc deneyim", "pi deneyim", "proje y\u00fcr\u00fct")) {
+      const withPI = researchers.filter(r => r.hasPIExperience);
+      return `Proje Y\u00fcr\u00fct\u00fcc\u00fcl\u00fc\u011f\u00fc Deneyimi:\n\u2022 Deneyimi olan: ${withPI.length} ki\u015fi\n\u2022 Deneyimi olmayan: ${researchers.length - withPI.length} ki\u015fi`;
+    }
+
+    // ── ARA\u015eTIRMACI ARAMA (isim ile) ──
+    const nameSearch = researchers.find(r => low.includes(r.name.toLowerCase().split(" ")[0]) && low.includes(r.name.toLowerCase().split(" ").pop()));
+    if (nameSearch) {
+      const rTopics = topics.filter(t => (t.researchers || []).some(tr => tr.researcherId === nameSearch.id));
+      const rTopicIds = new Set(rTopics.map(t => t.id));
+      const rProjects = projects.filter(p => (p.topics || []).some(tid => rTopicIds.has(tid)));
+      const roles = {};
+      rTopics.forEach(t => { const a = (t.researchers || []).find(r => r.researcherId === nameSearch.id); if (a?.role) roles[a.role] = (roles[a.role] || 0) + 1; });
+      const roleStr = Object.entries(roles).map(([k, v]) => `${k}: ${v}`).join(", ");
+      return `${nameSearch.title ? nameSearch.title + " " : ""}${nameSearch.name}:\n\u2022 Kurum: ${nameSearch.institution || "Belirtilmemi\u015f"}\n\u2022 A\u00d6F \u00dcyesi: ${nameSearch.isAofMember ? "Evet" : "Hay\u0131r"}\n\u2022 PI Deneyimi: ${nameSearch.hasPIExperience ? "Var" : "Yok"}\n\u2022 ${rTopics.length} konu, ${rProjects.length} proje\n\u2022 Aktif konu: ${rTopics.filter(t=>t.status==="active").length}${roleStr ? "\n\u2022 Roller: " + roleStr : ""}`;
+    }
+
+    // ── AKILLI ARAMA MOTORU ──
+    // Konu başlığı, açıklama, tag, kategori araması
+    const searchTerms = low.split(/\s+/).filter(w => w.length > 2);
+    if (searchTerms.length > 0) {
+      const matchedTopics = topics.filter(t => {
+        const haystack = [t.title, t.description, t.category, ...(t.tags || []), t.projectType, t.projectTypeDetail, t.projectCall, t.targetJournal, t.requiredSkills, t.researchMethod].filter(Boolean).join(" ").toLowerCase();
+        return searchTerms.some(term => haystack.includes(term));
+      });
+      const matchedProjects = projects.filter(p => {
+        const haystack = [p.title, p.description, p.type, ...(p.tags || []), ...(p.partnerCountries || []), p.piInstitution, p.piCountry].filter(Boolean).join(" ").toLowerCase();
+        return searchTerms.some(term => haystack.includes(term));
+      });
+      const matchedResearchers = researchers.filter(r => {
+        const haystack = [r.name, r.title, r.institution, r.unit, ...(r.researchAreas || []), ...(r.languages || []), r.eduProgram, r.eduUniversity].filter(Boolean).join(" ").toLowerCase();
+        return searchTerms.some(term => haystack.includes(term));
+      });
+
+      const results = [];
+      if (matchedTopics.length > 0) {
+        const topicList = matchedTopics.slice(0, 5).map((t, i) => {
+          const status = t.status === "active" ? "Aktif" : t.status === "completed" ? "Tamamlandı" : t.status === "proposed" ? "Önerilen" : t.status;
+          return `  ${i+1}. ${t.title} [${status}]${t.category ? " (" + t.category + ")" : ""}`;
+        }).join("\n");
+        results.push(`📖 Eşleşen Konular (${matchedTopics.length}):\n${topicList}${matchedTopics.length > 5 ? "\n  ... ve " + (matchedTopics.length - 5) + " konu daha" : ""}`);
+      }
+      if (matchedProjects.length > 0) {
+        const projList = matchedProjects.slice(0, 5).map((p, i) => {
+          const status = p.status === "active" ? "Aktif" : p.status === "completed" ? "Tamamlandı" : p.status === "proposed" ? "Önerilen" : p.status;
+          return `  ${i+1}. ${p.title} [${status}]${p.type ? " - " + p.type : ""}`;
+        }).join("\n");
+        results.push(`📁 Eşleşen Projeler (${matchedProjects.length}):\n${projList}${matchedProjects.length > 5 ? "\n  ... ve " + (matchedProjects.length - 5) + " proje daha" : ""}`);
+      }
+      if (matchedResearchers.length > 0) {
+        const resList = matchedResearchers.slice(0, 5).map((r, i) => {
+          const areas = (r.researchAreas || []).slice(0, 3).join(", ");
+          return `  ${i+1}. ${r.title ? r.title + " " : ""}${r.name}${areas ? " (" + areas + ")" : ""}`;
+        }).join("\n");
+        results.push(`👥 Eşleşen Araştırmacılar (${matchedResearchers.length}):\n${resList}${matchedResearchers.length > 5 ? "\n  ... ve " + (matchedResearchers.length - 5) + " kişi daha" : ""}`);
+      }
+
+      if (results.length > 0) {
+        return `🔍 "${q}" için arama sonuçları:\n\n${results.join("\n\n")}`;
+      }
+    }
+
+    // ── YARDIM ──
+    if (hasWord("yard\u0131m", "help", "ne sor", "neler sor", "komut")) {
+      return "Sorabilece\u011finiz soru kategorileri:\n\n\ud83d\udcca Genel: \u00d6zet, durum, kar\u015f\u0131la\u015ft\u0131rma\n\ud83d\udc65 Ara\u015ft\u0131rmac\u0131: Ka\u00e7 ki\u015fi, A\u00d6F, unvan\n\ud83d\udcd6 Konu: Ka\u00e7 konu, aktif/tamamlanan\n\ud83d\udcc1 Proje: BAP/T\u00dcB\u0130TAK, b\u00fct\u00e7e\n\ud83c\udf10 Uluslararas\u0131: Ortakl\u0131klar, \u00fclkeler\n\ud83d\udcc8 Performans: Verimlilik, g\u00f6revler\n\ud83d\udd0d Arama: Herhangi bir kelime yaz\u0131n!\n\n\u00d6rne\u011fin: \"yapay zeka\", \"XR\", \"uzaktan e\u011fitim\", \"Almanya\" gibi kelimelerle konular\u0131, projeleri ve ara\u015ft\u0131rmac\u0131lar\u0131 arayabilirsiniz.";
+    }
+
+    // ── FALLBACK ──
+    return "Tam e\u015fle\u015fme bulunamad\u0131. \u015eunlar\u0131 deneyebilirsiniz:\n\u2022 \u0130statistik sorgular\u0131: \"Genel \u00f6zet\", \"B\u00fct\u00e7e\", \"Unvan da\u011f\u0131l\u0131m\u0131\"\n\u2022 Anahtar kelime aramas\u0131: \"yapay zeka\", \"XR\", \"Horizon\"\n\u2022 Ki\u015fi aramas\u0131: Ara\u015ft\u0131rmac\u0131 ad\u0131 yaz\u0131n\n\n\"Yard\u0131m\" yazarak t\u00fcm kategorileri g\u00f6rebilirsiniz.";
+  }, [researchers, topics, projects]);
+
+  const getSuggestions = useCallback((q) => {
+    const low = q.toLowerCase();
+    if (low.includes("özet") || low.includes("genel") || low.includes("dashboard")) return ["Bütçe detayları", "Unvan dağılımı", "Aktif projeler"];
+    if (low.includes("bap")) return ["TÜBİTAK projeleri", "Toplam bütçe", "Proje türü dağılımı"];
+    if (low.includes("tübitak") || low.includes("tubitak")) return ["BAP projeleri", "Horizon projeleri", "Bütçe karşılaştırması"];
+    if (low.includes("horizon") || low.includes("erasmus") || low.includes("uluslararası")) return ["Ortaklık ülkeleri", "Proje türü dağılımı", "Toplam bütçe"];
+    if (low.includes("bütçe") || low.includes("butce") || low.includes("mali")) return ["En yüksek bütçeli proje", "Proje türü dağılımı", "Verimlilik metrikleri"];
+    if (low.includes("unvan") || low.includes("ünvan") || low.includes("profesör") || low.includes("doçent")) return ["Kurum dağılımı", "AÖF üyeleri", "Araştırmacı sayısı"];
+    if (low.includes("kurum") || low.includes("birim") || low.includes("fakülte")) return ["Unvan dağılımı", "AÖF üyeleri", "Genel özet"];
+    if (low.includes("araştırmacı") || low.includes("kişi") || low.includes("akademisyen")) return ["Unvan dağılımı", "En çok konusu olan", "AÖF üyeleri"];
+    if (low.includes("konu") && !low.includes("proje")) return ["Aktif konular", "En çok konusu olan", "Konu-proje karşılaştırması"];
+    if (low.includes("proje") && !low.includes("bap") && !low.includes("tübitak")) return ["BAP projeleri", "Bütçe detayları", "Uluslararası projeler"];
+    if (low.includes("aktif")) return ["Tamamlanan projeler", "Önerilen projeler", "Verimlilik metrikleri"];
+    if (low.includes("tamamla") || low.includes("bitir") || low.includes("biten")) return ["Aktif durumda olanlar", "Verimlilik metrikleri", "Görev özeti"];
+    if (low.includes("görev") || low.includes("task")) return ["Verimlilik metrikleri", "Aktif projeler", "Genel özet"];
+    if (low.includes("verimlilik") || low.includes("performans") || low.includes("başarı")) return ["Görev özeti", "Tamamlanan projeler", "Karşılaştırma"];
+    if (low.includes("aöf") || low.includes("açıköğretim")) return ["Unvan dağılımı", "Kurum dağılımı", "Genel özet"];
+    if (low.includes("rol") || low.includes("yürütücü")) return ["PI deneyimi olanlar", "En çok projesi olan", "Unvan dağılımı"];
+    if (low.includes("son eklenen") || low.includes("yeni")) return ["Genel özet", "Aktif projeler", "Görev özeti"];
+    if (low.includes("karşılaştır") || low.includes("kıyasla")) return ["Verimlilik metrikleri", "Bütçe detayları", "Görev özeti"];
+    if (low.includes("yapay zeka") || low.includes("ai") || low.includes("llm")) return ["uzaktan eğitim", "XR konuları", "Proje türü dağılımı"];
+    if (low.includes("xr") || low.includes("vr") || low.includes("ar ")) return ["yapay zeka", "STEM konuları", "Erasmus+ projeleri"];
+    if (low.includes("uzaktan") || low.includes("eğitim") || low.includes("öğretim")) return ["yapay zeka", "e-Kampüs", "Araştırmacı sayısı"];
+    if (low.includes("horizon") || low.includes("erasmus")) return ["Uluslararası projeler", "BAP projeleri", "Toplam bütçe"];
+    return ["Genel özet", "yapay zeka", "Yardım"];
+  }, []);
+
+  const handleSend = useCallback(() => {
+    if (!input.trim()) return;
+    const userMsg = input.trim(); setInput("");
+    setMessages(prev => [...prev, { role: "user", text: userMsg }]);
+    setTimeout(() => { const response = processQuery(userMsg); const suggs = getSuggestions(userMsg); setMessages(prev => [...prev, { role: "bot", text: response, suggestions: suggs }]); }, 300);
+  }, [input, processQuery]);
+
+  useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [messages]);
+
+
+  const searchThemes = useMemo(() => {
+    const stopWords = new Set(["bir","ve","ile","için","de","da","den","dan","bu","olan","olarak","göre","gibi","daha","ile","arasında","sonra","ile","hem","veya","mi","mı","mu","mü","ne","nasıl","kaç","ki","ise","ya","veya","her","çok","en"]);
+    const themeMap = {};
+
+    // Konu başlıklarından anahtar kelimeler
+    const keywords = [
+      { pattern: /yapay\s*zeka|\bai\b|\byz\b|llm|büyük dil model|agentic ai|üretken yapay/i, label: "Yapay Zeka / AI" },
+      { pattern: /\bxr\b|\bvr\b|\bar\b|sanal gerçeklik|artırılmış gerçeklik/i, label: "XR / VR / AR" },
+      { pattern: /uzaktan\s*(eğitim|öğretim|öğren)|açık.*öğret|açıköğretim/i, label: "Uzaktan Eğitim" },
+      { pattern: /e.kampüs|e-kampüs|lms|öğrenme analitik/i, label: "e-Kampüs / LMS" },
+      { pattern: /mikro.yeterli|mikro.kredi/i, label: "Mikro-yeterlik" },
+      { pattern: /oyunlaştır|gamif/i, label: "Oyunlaştırma" },
+      { pattern: /stem/i, label: "STEM" },
+      { pattern: /öğretim tasarım/i, label: "Öğretim Tasarımı" },
+      { pattern: /veri\s*(analiz|görsel)|data/i, label: "Veri Analizi" },
+      { pattern: /destek\s*(hizmet|sistem)|dropout|uyarı sistemi/i, label: "Öğrenci Destek" },
+      { pattern: /erasmus|horizon|avrupa birliği|\bab\b|jean monnet/i, label: "AB / Uluslararası" },
+      { pattern: /infografik|video|podcast|medya/i, label: "Medya / İçerik" },
+      { pattern: /kalite|akreditasyon/i, label: "Kalite" },
+      { pattern: /tercih|rehberlik|kayıt/i, label: "Öğrenci Rehberlik" },
+    ];
+
+    // Tüm konu ve proje başlıklarını tara
+    const allTexts = [
+      ...topics.map(t => [t.title, t.description, ...(t.tags || [])].filter(Boolean).join(" ")),
+      ...projects.map(p => [p.title, p.description, ...(p.tags || [])].filter(Boolean).join(" ")),
+    ];
+    keywords.forEach(kw => {
+      const count = allTexts.filter(text => kw.pattern.test(text)).length;
+      if (count > 0) themeMap[kw.label] = (themeMap[kw.label] || 0) + count;
+    });
+
+    // Araştırma alanlarından en popüler olanlar
+    const areaCounts = {};
+    researchers.forEach(r => (r.researchAreas || []).forEach(a => { areaCounts[a] = (areaCounts[a] || 0) + 1; }));
+    const topAreas = Object.entries(areaCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
+
+    // Ülkelerden
+    const countryCounts = {};
+    projects.forEach(p => (p.partnerCountries || []).forEach(c => { countryCounts[c] = (countryCounts[c] || 0) + 1; }));
+    const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => k);
+
+    // Tema butonlarını sırala (en çok eşleşen önce)
+    const sortedThemes = Object.entries(themeMap).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k]) => k);
+
+    return { themes: sortedThemes, areas: topAreas, countries: topCountries };
+  }, [researchers, topics, projects]);
+
+  const chatCategories = useMemo(() => {
+    const cats = [
+      { label: "Özet", emoji: "📊", subs: ["Genel özet", "Durum dağılımı", "Konu-proje karşılaştırması"] },
+      { label: "Araştırmacılar", emoji: "👥", subs: ["Araştırmacı sayısı", "Unvan dağılımı", "AÖF üyeleri", "Kurum dağılımı"] },
+      { label: "Konular", emoji: "📖", subs: ["Kaç konu var?", "Aktif konular", "En çok konusu olan"] },
+      { label: "Projeler", emoji: "📁", subs: ["Proje türü dağılımı", "BAP projeleri", "TÜBİTAK projeleri", "Uluslararası projeler", "Toplam bütçe"] },
+      { label: "Performans", emoji: "📈", subs: ["Verimlilik metrikleri", "Görev özeti", "Rol dağılımı", "PI deneyimi olanlar"] },
+    ];
+    if (searchThemes.themes.length > 0) cats.push({ label: "Temalar", emoji: "🏷️", subs: searchThemes.themes.slice(0, 4) });
+    if (searchThemes.areas.length > 0) cats.push({ label: "Araştırma Alanları", emoji: "🔬", subs: searchThemes.areas.slice(0, 4) });
+    if (searchThemes.countries.length > 0) cats.push({ label: "Ülkeler", emoji: "🌍", subs: searchThemes.countries.slice(0, 4) });
+    return cats;
+  }, [searchThemes]);
+
+  const handleCatClick = useCallback((text) => {
+    setMessages(prev => [...prev, { role: "user", text }]);
+    setTimeout(() => { const r = processQuery(text); const sg = getSuggestions(text); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300);
+  }, [processQuery, getSuggestions]);
+
+  if (!open) return (
+    <div className="fixed bottom-5 right-5 z-40 flex items-end gap-3">
+      <div className="relative bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl shadow-lg border border-purple-200 px-4 py-3 max-w-[220px]" style={{animation:"fadeIn 0.6s ease-out"}}>
+        <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
+        <p className="text-xs text-purple-700 font-medium leading-relaxed">Merhaba, ben Ar-Ge Asistanı! Nasıl yardımcı olabilirim?</p>
+        <div className="absolute bottom-3 -right-2 w-3 h-3 bg-indigo-50 border-r border-b border-purple-200 rotate-[-45deg]" />
+      </div>
+      <button onClick={() => setOpen(true)} className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center flex-shrink-0" title="Ar-Ge Asistanı">
+        <Bot size={24} /><span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="fixed bottom-5 right-5 z-40 w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{height:"min(580px, calc(100vh - 40px))"}}>
+
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3.5 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center"><Bot size={20} className="text-white" /></div>
+          <div><h3 className="text-sm font-bold text-white">Ar-Ge Asistanı</h3><p className="text-[10px] text-white/70">Akıllı veri sorgu asistanı</p></div>
+        </div>
+        <div className="flex items-center gap-1">
+          {messages.length > 1 && <button onClick={() => setMessages([{ role: "bot", text: "Merhaba! Ben Ar-Ge Asistanı. Aşağıdaki kategorilerden birini seçerek başlayabilirsiniz.", isWelcome: true }])} className="p-1.5 rounded-lg hover:bg-white/20 text-white/60 hover:text-white transition-colors" title="Görüşmeyi temizle"><Trash2 size={14} /></button>}
+          <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"><X size={16} /></button>
+        </div>
+      </div>
+      <div ref={chatRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+        {messages.map((m, i) => (
+          <div key={i}>
+            <div className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${m.role === "user" ? "bg-indigo-500 text-white rounded-br-md" : "bg-slate-100 text-slate-700 rounded-bl-md"}`}>
+                <p className="text-xs leading-relaxed whitespace-pre-line">{m.text}</p>
+              </div>
+            </div>
+            {m.isWelcome && i === messages.length - 1 && (
+              <div className="mt-3 space-y-2">
+                {chatCategories.map((cat, ci) => (
+                  <div key={ci}>
+                    <button onClick={() => cat.subs.length > 0 && handleCatClick(cat.subs[0])}
+                      className="w-full text-left px-3 py-2 text-[11px] font-semibold bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm">
+                      <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-purple-200">{cat.subs.length}</span>
+                    </button>
+                    <div className="flex flex-wrap gap-1 mt-1 ml-2">
+                      {cat.subs.map((sub, si) => (
+                        <button key={si} onClick={() => handleCatClick(sub)}
+                          className="px-2 py-0.5 text-[9px] bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200">{sub}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {m.role === "bot" && !m.isWelcome && m.suggestions && i === messages.length - 1 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
+                {m.suggestions.map((s, si) => (
+                  <button key={si} onClick={() => { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); }}
+                    className="px-2.5 py-1 text-[10px] bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 cursor-pointer">{s}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="p-3 border-t border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
+            placeholder="Bir soru sorun..." className="flex-1 text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-all" />
+          <button onClick={handleSend} className="p-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 disabled:opacity-40" disabled={!input.trim()}><Send size={16} /></button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard() {
   const [researchers, setResearchers] = useState(() => {
@@ -4837,6 +5443,7 @@ export default function ArGeDashboard() {
   const [projectPriorityFilter, setProjectPriorityFilter] = useState("");
   const [researcherDeptFilter, setResearcherDeptFilter] = useState("");
   const [aofMemberFilter, setAofMemberFilter] = useState("");
+  const [maximizedCol, setMaximizedCol] = useState(null);
   // Advanced filters
   const [showAdvRes, setShowAdvRes] = useState(false);
   const [showResearcherStats, setShowResearcherStats] = useState(false);
@@ -5266,7 +5873,8 @@ export default function ArGeDashboard() {
       {/* MAIN */}
       <div className="flex-1 flex overflow-hidden">
         {/* COL 1: RESEARCHERS */}
-        <div className="w-1/3 min-w-0 border-r border-slate-200 flex flex-col bg-white/50">
+        {(!maximizedCol || maximizedCol === "researchers") && (
+        <div className={`${maximizedCol === "researchers" ? "flex-1" : "w-1/3"} min-w-0 border-r border-slate-200 flex flex-col bg-white/50 transition-all`}>
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
@@ -5317,6 +5925,7 @@ export default function ArGeDashboard() {
                 )}
               </div>
               <div className="flex items-center gap-1">
+                <button onClick={() => setMaximizedCol(maximizedCol === "researchers" ? null : "researchers")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "researchers" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "researchers" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvRes(!showAdvRes)} className={`p-1.5 rounded-lg transition-colors ${showAdvRes ? "bg-indigo-100 text-indigo-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
                 <button onClick={() => setAddModal("researcher")} className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 transition-colors" title="Yeni Araştırmacı"><Plus size={16} /></button>
               </div>
@@ -5362,13 +5971,16 @@ export default function ArGeDashboard() {
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
           </div>
         </div>
+        )}
 
         {/* COL 2: TOPICS */}
-        <div className="w-1/3 min-w-0 border-r border-slate-200 flex flex-col bg-white/30">
+        {(!maximizedCol || maximizedCol === "topics") && (
+        <div className={`${maximizedCol === "topics" ? "flex-1" : "w-1/3"} min-w-0 border-r border-slate-200 flex flex-col bg-white/30 transition-all`}>
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><BookOpen size={15} className="text-emerald-500" />Konular<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredTopics.length}</Badge></h2>
               <div className="flex items-center gap-1">
+                <button onClick={() => setMaximizedCol(maximizedCol === "topics" ? null : "topics")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "topics" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "topics" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvTopic(!showAdvTopic)} className={`p-1.5 rounded-lg transition-colors ${showAdvTopic ? "bg-emerald-100 text-emerald-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
                 <button onClick={() => setAddModal("topic")} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 transition-colors" title="Yeni Konu"><Plus size={16} /></button>
               </div>
@@ -5413,13 +6025,16 @@ export default function ArGeDashboard() {
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
           </div>
         </div>
+        )}
 
         {/* COL 3: PROJECTS */}
-        <div className="w-1/3 min-w-0 flex flex-col">
+        {(!maximizedCol || maximizedCol === "projects") && (
+        <div className={`${maximizedCol === "projects" ? "flex-1" : "w-1/3"} min-w-0 flex flex-col transition-all`}>
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><FolderKanban size={15} className="text-violet-500" />Projeler<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredProjects.length}</Badge></h2>
               <div className="flex items-center gap-1">
+                <button onClick={() => setMaximizedCol(maximizedCol === "projects" ? null : "projects")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "projects" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "projects" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvProject(!showAdvProject)} className={`p-1.5 rounded-lg transition-colors ${showAdvProject ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
                 <button onClick={() => setAddModal("project")} className="p-1.5 rounded-lg hover:bg-violet-50 text-violet-500 transition-colors" title="Yeni Proje"><Plus size={16} /></button>
               </div>
@@ -5465,6 +6080,7 @@ export default function ArGeDashboard() {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* MODALS */}
@@ -5476,6 +6092,7 @@ export default function ArGeDashboard() {
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}
       {showTableView && <TableViewModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowTableView(false)} />}
       {showStats && <StatsModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowStats(false)} />}
+      <ArGeChatbot researchers={researchers} topics={topics} projects={projects} />
       {showSettings && <SettingsModal
         roleConfig={roleConfig} onRoleConfigChange={setRoleConfig}
         statusConfig={statusConfig} onStatusConfigChange={setStatusConfig}
