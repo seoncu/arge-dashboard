@@ -1040,7 +1040,7 @@ const Toast = ({ message, type = "success", onClose }) => {
 };
 
 // ─── RESEARCHER CARD (Compact — just name shown, click for full profile) ──
-const ResearcherCard = ({ researcher, onClick, topics }) => {
+const ResearcherCard = ({ researcher, onClick, topics, maximized }) => {
   const myTopics = (topics || []).filter(t => t.researchers.some(r => r.researcherId === researcher.id));
   const proposedCount = myTopics.filter(t => t.status === "proposed").length;
   const activeCount = myTopics.filter(t => t.status === "active").length;
@@ -1056,8 +1056,8 @@ const ResearcherCard = ({ researcher, onClick, topics }) => {
         e.dataTransfer.effectAllowed = "copy";
       }}
       onClick={(e) => { e.stopPropagation(); onClick(researcher); }}
-      className="bg-white rounded-xl border border-slate-200 p-3 cursor-grab active:cursor-grabbing
-        hover:shadow-md hover:border-indigo-200 transition-all duration-200 group"
+      className={`bg-white rounded-xl border border-slate-200 cursor-grab active:cursor-grabbing
+        hover:shadow-md hover:border-indigo-200 transition-all duration-200 group ${maximized ? "p-4" : "p-3"}`}
     >
       <div className="flex items-center gap-3">
         <div className="relative">
@@ -1070,8 +1070,8 @@ const ResearcherCard = ({ researcher, onClick, topics }) => {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800 truncate">{researcher.title} {researcher.name}</p>
-          <p className="text-xs text-slate-500 truncate">{researcher.institution}{researcher.unit ? ` · ${researcher.unit}` : ""}</p>
+          <p className={`font-semibold text-slate-800 truncate ${maximized ? "text-base" : "text-sm"}`}>{researcher.title} {researcher.name}</p>
+          <p className={`text-slate-500 truncate ${maximized ? "text-sm" : "text-xs"}`}>{researcher.institution}{researcher.unit ? ` · ${researcher.unit}` : ""}</p>
           {totalCount > 0 ? (
             <div className="flex items-center gap-1 mt-1 flex-wrap">
               {proposedCount > 0 && <Badge className="bg-slate-100 text-slate-600">{proposedCount} Önerilen</Badge>}
@@ -1551,7 +1551,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, onClose, onUpdate
 };
 
 // ─── TOPIC CARD ───────────────────────────────────────────
-const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveFromProject }) => {
+const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveFromProject, maximized }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[topic.status] || statusConfig.proposed;
   const prCfg = priorityConfig[topic.priority] || priorityConfig.medium;
@@ -1569,7 +1569,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveF
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); setDragOver(false); const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id"); if (type === "researcher") onDrop(topic.id, id, e); }}
       onClick={() => onClick(topic)}
-      className={`rounded-xl border p-3 cursor-pointer transition-all duration-200 ${baseBg} ${baseBorder}`}
+      className={`rounded-xl border cursor-pointer transition-all duration-200 ${baseBg} ${baseBorder} ${maximized ? "p-4" : "p-3"}`}
     >
       {cardStyle && !isProjected && (
         <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg ${cardStyle.labelClass}`}>
@@ -1593,7 +1593,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveF
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
-        <h3 className={`text-sm font-semibold flex-1 pr-2 ${isProjected ? "text-slate-500" : topic.status === "failed" ? "text-red-700" : topic.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{topic.title}</h3>
+        <h3 className={`font-semibold flex-1 pr-2 ${maximized ? "text-base" : "text-sm"} ${isProjected ? "text-slate-500" : topic.status === "failed" ? "text-red-700" : topic.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{topic.title}</h3>
         <GripVertical size={16} className="text-slate-300 flex-shrink-0" />
       </div>
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
@@ -1602,7 +1602,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveF
         {topic.projectType && <Badge className="bg-violet-50 text-violet-600">{topic.projectType}{topic.projectTypeDetail ? `: ${topic.projectTypeDetail}` : ""}</Badge>}
         {topic.category && <Badge className="bg-blue-50 text-blue-600">{topic.category}</Badge>}
       </div>
-      <p className="text-xs text-slate-500 mb-3 line-clamp-2">{topic.description}</p>
+      <p className={`text-slate-500 mb-3 ${maximized ? "text-sm line-clamp-3" : "text-xs line-clamp-2"}`}>{topic.description}</p>
       {topic.tasks.length > 0 && (
         <div className="mb-2">
           <div className="flex items-center justify-between mb-1">
@@ -1632,7 +1632,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, projects, onRemoveF
 };
 
 // ─── PROJECT CARD ─────────────────────────────────────────
-const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject }) => {
+const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCancelProject, maximized }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[project.status] || statusConfig.planning;
   const prCfg = priorityConfig[project.priority] || priorityConfig.medium;
@@ -1659,7 +1659,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id"); if (type === "topic") onDrop(project.id, id); }}
       onClick={() => onClick(project)}
-      className={`rounded-xl border p-3 cursor-pointer transition-all duration-200 ${pBg} ${pBorder}`}
+      className={`rounded-xl border cursor-pointer transition-all duration-200 ${pBg} ${pBorder} ${maximized ? "p-4" : "p-3"}`}
     >
       {cardStyle && (
         <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg ${cardStyle.labelClass}`}>
@@ -1668,7 +1668,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
         </div>
       )}
       <div className="flex items-start justify-between mb-2">
-        <h3 className={`text-sm font-semibold flex-1 pr-2 ${project.status === "failed" ? "text-red-700" : project.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{project.title}</h3>
+        <h3 className={`font-semibold flex-1 pr-2 ${maximized ? "text-base" : "text-sm"} ${project.status === "failed" ? "text-red-700" : project.status === "completed" ? "text-emerald-700" : "text-slate-800"}`}>{project.title}</h3>
         <FolderKanban size={16} className="text-slate-300 flex-shrink-0" />
       </div>
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
@@ -1678,7 +1678,7 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
         {project.fundingSource && <Badge className="bg-violet-50 text-violet-600">{project.fundingSource}</Badge>}
         {project.type && <Badge className="bg-sky-50 text-sky-600">{project.type}</Badge>}
       </div>
-      <p className="text-xs text-slate-500 mb-3 line-clamp-2">{project.description}</p>
+      <p className={`text-slate-500 mb-3 ${maximized ? "text-sm line-clamp-3" : "text-xs line-clamp-2"}`}>{project.description}</p>
       {project.budget > 0 && <p className="text-xs text-slate-500 mb-2"><span className="font-medium text-slate-700">₺{project.budget.toLocaleString("tr-TR")}</span></p>}
       {allTasks.length > 0 && (
         <div className="mb-2">
@@ -4976,6 +4976,7 @@ const CalendarModal = ({ topics, projects, onClose }) => {
 // ─── AR-GE CHATBOT (KURAL TABANLI) ─────────────────────
 const ArGeChatbot = ({ researchers, topics, projects }) => {
   const [open, setOpen] = useState(false);
+  const [chatMaximized, setChatMaximized] = useState(false);
   const [messages, setMessages] = useState([
     { role: "bot", text: "Merhaba! Ben Ar-Ge Asistanı. Aşağıdaki kategorilerden birini seçerek başlayabilirsiniz.", isWelcome: true }
   ]);
@@ -5555,24 +5556,25 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
   );
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" style={{height:"min(580px, calc(100vh - 40px))"}}>
+    <div className={chatMaximized ? "fixed inset-4 z-40 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden" : "fixed bottom-5 right-5 z-40 w-[340px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"} style={chatMaximized ? {} : {height:"min(580px, calc(100vh - 40px))"}}>
 
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-3.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center"><Bot size={20} className="text-white" /></div>
-          <div><h3 className="text-sm font-bold text-white">Ar-Ge Asistanı</h3><p className="text-[10px] text-white/70">Akıllı veri sorgu asistanı</p></div>
+          <div className={`bg-white/20 rounded-xl flex items-center justify-center ${chatMaximized ? "w-11 h-11" : "w-9 h-9"}`}><Bot size={chatMaximized ? 24 : 20} className="text-white" /></div>
+          <div><h3 className={`font-bold text-white ${chatMaximized ? "text-base" : "text-sm"}`}>Ar-Ge Asistanı</h3><p className={`text-white/70 ${chatMaximized ? "text-xs" : "text-[10px]"}`}>Akıllı veri sorgu asistanı</p></div>
         </div>
         <div className="flex items-center gap-1">
           {messages.length > 1 && <button onClick={() => setMessages([{ role: "bot", text: "Merhaba! Ben Ar-Ge Asistanı. Aşağıdaki kategorilerden birini seçerek başlayabilirsiniz.", isWelcome: true }])} className="p-1.5 rounded-lg hover:bg-white/20 text-white/60 hover:text-white transition-colors" title="Görüşmeyi temizle"><Trash2 size={14} /></button>}
-          <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"><X size={16} /></button>
+          <button onClick={() => setChatMaximized(!chatMaximized)} className="p-1.5 rounded-lg hover:bg-white/20 text-white/60 hover:text-white transition-colors" title={chatMaximized ? "Küçült" : "Tam Ekran"}>{chatMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
+          <button onClick={() => { setOpen(false); setChatMaximized(false); }} className="p-1.5 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"><X size={16} /></button>
         </div>
       </div>
-      <div ref={chatRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div ref={chatRef} className={`flex-1 overflow-y-auto space-y-3 ${chatMaximized ? "p-5" : "p-3"}`}>
         {messages.map((m, i) => (
           <div key={i}>
             <div className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${m.role === "user" ? "bg-indigo-500 text-white rounded-br-md" : "bg-slate-100 text-slate-700 rounded-bl-md"}`}>
-                <p className="text-xs leading-relaxed whitespace-pre-line">{m.text}</p>
+              <div className={`${chatMaximized ? "max-w-[70%]" : "max-w-[85%]"} rounded-2xl ${chatMaximized ? "px-5 py-3.5" : "px-3.5 py-2.5"} ${m.role === "user" ? "bg-indigo-500 text-white rounded-br-md" : "bg-slate-100 text-slate-700 rounded-bl-md"}`}>
+                <p className={`leading-relaxed whitespace-pre-line ${chatMaximized ? "text-sm" : "text-xs"}`}>{m.text}</p>
               </div>
             </div>
             {m.isWelcome && i === messages.length - 1 && (
@@ -5580,23 +5582,23 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
                 {chatCategories.map((cat, ci) => (
                   <div key={ci}>
                     <button onClick={() => cat.subs.length > 0 && handleCatClick(cat.subs[0])}
-                      className="w-full text-left px-3 py-2 text-[11px] font-semibold bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm">
+                      className={`w-full text-left font-semibold bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm ${chatMaximized ? "px-4 py-3 text-sm" : "px-3 py-2 text-[11px]"}`}>
                       <span>{cat.emoji}</span> {cat.label} <span className="ml-auto text-[9px] text-purple-200">{cat.subs.length}</span>
                     </button>
                     <div className="flex flex-wrap gap-1 mt-1 ml-2">
                       {cat.subs.map((sub, si) => (
                         <button key={si} onClick={() => handleCatClick(sub)}
-                          className="px-2 py-0.5 text-[9px] bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200">{sub}</button>
+                          className={`bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 ${chatMaximized ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[9px]"}`}>{sub}</button>
                       ))}
                     </div>
                   </div>
                 ))}
                 <button onClick={() => { setTopicMode(true); setMessages(prev => [...prev, { role: "bot", text: "🆕 Yeni bir araştırma konusu mu düşünüyorsunuz? Harika!\n\nLütfen çalışmak istediğiniz konuyu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka ve uzaktan eğitim\", \"XR tabanlı öğretim\", \"öğrenme analitikleri\" gibi..." }]); }}
-                  className="w-full text-left px-3 py-2.5 text-[11px] font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-2">
+                  className={`w-full text-left font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-2 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
                   <span>🆕</span> Yeni Araştırma Konusu Öner
                 </button>
                 <button onClick={() => { setResearcherMode(true); setMessages(prev => [...prev, { role: "bot", text: "👤 Belirli bir alan veya konu için uygun araştırmacı mı arıyorsunuz?\n\nLütfen araştırma alanı, konu veya anahtar kelimeleri yazın.\n\nÖrneğin: \"yapay zeka\", \"uzaktan eğitim\", \"veri analitiği\" gibi..." }]); }}
-                  className="w-full text-left px-3 py-2.5 text-[11px] font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-1">
+                  className={`w-full text-left font-semibold bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-all flex items-center gap-2 shadow-md mt-1 ${chatMaximized ? "px-4 py-3.5 text-sm" : "px-3 py-2.5 text-[11px]"}`}>
                   <span>👤</span> Uygun Araştırmacı Öner
                 </button>
               </div>
@@ -5605,7 +5607,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
               <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
                 {m.suggestions.map((s, si) => (
                   <button key={si} onClick={() => { if (s === "Başka konu öner" || s === "Yeni konu öner") { setTopicMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Başka bir konu için anahtar kelimeleri yazın..." }]); } else if (s === "Başka araştırmacı ara" || s === "Uygun araştırmacı öner") { setResearcherMode(true); setMessages(prev => [...prev, { role: "user", text: s }, { role: "bot", text: "Araştırmacı aramak için anahtar kelimeleri yazın..." }]); } else { setMessages(prev => [...prev, { role: "user", text: s }]); setTimeout(() => { const r = processQuery(s); const sg = getSuggestions(s); setMessages(prev => [...prev, { role: "bot", text: r, suggestions: sg }]); }, 300); } }}
-                    className="px-2.5 py-1 text-[10px] bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 cursor-pointer">{s}</button>
+                    className={`bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors border border-purple-200 cursor-pointer ${chatMaximized ? "px-3.5 py-1.5 text-xs" : "px-2.5 py-1 text-[10px]"}`}>{s}</button>
                 ))}
               </div>
             )}
@@ -5613,11 +5615,11 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
         ))}
       </div>
 
-      <div className="p-3 border-t border-slate-100 flex-shrink-0">
+      <div className={`border-t border-slate-100 flex-shrink-0 ${chatMaximized ? "p-4" : "p-3"}`}>
         <div className="flex items-center gap-2">
           <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
-            placeholder={topicMode ? "Konu veya anahtar kelime yazın..." : researcherMode ? "Araştırma alanı veya konu yazın..." : "Bir soru sorun..."} className="flex-1 text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-all" />
-          <button onClick={handleSend} className="p-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 disabled:opacity-40" disabled={!input.trim()}><Send size={16} /></button>
+            placeholder={topicMode ? "Konu veya anahtar kelime yazın..." : researcherMode ? "Araştırma alanı veya konu yazın..." : "Bir soru sorun..."} className={`flex-1 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-all ${chatMaximized ? "text-base px-4 py-3" : "text-sm px-3.5 py-2.5"}`} />
+          <button onClick={handleSend} className={`bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-colors flex-shrink-0 disabled:opacity-40 ${chatMaximized ? "p-3" : "p-2.5"}`} disabled={!input.trim()}><Send size={chatMaximized ? 20 : 16} /></button>
         </div>
       </div>
     </div>
@@ -6084,7 +6086,7 @@ export default function ArGeDashboard() {
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><Users size={15} className="text-indigo-500" />Araştırmacılar<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredResearchers.length}</Badge></h2>
+                <h2 className={`font-bold text-slate-700 flex items-center gap-1.5 ${maximizedCol === "researchers" ? "text-base" : "text-sm"}`}><Users size={maximizedCol === "researchers" ? 18 : 15} className="text-indigo-500" />Araştırmacılar<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredResearchers.length}</Badge></h2>
                 <button onClick={() => setShowResearcherStats(!showResearcherStats)}
                   className="flex items-center gap-1 mt-1 text-[10px] font-medium text-indigo-500 hover:text-indigo-700 transition-colors">
                   <BarChart3 size={11} />
@@ -6172,9 +6174,11 @@ export default function ArGeDashboard() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} topics={topics} onClick={setSelectedResearcher} />)}
+          <div className={`flex-1 overflow-y-auto ${maximizedCol === "researchers" ? "p-4" : "p-3"}`}>
+            <div className={maximizedCol === "researchers" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
+            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} />)}
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
+            </div>
           </div>
         </div>
         )}
@@ -6184,7 +6188,7 @@ export default function ArGeDashboard() {
         <div className={`${maximizedCol === "topics" ? "flex-1" : "w-1/3"} min-w-0 border-r border-slate-200 flex flex-col bg-white/30 transition-all`}>
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><BookOpen size={15} className="text-emerald-500" />Konular<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredTopics.length}</Badge></h2>
+              <h2 className={`font-bold text-slate-700 flex items-center gap-1.5 ${maximizedCol === "topics" ? "text-base" : "text-sm"}`}><BookOpen size={maximizedCol === "topics" ? 18 : 15} className="text-emerald-500" />Konular<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredTopics.length}</Badge></h2>
               <div className="flex items-center gap-1">
                 <button onClick={() => setMaximizedCol(maximizedCol === "topics" ? null : "topics")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "topics" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "topics" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvTopic(!showAdvTopic)} className={`p-1.5 rounded-lg transition-colors ${showAdvTopic ? "bg-emerald-100 text-emerald-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
@@ -6226,9 +6230,11 @@ export default function ArGeDashboard() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} projects={projects} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} onRemoveFromProject={handleRemoveTopicFromProject} />)}
+          <div className={`flex-1 overflow-y-auto ${maximizedCol === "topics" ? "p-4" : "p-3"}`}>
+            <div className={maximizedCol === "topics" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
+            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} projects={projects} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} onRemoveFromProject={handleRemoveTopicFromProject} maximized={maximizedCol === "topics"} />)}
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
+            </div>
           </div>
         </div>
         )}
@@ -6238,7 +6244,7 @@ export default function ArGeDashboard() {
         <div className={`${maximizedCol === "projects" ? "flex-1" : "w-1/3"} min-w-0 flex flex-col transition-all`}>
           <div className="p-3 border-b border-slate-100 space-y-2 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><FolderKanban size={15} className="text-violet-500" />Projeler<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredProjects.length}</Badge></h2>
+              <h2 className={`font-bold text-slate-700 flex items-center gap-1.5 ${maximizedCol === "projects" ? "text-base" : "text-sm"}`}><FolderKanban size={maximizedCol === "projects" ? 18 : 15} className="text-violet-500" />Projeler<Badge className="bg-slate-100 text-slate-500 ml-1">{filteredProjects.length}</Badge></h2>
               <div className="flex items-center gap-1">
                 <button onClick={() => setMaximizedCol(maximizedCol === "projects" ? null : "projects")} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title={maximizedCol === "projects" ? "Normal Görünüm" : "Tam Ekran"}>{maximizedCol === "projects" ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>
                 <button onClick={() => setShowAdvProject(!showAdvProject)} className={`p-1.5 rounded-lg transition-colors ${showAdvProject ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-400"}`} title="Detaylı Filtre"><Filter size={14} /></button>
@@ -6267,7 +6273,7 @@ export default function ArGeDashboard() {
               </div>
             )}
           </div>
-          <div className={`flex-1 overflow-y-auto p-3 space-y-2 transition-colors duration-200 ${projectColDragOver ? "bg-violet-50 ring-2 ring-inset ring-violet-300 rounded-lg" : ""}`}
+          <div className={`flex-1 overflow-y-auto transition-colors duration-200 ${maximizedCol === "projects" ? "p-4" : "p-3"} ${projectColDragOver ? "bg-violet-50 ring-2 ring-inset ring-violet-300 rounded-lg" : ""}`}
             onDragOver={(e) => { e.preventDefault(); const t = e.dataTransfer.types; if (t) setProjectColDragOver(true); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setProjectColDragOver(false); }}
             onDrop={(e) => {
@@ -6275,8 +6281,10 @@ export default function ArGeDashboard() {
               const type = e.dataTransfer.getData("type"); const id = e.dataTransfer.getData("id");
               if (type === "topic") handleCreateProjectFromTopic(id);
             }}>
-            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} onDrop={handleTopicDropOnProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} onCancelProject={handleCancelProject} />)}
+            <div className={maximizedCol === "projects" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
+            {filteredProjects.map(p => <ProjectCard key={p.id} project={p} topics={topics} allResearchers={researchers} onDrop={handleTopicDropOnProject} onClick={(project) => { setSelectedItem(project); setSelectedType("project"); }} onCancelProject={handleCancelProject} maximized={maximizedCol === "projects"} />)}
             {filteredProjects.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Proje bulunamadı</p>}
+            </div>
             {projectColDragOver && (
               <div className="border-2 border-dashed border-violet-400 rounded-xl p-4 text-center animate-slide-up">
                 <FolderKanban size={24} className="text-violet-400 mx-auto mb-1" />
