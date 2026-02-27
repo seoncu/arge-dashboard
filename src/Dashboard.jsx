@@ -3637,6 +3637,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     try { const saved = localStorage.getItem("arge_topics"); return saved ? JSON.parse(saved) : initialTopics; } catch { return initialTopics; }
   });
   const [projects, setProjects] = useState(() => {
+    // v2: one-time project reset to clear stuck projects
+    if (!localStorage.getItem("arge_v2_reset")) {
+      localStorage.removeItem("arge_projects");
+      localStorage.setItem("arge_v2_reset", "1");
+      return initialProjects;
+    }
     try { const saved = localStorage.getItem("arge_projects"); return saved ? JSON.parse(saved) : initialProjects; } catch { return initialProjects; }
   });
 
