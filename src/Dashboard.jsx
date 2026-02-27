@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { db } from "./firebase";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -2526,9 +2528,9 @@ p{text-align:justify;font-size:12px;margin:8px 0}
 <p><strong>3.2. Yapay Zeka Destekli Geliştirme Süreci:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli kullanılmıştır. Kullanılan modeller: Claude Opus 4 (karmaşık mimari kararlar ve çok adımlı geliştirme) ve Claude Sonnet 4.5 (hızlı iterasyon ve kod düzenleme). Geliştirme, iki farklı arayüz üzerinden yürütülmüştür: (a) Claude Cowork — masaüstü agent modu ile dosya yönetimi ve otomatik düzenleme, (b) Claude Code — komut satırı tabanlı agent aracı ile Git entegrasyonu ve toplu değişiklik.</p>
 <p><strong>3.3. Prompt Mühendisliği Metodolojisi:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi (context window) yönetimi ile oturum sürekliliği sağlanmıştır. Oturum özetleme (session summarization) tekniği ile uzun geliştirme süreçleri arasında bilgi kaybı minimize edilmiştir.</p>
 <h3>4. Sistem Mimarisi</h3>
-<p><strong>4.1. Veri Katmanı:</strong> Sunucu tarafı veritabanı yerine tarayıcı localStorage API'si kullanılmıştır. JSON serileştirme/deserileştirme ile veri kalıcılığı sağlanmış, başlangıç verileri ile otomatik migrasyon desteği eklenmiştir. itemWithDefaults deseni ile geriye dönük uyumluluk korunmaktadır.</p>
+<p><strong>4.1. Veri Katmanı:</strong> Google Firebase Firestore bulut veritabanı kullanılmıştır. Gerçek zamanlı onSnapshot dinleyicileri ile çoklu kullanıcı senkronizasyonu sağlanmış, offline persistence desteği ile internet bağlantısı kesilse bile uygulama çalışmaya devam etmektedir. itemWithDefaults deseni ile geriye dönük uyumluluk korunmaktadır.</p>
 <p><strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), HTML5 Drag & Drop API ile sürükle-bırak etkileşimi, React useMemo hook'u ile optimize edilmiş gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
-<p><strong>4.3. Kimlik Doğrulama:</strong> Web Crypto API (SHA-256) tabanlı parola hash'leme, admin/viewer rol ayrımı, localStorage session yönetimi.</p>
+<p><strong>4.3. Kimlik Doğrulama:</strong> Web Crypto API (SHA-256) tabanlı parola hash'leme, admin/viewer rol ayrımı, yerel oturum yönetimi.</p>
 <h3>5. Geliştirilen Özellikler</h3>
 <p>Araştırmacı profil yönetimi (unvan, kurum, eğitim bilgileri, araştırma alanları), konu ve proje yaşam döngüsü takibi, rol tabanlı yetkilendirme, kapsamlı istatistik modalları (6 sekme), liderlik tablosu (ağırlıklı puanlama), takvim görünümü, uluslararası ortaklık ve ülke takibi, AÖF öğretim üyesi filtreleme sistemi, unvan dağılımı analizi, sütun tam ekran modu, JSON veri dışa/içe aktarım, yapılandırılabilir roller/durumlar/öncelikler, hızlı bağlantı yönetimi ve kural tabanlı akıllı sohbet asistanı.</p>
 <h3>6. AI/LLM Kullanım Detayları</h3>
@@ -3029,7 +3031,7 @@ const SettingsModal = ({
                   <p className="text-xs text-slate-600 leading-relaxed"><strong>3.2. Yapay Zeka Destekli Geliştirme:</strong> Geliştirme sürecinin tamamında Anthropic şirketinin Claude AI büyük dil modeli (Claude Opus 4 ve Claude Sonnet 4.5) kullanılmıştır. Cowork (masaüstü agent modu) ve Claude Code (komut satırı agent aracı) üzerinden iteratif geliştirme yapılmıştır.</p>
                   <p className="text-xs text-slate-600 leading-relaxed"><strong>3.3. Prompt Mühendisliği:</strong> Her özellik için detaylı Türkçe prompt'lar hazırlanmış, bağlam penceresi yönetimi ile tutarlılık sağlanmıştır. Oturum sürekliliği (session continuity) tekniği ile uzun geliştirme süreçleri yönetilmiştir.</p>
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">4. Sistem Mimarisi</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed"><strong>4.1. Veri Katmanı:</strong> localStorage tabanlı kalıcı veri saklama, JSON serileştirme/deserileştirme, başlangıç verileri ile otomatik migrasyon desteği. <strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), sürükle-bırak etkileşimi, gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
+                  <p className="text-xs text-slate-600 leading-relaxed"><strong>4.1. Veri Katmanı:</strong> Firebase Firestore bulut veritabanı, gerçek zamanlı senkronizasyon (onSnapshot), offline persistence desteği. <strong>4.2. Sunum Katmanı:</strong> Üç sütunlu Kanban görünümü (Araştırmacılar, Konular, Projeler), sürükle-bırak etkileşimi, gerçek zamanlı filtreleme ve istatistik hesaplama.</p>
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">5. Özellikler</h4>
                   <p className="text-xs text-slate-600 leading-relaxed">Araştırmacı yönetimi, konu ve proje takibi, rol tabanlı yetkilendirme (admin/viewer), detaylı istatistik modalları, liderlik tablosu, takvim görünümü, uluslararası ortaklık takibi, AÖF üyelik filtreleme, unvan dağılımı analizi, sütun tam ekran modu, veri dışa/içe aktarım ve kural tabanlı akıllı sohbet asistanı (chatbot).</p>
                   <h4 className="text-xs font-bold text-slate-700 mt-4 mb-1">6. AI/LLM Kullanım Detayları</h4>
@@ -5695,21 +5697,31 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard({ role, user, onLogout }) {
   const isAdmin = role === "admin";
-  const [researchers, setResearchers] = useState(() => {
-    try { const saved = localStorage.getItem("arge_researchers"); return saved ? JSON.parse(saved) : initialResearchers; } catch { return initialResearchers; }
-  });
-  const [topics, setTopics] = useState(() => {
-    try { const saved = localStorage.getItem("arge_topics"); return saved ? JSON.parse(saved) : initialTopics; } catch { return initialTopics; }
-  });
-  const [projects, setProjects] = useState(() => {
-    // v2: one-time project reset to clear stuck projects
-    if (!localStorage.getItem("arge_v2_reset")) {
-      localStorage.removeItem("arge_projects");
-      localStorage.setItem("arge_v2_reset", "1");
-      return initialProjects;
-    }
-    try { const saved = localStorage.getItem("arge_projects"); return saved ? JSON.parse(saved) : initialProjects; } catch { return initialProjects; }
-  });
+  // ─── Firestore senkronizasyon yardımcıları ───
+  const writeTimers = useRef({});
+  const firestoreReady = useRef(false);
+  const totalListeners = 11; // 4 veri + 7 config doküman
+
+  const writeToFirestore = useCallback((docId, data) => {
+    if (!firestoreReady.current) return;
+    if (writeTimers.current[docId]) clearTimeout(writeTimers.current[docId]);
+    writeTimers.current[docId] = setTimeout(() => {
+      setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() }).catch(err => console.warn("Firestore yazma hatası:", docId, err));
+    }, 600);
+  }, []);
+
+  const writeConfigToFirestore = useCallback((docId, data) => {
+    if (!firestoreReady.current) return;
+    if (writeTimers.current[docId]) clearTimeout(writeTimers.current[docId]);
+    writeTimers.current[docId] = setTimeout(() => {
+      setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() }).catch(err => console.warn("Firestore config yazma hatası:", docId, err));
+    }, 600);
+  }, []);
+
+  // ─── Ana veri state'leri (başlangıçta default, Firestore'dan güncellenecek) ───
+  const [researchers, setResearchers] = useState(initialResearchers);
+  const [topics, setTopics] = useState(initialTopics);
+  const [projects, setProjects] = useState(initialProjects);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [topicStatusFilter, setTopicStatusFilter] = useState("");
@@ -5741,43 +5753,72 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [showTableView, setShowTableView] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [projectColDragOver, setProjectColDragOver] = useState(false);
-  const [quickLinks, setQuickLinks] = useState(() => {
-    try { const saved = localStorage.getItem("arge_quicklinks"); return saved ? JSON.parse(saved) : defaultQuickLinks; } catch { return defaultQuickLinks; }
-  });
-  const [roleConfigSt, setRoleConfig] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_roles"); return s ? JSON.parse(s) : DEFAULT_ROLE_CONFIG; } catch { return DEFAULT_ROLE_CONFIG; }
-  });
-  const [statusConfigSt, setStatusConfig] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_statuses"); return s ? JSON.parse(s) : DEFAULT_STATUS_CONFIG; } catch { return DEFAULT_STATUS_CONFIG; }
-  });
-  const [priorityConfigSt, setPriorityConfig] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_priorities"); return s ? JSON.parse(s) : DEFAULT_PRIORITY_CONFIG; } catch { return DEFAULT_PRIORITY_CONFIG; }
-  });
-  const [projectTypeOptionsSt, setProjectTypeOptions] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_ptypes"); return s ? JSON.parse(s) : DEFAULT_PROJECT_TYPES; } catch { return DEFAULT_PROJECT_TYPES; }
-  });
-  const [categoryOptionsSt, setCategoryOptions] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_categories"); return s ? JSON.parse(s) : DEFAULT_CATEGORY_OPTIONS; } catch { return DEFAULT_CATEGORY_OPTIONS; }
-  });
-  const [eduDegreeOptionsSt, setEduDegreeOptions] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_degrees"); return s ? JSON.parse(s) : DEFAULT_EDU_DEGREES; } catch { return DEFAULT_EDU_DEGREES; }
-  });
-  const [eduStatusOptionsSt, setEduStatusOptions] = useState(() => {
-    try { const s = localStorage.getItem("arge_cfg_edustatus"); return s ? JSON.parse(s) : DEFAULT_EDU_STATUSES; } catch { return DEFAULT_EDU_STATUSES; }
-  });
+  const [quickLinks, setQuickLinks] = useState(defaultQuickLinks);
+  const [roleConfigSt, setRoleConfig] = useState(DEFAULT_ROLE_CONFIG);
+  const [statusConfigSt, setStatusConfig] = useState(DEFAULT_STATUS_CONFIG);
+  const [priorityConfigSt, setPriorityConfig] = useState(DEFAULT_PRIORITY_CONFIG);
+  const [projectTypeOptionsSt, setProjectTypeOptions] = useState(DEFAULT_PROJECT_TYPES);
+  const [categoryOptionsSt, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS);
+  const [eduDegreeOptionsSt, setEduDegreeOptions] = useState(DEFAULT_EDU_DEGREES);
+  const [eduStatusOptionsSt, setEduStatusOptions] = useState(DEFAULT_EDU_STATUSES);
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => { localStorage.setItem("arge_researchers", JSON.stringify(researchers)); }, [researchers]);
-  useEffect(() => { localStorage.setItem("arge_topics", JSON.stringify(topics)); }, [topics]);
-  useEffect(() => { localStorage.setItem("arge_projects", JSON.stringify(projects)); }, [projects]);
-  useEffect(() => { localStorage.setItem("arge_quicklinks", JSON.stringify(quickLinks)); }, [quickLinks]);
-  useEffect(() => { localStorage.setItem("arge_cfg_roles", JSON.stringify(roleConfigSt)); }, [roleConfigSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_statuses", JSON.stringify(statusConfigSt)); }, [statusConfigSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_priorities", JSON.stringify(priorityConfigSt)); }, [priorityConfigSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_ptypes", JSON.stringify(projectTypeOptionsSt)); }, [projectTypeOptionsSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_categories", JSON.stringify(categoryOptionsSt)); }, [categoryOptionsSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_degrees", JSON.stringify(eduDegreeOptionsSt)); }, [eduDegreeOptionsSt]);
-  useEffect(() => { localStorage.setItem("arge_cfg_edustatus", JSON.stringify(eduStatusOptionsSt)); }, [eduStatusOptionsSt]);
+  // ─── Firestore'dan gerçek zamanlı okuma (onSnapshot) ───
+  useEffect(() => {
+    const unsubs = [];
+    const firstLoad = new Set();
+    const listen = (docId, setter, fallback, isConfig) => {
+      let isFirst = true;
+      const unsub = onSnapshot(doc(db, "arge", docId), (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const val = isConfig ? d.data : d.items;
+          if (val !== undefined) setter(val);
+        } else if (isFirst) {
+          // Doküman henüz yok — default veriyi Firestore'a yaz (ilk kurulum)
+          const payload = isConfig ? { data: fallback, updatedAt: Date.now() } : { items: fallback, updatedAt: Date.now() };
+          setDoc(doc(db, "arge", docId), payload).catch(() => {});
+        }
+        if (isFirst) {
+          isFirst = false;
+          firstLoad.add(docId);
+          if (firstLoad.size >= totalListeners) {
+            // Tüm dokümanlar yüklendi — artık yazma aktif
+            firestoreReady.current = true;
+          }
+        }
+      }, (err) => {
+        console.warn("Firestore dinleme hatası:", docId, err);
+        if (isFirst) { isFirst = false; firstLoad.add(docId); if (firstLoad.size >= totalListeners) firestoreReady.current = true; }
+      });
+      unsubs.push(unsub);
+    };
+    listen("researchers", setResearchers, initialResearchers, false);
+    listen("topics", setTopics, initialTopics, false);
+    listen("projects", setProjects, initialProjects, false);
+    listen("quicklinks", setQuickLinks, defaultQuickLinks, false);
+    listen("cfg_roles", setRoleConfig, DEFAULT_ROLE_CONFIG, true);
+    listen("cfg_statuses", setStatusConfig, DEFAULT_STATUS_CONFIG, true);
+    listen("cfg_priorities", setPriorityConfig, DEFAULT_PRIORITY_CONFIG, true);
+    listen("cfg_ptypes", setProjectTypeOptions, DEFAULT_PROJECT_TYPES, true);
+    listen("cfg_categories", setCategoryOptions, DEFAULT_CATEGORY_OPTIONS, true);
+    listen("cfg_degrees", setEduDegreeOptions, DEFAULT_EDU_DEGREES, true);
+    listen("cfg_edustatus", setEduStatusOptions, DEFAULT_EDU_STATUSES, true);
+    return () => unsubs.forEach(fn => fn());
+  }, []);
+
+  // ─── Firestore'a yazma (state değiştiğinde, sadece kullanıcı eylemi sonrası) ───
+  useEffect(() => { writeToFirestore("researchers", researchers); }, [researchers]);
+  useEffect(() => { writeToFirestore("topics", topics); }, [topics]);
+  useEffect(() => { writeToFirestore("projects", projects); }, [projects]);
+  useEffect(() => { writeToFirestore("quicklinks", quickLinks); }, [quickLinks]);
+  useEffect(() => { writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt]);
+  useEffect(() => { writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt]);
 
   // Sync module-level config refs for sub-components
   roleConfig = roleConfigSt;
