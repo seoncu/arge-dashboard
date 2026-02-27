@@ -13,6 +13,13 @@ async function hashPassword(password) {
 // Önceden hash'lenmiş şifreler
 const USERS = [
   {
+    username: "master",
+    passwordHash: null,
+    plainForInit: "Master@ArGe2026!",
+    role: "master",
+    displayName: "Master Yönetici",
+  },
+  {
     username: "admin",
     passwordHash: null,
     plainForInit: "ArGe@Aof2026",

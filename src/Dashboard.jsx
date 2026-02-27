@@ -5921,11 +5921,14 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard({ role, user, onLogout }) {
-  const isAdmin = role === "admin";
+  const isMaster = role === "master";
+  const isAdmin = role === "admin" || isMaster;
   const [sessionBlocked, setSessionBlocked] = useState(false);
   const [activeSessionUser, setActiveSessionUser] = useState(null);
+  const [activeSessionRole, setActiveSessionRole] = useState(null);
   const [viewOnlyMode, setViewOnlyMode] = useState(false);
   const [forceReloading, setForceReloading] = useState(false);
+  const [masterTakeoverAlert, setMasterTakeoverAlert] = useState(false);
   const sessionId = useRef(Math.random().toString(36).slice(2, 10));
   const heartbeatRef = useRef(null);
 
@@ -5938,11 +5941,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         await setDoc(sessionDocRef, {
           sessionId: sessionId.current,
           user: user?.displayName || "Admin",
+          role: role,
           heartbeat: Date.now()
         });
       } catch (e) { console.warn("Heartbeat error:", e); }
     }, 15000);
-  }, [user]);
+  }, [user, role]);
 
   // Session'ı al ve heartbeat başlat
   const claimAndStart = useCallback(async () => {
@@ -5950,12 +5954,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     await setDoc(sessionDocRef, {
       sessionId: sessionId.current,
       user: user?.displayName || "Admin",
+      role: role,
       heartbeat: Date.now()
     });
     setSessionBlocked(false);
     setActiveSessionUser(null);
+    setActiveSessionRole(null);
     startHeartbeat();
-  }, [user, startHeartbeat]);
+  }, [user, role, startHeartbeat]);
 
   // ─── Aktif Oturum Kilidi (Presence Lock) ───
   useEffect(() => {
@@ -5969,8 +5975,22 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           const s = snap.data();
           const elapsed = Date.now() - (s.heartbeat || 0);
           if (s.sessionId !== sessionId.current && elapsed < 60000) {
+            // Master her zaman session'ı alır
+            if (isMaster) {
+              await claimAndStart();
+              return;
+            }
+            // Master aktifse diğer admin doğrudan view-only
+            if (s.role === "master") {
+              setSessionBlocked(false);
+              setActiveSessionUser(s.user || "Master Yönetici");
+              setActiveSessionRole("master");
+              setViewOnlyMode(true);
+              return;
+            }
             setSessionBlocked(true);
             setActiveSessionUser(s.user || "Bilinmeyen");
+            setActiveSessionRole(s.role || "admin");
             return;
           }
         }
@@ -5987,9 +6007,11 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     // Diğer admin'in session durumunu dinle
     const unsub = onSnapshot(sessionDocRef, (snap) => {
       if (!snap.exists()) {
-        // Diğer admin çıkış yaptı — session boş, otomatik al!
+        // Session boş — otomatik al!
         setSessionBlocked(false);
         setActiveSessionUser(null);
+        setActiveSessionRole(null);
+        setMasterTakeoverAlert(false);
         claimAndStart().catch(() => {});
         return;
       }
@@ -5999,12 +6021,24 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       } else {
         const elapsed = Date.now() - (s.heartbeat || 0);
         if (elapsed < 60000) {
+          // Master giriş yaptıysa — diğer adminler otomatik view-only
+          if (s.role === "master" && !isMaster) {
+            setSessionBlocked(false);
+            setActiveSessionUser(s.user || "Master Yönetici");
+            setActiveSessionRole("master");
+            setViewOnlyMode(true);
+            setMasterTakeoverAlert(true);
+            setTimeout(() => setMasterTakeoverAlert(false), 5000);
+            return;
+          }
           setSessionBlocked(true);
           setActiveSessionUser(s.user || "Bilinmeyen");
+          setActiveSessionRole(s.role || "admin");
         } else {
-          // Heartbeat eski — diğer admin muhtemelen kapattı, session'ı al
+          // Heartbeat eski — session'ı al
           setSessionBlocked(false);
           setActiveSessionUser(null);
+          setActiveSessionRole(null);
           claimAndStart().catch(() => {});
         }
       }
@@ -6016,7 +6050,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       unsub();
       deleteDoc(sessionDocRef).catch(() => {});
     };
-  }, [isAdmin, user, claimAndStart]);
+  }, [isAdmin, isMaster, user, claimAndStart]);
 
   // Zorla oturumu al (kullanıcı "Yine de Devam Et" tıkladığında)
   const forceClaimSession = useCallback(async () => {
@@ -6651,13 +6685,52 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             title="Ayarlar">
             <Wrench size={18} />
           </button>}
+          {/* Session Status Indicator */}
+          {isAdmin && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              viewOnlyMode && activeSessionRole === "master"
+                ? "bg-red-50 text-red-700 border border-red-200"
+                : viewOnlyMode
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : isMaster
+                    ? "bg-gradient-to-r from-red-50 to-amber-50 text-red-700 border border-red-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            }`}>
+              {isMaster && !viewOnlyMode ? (
+                <span className="text-sm">👑</span>
+              ) : (
+                <div className={`w-2 h-2 rounded-full ${
+                  viewOnlyMode && activeSessionRole === "master" ? "bg-red-400" : viewOnlyMode ? "bg-amber-400" : "bg-emerald-400 animate-pulse"
+                }`} />
+              )}
+              {viewOnlyMode ? (
+                activeSessionRole === "master" ? (
+                  <span>👑 <strong>{activeSessionUser}</strong> aktif — Görüntüleme Modu</span>
+                ) : (
+                  <span>Görüntüleme — <strong>{activeSessionUser}</strong> düzenliyor</span>
+                )
+              ) : isMaster ? (
+                <span>Master Yönetici</span>
+              ) : (
+                <span>Düzenleme Modu</span>
+              )}
+            </div>
+          )}
           <div className="w-px h-6 bg-slate-200" />
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
-              <p className="text-[10px] text-slate-400">{role === "admin" ? "Yönetici" : "Görüntüleyici"}</p>
+              <p className="text-[10px] text-slate-400">{role === "master" ? "Master Yönetici" : role === "admin" ? "Yönetici" : "Görüntüleyici"}</p>
             </div>
-            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-semibold text-xs">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs ${
+              isMaster && !viewOnlyMode
+                ? "bg-red-100 text-red-600 ring-2 ring-red-300"
+                : isAdmin && !viewOnlyMode
+                  ? "bg-emerald-100 text-emerald-600 ring-2 ring-emerald-300"
+                  : isAdmin && viewOnlyMode
+                    ? "bg-amber-100 text-amber-600 ring-2 ring-amber-300"
+                    : "bg-indigo-100 text-indigo-600"
+            }`}>
               {(user?.displayName || "K")[0]}
             </div>
             <button onClick={onLogout} className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Çıkış Yap">
@@ -6671,13 +6744,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       {sessionBlocked && isAdmin && !viewOnlyMode && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center space-y-4">
-            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
-              <AlertTriangle size={32} className="text-amber-500" />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${activeSessionRole === "master" ? "bg-red-100" : "bg-amber-100"}`}>
+              <AlertTriangle size={32} className={activeSessionRole === "master" ? "text-red-500" : "text-amber-500"} />
             </div>
-            <h2 className="text-lg font-bold text-slate-800">Oturum Meşgul</h2>
+            <h2 className="text-lg font-bold text-slate-800">{activeSessionRole === "master" ? "Master Yönetici Aktif" : "Oturum Meşgul"}</h2>
             <p className="text-sm text-slate-600">
-              <strong className="text-indigo-600">{activeSessionUser}</strong> şu anda dashboard üzerinde çalışıyor.
-              Aynı anda iki kişinin düzenleme yapması veri çakışmasına neden olabilir.
+              <strong className={activeSessionRole === "master" ? "text-red-600" : "text-indigo-600"}>{activeSessionUser}</strong> şu anda dashboard üzerinde çalışıyor.
+              {activeSessionRole === "master" && <span className="block mt-1 text-red-500 font-medium text-xs">Master yönetici aktifken düzenleme yapılamaz.</span>}
+              {activeSessionRole !== "master" && " Aynı anda iki kişinin düzenleme yapması veri çakışmasına neden olabilir."}
             </p>
             <div className="flex gap-3 justify-center">
               <button onClick={onLogout} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
@@ -6688,6 +6762,19 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               </button>
             </div>
             <p className="text-[10px] text-slate-400">Görüntüleme modunda verileri görebilir ancak düzenleyemezsiniz. Diğer kullanıcının değişiklikleri otomatik yansır.</p>
+          </div>
+        </div>
+      )}
+
+      {/* MASTER TAKEOVER ALERT */}
+      {masterTakeoverAlert && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[55] animate-bounce">
+          <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg">👑</div>
+            <div>
+              <p className="font-bold text-sm">Master Yönetici Giriş Yaptı</p>
+              <p className="text-[11px] text-white/80">Görüntüleme moduna geçirildiniz</p>
+            </div>
           </div>
         </div>
       )}
@@ -6707,9 +6794,16 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* VIEW-ONLY BANNER */}
       {viewOnlyMode && (
-        <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center justify-center gap-2 flex-shrink-0">
-          <Eye size={14} className="text-amber-600" />
-          <span className="text-xs font-medium text-amber-700">Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor. Değişiklikler otomatik yansır.</span>
+        <div className={`border-b px-5 py-2 flex items-center justify-center gap-2 flex-shrink-0 ${
+          activeSessionRole === "master" ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
+        }`}>
+          {activeSessionRole === "master" ? <span className="text-sm">👑</span> : <Eye size={14} className="text-amber-600" />}
+          <span className={`text-xs font-medium ${activeSessionRole === "master" ? "text-red-700" : "text-amber-700"}`}>
+            {activeSessionRole === "master"
+              ? <>Master Yönetici <strong>{activeSessionUser}</strong> aktif — Görüntüleme modundasınız. Değişiklikler otomatik yansır.</>
+              : <>Görüntüleme Modu — <strong>{activeSessionUser}</strong> düzenleme yapıyor. Değişiklikler otomatik yansır.</>
+            }
+          </span>
         </div>
       )}
 
