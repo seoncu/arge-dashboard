@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, setDoc, getDoc, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, getDocFromServer, onSnapshot, deleteDoc } from "firebase/firestore";
 import {
   Users, BookOpen, FolderKanban, GripVertical, X, Plus, Search,
   Filter, ChevronDown, Check, Clock, AlertCircle, ArrowRight,
@@ -5927,10 +5927,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [activeSessionUser, setActiveSessionUser] = useState(null);
   const [activeSessionRole, setActiveSessionRole] = useState(null);
   const [viewOnlyMode, setViewOnlyMode] = useState(false);
+  const viewOnlyRef = useRef(false);
   const [forceReloading, setForceReloading] = useState(false);
   const [masterTakeoverAlert, setMasterTakeoverAlert] = useState(false);
   const sessionId = useRef(Math.random().toString(36).slice(2, 10));
   const heartbeatRef = useRef(null);
+
+  // viewOnlyMode ref'i senkronize et
+  useEffect(() => { viewOnlyRef.current = viewOnlyMode; }, [viewOnlyMode]);
 
   // Heartbeat başlatan yardımcı
   const startHeartbeat = useCallback(() => {
@@ -5970,7 +5974,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
     const checkAndClaim = async () => {
       try {
-        const snap = await getDoc(sessionDocRef);
+        const snap = await getDocFromServer(sessionDocRef);
         if (snap.exists()) {
           const s = snap.data();
           const elapsed = Date.now() - (s.heartbeat || 0);
@@ -6062,22 +6066,24 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const lastJson = useRef({}); // Her docId için son bilinen JSON — write-back loop engeller
 
   const writeToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current || viewOnlyMode) return;
+    if (!firestoreReady.current) return;
+    if (viewOnlyRef.current) return; // ref-based guard — asla stale olmaz
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
     setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore yazma hatası:", docId, err));
-  }, [viewOnlyMode]);
+  }, []); // dependency yok — ref kullanıyor, stale olmaz
 
   const writeConfigToFirestore = useCallback((docId, data) => {
-    if (!firestoreReady.current || viewOnlyMode) return;
+    if (!firestoreReady.current) return;
+    if (viewOnlyRef.current) return; // ref-based guard
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
     setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
       .catch(err => console.warn("Firestore config yazma hatası:", docId, err));
-  }, [viewOnlyMode]);
+  }, []); // dependency yok — ref kullanıyor
 
   // ─── Ana veri state'leri (başlangıçta default, Firestore'dan güncellenecek) ───
   const [researchers, setResearchers] = useState(initialResearchers);
@@ -6129,23 +6135,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const forceSync = useCallback(async () => {
     setSyncStatus("syncing");
     try {
-      // Adım 1: Mevcut verileri Firestore'a zorla yaz
-      const writes = [
-        setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
-      ];
-      await Promise.all(writes);
-
-      // Adım 2: Firestore'dan taze veri çek
+      // Firestore SUNUCUSUNDAN taze veri çek (cache bypass!)
       const reads = [
         { id: "researchers", setter: setResearchers, isConfig: false },
         { id: "topics", setter: setTopics, isConfig: false },
@@ -6160,7 +6150,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
       ];
       for (const { id, setter, isConfig } of reads) {
-        const snap = await getDoc(doc(db, "arge", id));
+        const snap = await getDocFromServer(doc(db, "arge", id));
         if (snap.exists()) {
           const d = snap.data();
           const val = isConfig ? d.data : d.items;
@@ -6179,7 +6169,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       setSyncStatus("idle");
       setToast({ type: "error", message: "Senkronizasyon hatası: " + err.message });
     }
-  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt]);
+  }, []); // dependency yok — sadece okuma yapıyor, ref-based
 
   // ─── Zorunlu Yayınla — tüm client'lara bildirim gönder ───
   const forcePublish = useCallback(async () => {
@@ -6214,7 +6204,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     }
   }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
 
-  // Otomatik senkronizasyon — her 30 saniyede Firestore'dan güncelle
+  // Otomatik senkronizasyon — her 10 saniyede Firestore SUNUCUSUNDAN güncelle
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!firestoreReady.current) return;
@@ -6233,7 +6223,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           { id: "cfg_edustatus", setter: setEduStatusOptions, isConfig: true },
         ];
         for (const { id, setter, isConfig } of reads) {
-          const snap = await getDoc(doc(db, "arge", id));
+          const snap = await getDocFromServer(doc(db, "arge", id));
           if (snap.exists()) {
             const d = snap.data();
             const val = isConfig ? d.data : d.items;
@@ -6247,7 +6237,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           }
         }
       } catch (err) { console.warn("Auto-sync error:", err); }
-    }, 30000);
+    }, 10000); // 10 saniyede bir otomatik güncelle
     return () => clearInterval(interval);
   }, []);
 
@@ -6320,17 +6310,17 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   }, []);
 
   // ─── Firestore'a yazma (state değiştiğinde, sadece kullanıcı eylemi sonrası) ───
-  useEffect(() => { writeToFirestore("researchers", researchers); }, [researchers]);
-  useEffect(() => { writeToFirestore("topics", topics); }, [topics]);
-  useEffect(() => { writeToFirestore("projects", projects); }, [projects]);
-  useEffect(() => { writeToFirestore("quicklinks", quickLinks); }, [quickLinks]);
-  useEffect(() => { writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt]);
-  useEffect(() => { writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt]);
+  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("researchers", researchers); }, [researchers, writeToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("topics", topics); }, [topics, writeToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("projects", projects); }, [projects, writeToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeToFirestore("quicklinks", quickLinks); }, [quickLinks, writeToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { if (!viewOnlyRef.current) writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt, writeConfigToFirestore]);
 
   // Sync module-level config refs for sub-components
   roleConfig = roleConfigSt;

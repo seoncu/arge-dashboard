@@ -1,6 +1,6 @@
 // ─── Firebase Konfigürasyonu ───────────────────────────────
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAWQN5caYDCTzl9al4vc85ejhsY4PCZJVM",
@@ -14,13 +14,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Offline destek — internet kesilse bile uygulama çalışmaya devam eder
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === "failed-precondition") {
-    console.warn("Firestore persistence: birden fazla sekme açık, sadece birinde offline destek aktif");
-  } else if (err.code === "unimplemented") {
-    console.warn("Firestore persistence: bu tarayıcı desteklemiyor");
-  }
-});
+// NOT: enableIndexedDbPersistence KALDIRILDI!
+// Lokal cache, çoklu tarayıcı senkronizasyonunu engelliyor.
+// Persistence olmadan: setDoc → doğrudan sunucu, onSnapshot → sunucudan push, getDoc → sunucudan çek.
 
 export { db };
