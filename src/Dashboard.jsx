@@ -6301,15 +6301,28 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           firestoreReady.current = true;
           setFirestoreStatus("ready");
           console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
-          // İlk yükleme sonrası tüm veriyi Firestore'a push et (sunucu boşsa diye)
-          setTimeout(() => {
-            if (forcePublishRef.current) {
-              console.log("[SYNC] 🚀 İlk veri push başlatılıyor...");
-              forcePublishRef.current().then(() => {
-                console.log("[SYNC] ✅ İlk veri push tamamlandı!");
-              }).catch((err) => {
-                console.warn("[SYNC] ⚠️ İlk veri push hatası:", err.message);
-              });
+          // İlk yükleme sonrası tüm veriyi Firestore'a sessizce push et
+          // NOT: forcePublish kullanMIYORUZ çünkü o _force_reload sinyali gönderiyor
+          // ve sonsuz yeniden yükleme döngüsü yaratıyor!
+          setTimeout(async () => {
+            try {
+              console.log("[SYNC] 🚀 İlk veri push başlatılıyor (sessiz)...");
+              await withTimeout(Promise.all([
+                setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
+                setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
+              ]), 15000, "initialPush");
+              console.log("[SYNC] ✅ İlk veri push tamamlandı!");
+            } catch (err) {
+              console.warn("[SYNC] ⚠️ İlk veri push hatası:", err.message);
             }
           }, 1000);
         }
