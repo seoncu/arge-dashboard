@@ -1329,6 +1329,17 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
                     </div>
                   </div>
                 </div>
+                {/* Proje Türü Dağılımı */}
+                {Object.keys(projectTypeCount).length > 0 && (<>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Proje Türü Dağılımı</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {Object.entries(projectTypeCount).sort((a, b) => b[1] - a[1]).map(([pt, cnt]) => (
+                      <div key={pt} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium border border-indigo-100">
+                        <FolderKanban size={10} /><span>{pt}</span><span className="font-bold">{cnt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>)}
                 {/* Rol dağılımı */}
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Rol Dağılımı</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -4208,6 +4219,35 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 <p className="text-[10px] text-slate-400 mt-2 text-right">Toplam: {titleDistribution.total} araştırmacı</p>
               </div>
               )}
+              {/* Proje Türü Bazlı Dağılım */}
+              {(() => {
+                const ptDist = {};
+                (aofResearcherIds ? projects.filter(p => (p.researchers || []).some(r => aofResearcherIds.has(r.researcherId))) : projects).forEach(p => {
+                  const pt = p.projectType || "Belirtilmemiş";
+                  ptDist[pt] = (ptDist[pt] || 0) + 1;
+                });
+                const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
+                if (entries.length === 0) return null;
+                return (
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-indigo-500" />Proje Türü Dağılımı</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                      {entries.map(([pt, cnt]) => (
+                        <div key={pt} className="text-center p-3 bg-white rounded-lg border border-slate-100">
+                          <p className="text-2xl font-bold text-indigo-600">{cnt}</p>
+                          <p className="text-[10px] text-slate-500 mt-1 font-medium">{pt}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {entries.length >= 2 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü (Pasta)" />
+                        <SimpleBarChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü (Çubuk)" color="#6366f1" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {/* Researcher activity table */}
               <div className="bg-slate-50 rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Araştırmacı Aktivite Tablosu</h3>
@@ -4343,6 +4383,26 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                       </div>
                     </div>
                   </div>
+                  {/* Proje Türü Dağılımı */}
+                  {(() => {
+                    const ptDist = {};
+                    personStats.myProjects.forEach(p => { const pt = p.projectType || p.type || "Belirtilmemiş"; ptDist[pt] = (ptDist[pt] || 0) + 1; });
+                    const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
+                    if (entries.length === 0) return null;
+                    return (
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
+                        <div className="flex flex-wrap gap-2">
+                          {entries.map(([pt, cnt]) => (
+                            <div key={pt} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-medium border border-indigo-100">
+                              <FolderKanban size={12} /><span>{pt}</span><span className="font-bold">{cnt}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {entries.length >= 2 && <div className="mt-2"><SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü" /></div>}
+                      </div>
+                    );
+                  })()}
                   {/* Rol dağılımı */}
                   <div>
                     <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Rol Dağılımı</p>
@@ -4365,13 +4425,25 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                     <h3 className="text-sm font-semibold text-slate-700 mb-3">Konuları ({personStats.myTopics.length})</h3>
                     {personStats.myTopics.length > 0 ? (
                       <div className="space-y-1.5">
-                        {personStats.myTopics.map(t => (
-                          <div key={t.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-slate-100">
-                            <Badge className={statusConfig[t.status]?.color}>{statusConfig[t.status]?.label}</Badge>
-                            <span className="text-xs font-medium text-slate-700 truncate flex-1">{t.title}</span>
-                            {(() => { const a = t.researchers.find(r => r.researcherId === selectedPersonId); return a?.role ? <Badge className={roleConfig[a.role]?.color}>{roleConfig[a.role]?.label}</Badge> : null; })()}
-                          </div>
-                        ))}
+                        {personStats.myTopics.map(t => {
+                          const linkedPrj = (projects || []).find(p => (p.topics || []).includes(t.id));
+                          const assignment = t.researchers.find(r => r.researcherId === selectedPersonId);
+                          return (
+                            <div key={t.id} className={`flex items-center gap-2 rounded-lg p-2 border ${linkedPrj ? "bg-gradient-to-r from-violet-50 to-indigo-50 border-violet-200" : "bg-white border-slate-100"}`}>
+                              <Badge className={statusConfig[t.status]?.color}>{statusConfig[t.status]?.label}</Badge>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium text-slate-700 truncate block">{t.title}</span>
+                                {linkedPrj && (
+                                  <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded bg-violet-100 text-[10px] font-semibold text-violet-700">
+                                    <FolderKanban size={9} />{linkedPrj.title?.length > 35 ? linkedPrj.title.slice(0, 35) + "…" : linkedPrj.title}
+                                    {linkedPrj.projectType && <span className="text-violet-500 ml-1">({linkedPrj.projectType})</span>}
+                                  </span>
+                                )}
+                              </div>
+                              {assignment?.role && <Badge className={roleConfig[assignment.role]?.color}>{roleConfig[assignment.role]?.label}</Badge>}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : <p className="text-xs text-slate-400 text-center py-3">Konu atanmamış</p>}
                   </div>
@@ -4384,7 +4456,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                           <div key={p.id} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-slate-100">
                             <Badge className={statusConfig[p.status]?.color}>{statusConfig[p.status]?.label}</Badge>
                             <span className="text-xs font-medium text-slate-700 truncate flex-1">{p.title}</span>
-                            {p.type && <Badge className="bg-slate-100 text-slate-500">{p.type}</Badge>}
+                            {(p.projectType || p.type) && <Badge className="bg-indigo-50 text-indigo-600">{p.projectType || p.type}</Badge>}
                           </div>
                         ))}
                       </div>
@@ -4541,6 +4613,56 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
+              {/* Projelendirilme Durumu & Proje Türü Dağılımı */}
+              {(() => {
+                const ft = filteredTopics;
+                const projectedTopics = ft.filter(t => (projects || []).some(p => (p.topics || []).includes(t.id)));
+                const notProjected = ft.length - projectedTopics.length;
+                // proje türü bazlı konu dağılımı: her konunun bağlı olduğu projelerin türleri
+                const topicPtDist = {};
+                projectedTopics.forEach(t => {
+                  const linkedProjects = (projects || []).filter(p => (p.topics || []).includes(t.id));
+                  linkedProjects.forEach(p => {
+                    const pt = p.projectType || "Belirtilmemiş";
+                    topicPtDist[pt] = (topicPtDist[pt] || 0) + 1;
+                  });
+                });
+                const ptEntries = Object.entries(topicPtDist).sort((a, b) => b[1] - a[1]);
+                return (
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Projelendirilme ve Proje Türü Dağılımı</h3>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="text-center p-4 bg-violet-50 rounded-xl border border-violet-200">
+                        <p className="text-[10px] text-violet-500 mb-1">Projelendirilmiş Konu</p>
+                        <p className="text-2xl font-bold text-violet-700">{projectedTopics.length}</p>
+                        <p className="text-[10px] text-violet-400 mt-0.5">{ft.length > 0 ? Math.round(projectedTopics.length / ft.length * 100) : 0}%</p>
+                      </div>
+                      <div className="text-center p-4 bg-slate-100 rounded-xl border border-slate-200">
+                        <p className="text-[10px] text-slate-500 mb-1">Projelendirilmemiş Konu</p>
+                        <p className="text-2xl font-bold text-slate-600">{notProjected}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{ft.length > 0 ? Math.round(notProjected / ft.length * 100) : 0}%</p>
+                      </div>
+                    </div>
+                    {ptEntries.length > 0 && (<>
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türüne Göre Konu Dağılımı</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
+                        {ptEntries.map(([pt, cnt]) => (
+                          <div key={pt} className="text-center p-2.5 bg-white rounded-lg border border-slate-100">
+                            <p className="text-lg font-bold text-indigo-600">{cnt}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">{pt}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {ptEntries.length >= 2 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <SimplePieChart data={[{ label: "Projelendirilmiş", value: projectedTopics.length }, { label: "Projelendirilmemiş", value: notProjected }]} title="Projelendirilme" />
+                          <SimplePieChart data={ptEntries.map(([label, value]) => ({ label, value }))} title="Proje Türü" />
+                        </div>
+                      )}
+                    </>)}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -7287,24 +7409,10 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </div>
           )}
           {onlineUsersList.length > 0 && <div className="w-px h-6 bg-slate-200" />}
-          {/* Session Status Indicator */}
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-            isMaster
-              ? "bg-gradient-to-r from-red-50 to-amber-50 text-red-700 border border-red-200"
-              : isAdmin
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : isEditor
-                  ? "bg-violet-50 text-violet-700 border border-violet-200"
-                  : "bg-blue-50 text-blue-700 border border-blue-200"
-          }`}>
-            {isMaster ? (
-              <span className="text-sm">👑</span>
-            ) : (
-              <div className={`w-2 h-2 rounded-full animate-pulse ${isAdmin ? "bg-emerald-400" : isEditor ? "bg-violet-400" : "bg-blue-400"}`} />
-            )}
-            <span>{isMaster ? "Master Yönetici" : isAdmin ? "Yönetici Modu" : isEditor ? "Editör Modu" : "Görüntüleyici"}</span>
-          </div>
-          <div className="w-px h-6 bg-slate-200" />
+          {/* Role Badge — compact */}
+          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
+            isMaster ? "bg-red-100 text-red-600" : isAdmin ? "bg-emerald-100 text-emerald-600" : isEditor ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"
+          }`}>{isMaster ? "Master" : isAdmin ? "Yönetici" : isEditor ? "Editör" : "Görüntüleme"}</span>
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
