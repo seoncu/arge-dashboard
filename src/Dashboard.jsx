@@ -1618,13 +1618,16 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
 };
 
 // ─── TOPIC CARD ───────────────────────────────────────────
-const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, onRemoveFromProject, maximized, editingBy }) => {
+const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, allTopics, onRemoveFromProject, maximized, editingBy }) => {
   const [dragOver, setDragOver] = useState(false);
   const stCfg = statusConfig[topic.status] || statusConfig.proposed;
   const prCfg = priorityConfig[topic.priority] || priorityConfig.medium;
-  const progress = getProgress(topic.tasks);
   const isProjected = (projects || []).some(p => (p.topics || []).includes(topic.id));
   const linkedProject = isProjected ? (projects || []).find(p => (p.topics || []).includes(topic.id)) : null;
+  // Projelendirilmişse: projenin tüm görevleriyle (proje + bağlı konular) senkron progress göster
+  const progress = isProjected && linkedProject
+    ? getProgress([...(linkedProject.tasks || []), ...(linkedProject.topics || []).flatMap(tid => { const t = (allTopics || []).find(x => x.id === tid); return t ? (t.tasks || []) : []; })])
+    : getProgress(topic.tasks);
   const cardStyle = getCardStyle(topic.status, topic.endDate);
   const baseBg = isProjected ? "bg-slate-100 opacity-80 hover:opacity-100" : cardStyle ? `${cardStyle.bg} hover:shadow-md` : "bg-white hover:shadow-md";
   const baseBorder = editingBy
@@ -1881,7 +1884,13 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const handleTaskStatus = (taskId, newStatus) => { onUpdate({ ...item, tasks: (item.tasks || []).map(t => t.id === taskId ? { ...t, status: newStatus } : t) }); };
   const handleDeleteTask = (taskId) => { onUpdate({ ...item, tasks: (item.tasks || []).filter(t => t.id !== taskId) }); };
   const handleRemoveResearcher = (researcherId) => { onUpdate({ ...item, researchers: (item.researchers || []).filter(tr => tr.researcherId !== researcherId) }); };
-  const progress = getProgress(item.tasks || []);
+  // Projelendirilmiş konularda proje ile senkron progress göster
+  const linkedPrjForProgress = isTopic ? (projects || []).find(p => (p.topics || []).includes(item.id)) : null;
+  const progress = linkedPrjForProgress
+    ? getProgress([...(linkedPrjForProgress.tasks || []), ...(linkedPrjForProgress.topics || []).flatMap(tid => { const t = (topics || []).find(x => x.id === tid); return t ? (t.tasks || []) : []; })])
+    : isProject
+      ? getProgress([...(item.tasks || []), ...projectTopics.flatMap(t => t.tasks || [])])
+      : getProgress(item.tasks || []);
 
   const statusOptions = Object.keys(statusConfig || {});
   const priorityOptions = Object.keys(priorityConfig || {});
@@ -3318,24 +3327,23 @@ const SettingsModal = ({
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
                 <h3 className="text-sm font-bold text-indigo-800 flex items-center gap-2 mb-2"><FileText size={16} />Ar-Ge Dashboard Akademik Raporu</h3>
                 <p className="text-xs text-slate-600 mb-3">Bu rapor, Ar-Ge Dashboard uygulamasının geliştirilme sürecini, kullanılan yapay zeka teknolojilerini, Ar-Ge birimi sorunlarına getirilen çözümleri ve gelecek araştırma yönelimlerini akademik formatta açıklamaktadır.</p>
-                <div className="flex gap-2">
-                  <button onClick={() => {
-                    const html = generateAcademicReportHTML();
-                    const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = 'ArGe_Dashboard_Akademik_Rapor.doc'; a.click();
-                    URL.revokeObjectURL(url);
-                  }} className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
-                    <Download size={14} />Word İndir (.doc)
-                  </button>
+                <div className="flex gap-2 flex-wrap">
+                  <a href={"/ArGe-Dashboard-Teknik-Rapor.pdf"} download className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 no-underline">
+                    <Download size={14} />PDF İndir
+                  </a>
+                  <a href={"/ArGe-Dashboard-Teknik-Rapor.docx"} download className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 no-underline">
+                    <Download size={14} />Word İndir (.docx)
+                  </a>
+                  <a href={"/ArGe-Dashboard-Teknik-Rapor.md"} download className="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2 no-underline">
+                    <Download size={14} />Markdown İndir
+                  </a>
                   <button onClick={() => {
                     const html = generateAcademicReportHTML();
                     const w = window.open('', '_blank');
                     w.document.write(html);
                     w.document.close();
-                    setTimeout(() => { w.print(); }, 500);
-                  }} className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
-                    <Download size={14} />PDF İndir (Yazdır)
+                  }} className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2 border border-indigo-200">
+                    <Eye size={14} />Web'de Önizle
                   </button>
                 </div>
               </div>
@@ -7601,7 +7609,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "topics" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "topics" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={canEdit} projects={projects} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} editingBy={editingByOthers[t.id]} />)}
+            {filteredTopics.map(t => <TopicCard key={t.id} topic={t} allResearchers={researchers} isAdmin={canEdit} projects={projects} allTopics={topics} onRemoveFromProject={handleRemoveTopicFromProject} onDrop={handleResearcherDropOnTopic} onClick={(topic) => { setSelectedItem(topic); setSelectedType("topic"); }} maximized={maximizedCol === "topics"} editingBy={editingByOthers[t.id]} />)}
             {filteredTopics.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Konu bulunamadı</p>}
             </div>
           </div>
