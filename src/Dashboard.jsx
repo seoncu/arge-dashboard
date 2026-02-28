@@ -1062,14 +1062,9 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
   const activeCount = myTopics.filter(t => t.status === "active").length;
   const completedCount = myTopics.filter(t => t.status === "completed").length;
   const totalCount = myTopics.length;
-  // Proje türü istatistikleri
-  const myTopicIds = new Set(myTopics.map(t => t.id));
-  const myProjects = (projects || []).filter(p =>
-    (p.researchers || []).some(r => r.researcherId === researcher.id) ||
-    (p.topics || []).some(tid => myTopicIds.has(tid))
-  );
+  // Proje türü istatistikleri (konular üzerinden)
   const projectTypeCount = {};
-  myProjects.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeCount[pt] = (projectTypeCount[pt] || 0) + 1; });
+  myTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
   return (
     <div
       draggable={isAdmin}
@@ -1125,10 +1120,9 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
               )}
             </div>
           )}
-          {/* Proje türü istatistikleri */}
-          {myProjects.length > 0 && (
+          {/* Proje türü istatistikleri (topics üzerinden) */}
+          {Object.keys(projectTypeCount).length > 0 && (
             <div className="flex items-center gap-1 mt-1 flex-wrap">
-              <span className="text-[9px] text-violet-500 font-medium">📂{myProjects.length}P</span>
               {Object.entries(projectTypeCount).slice(0, 3).map(([type, count]) => (
                 <Badge key={type} className="bg-violet-50 text-violet-600 border border-violet-200" style={{fontSize: "9px", padding: "1px 4px"}}>{count > 1 ? `${count}×` : ""}{type.length > 12 ? type.slice(0, 12) + "…" : type}</Badge>
               ))}
@@ -1163,14 +1157,9 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
     t.researchers.some(r => r.researcherId === researcher.id)
   );
 
-  // Proje türü istatistikleri
-  const myTopicIds = new Set(assignedTopics.map(t => t.id));
-  const myProjects = (projects || []).filter(p =>
-    (p.researchers || []).some(r => r.researcherId === researcher.id) ||
-    (p.topics || []).some(tid => myTopicIds.has(tid))
-  );
+  // Proje türü istatistikleri (konular üzerinden)
   const projectTypeCount = {};
-  myProjects.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeCount[pt] = (projectTypeCount[pt] || 0) + 1; });
+  assignedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
 
   const handleSave = () => {
     onUpdate({
@@ -1686,7 +1675,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
       {topic.tasks.length > 0 && (
         <div className="mb-2">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-400">İlerleme</span>
+            <span className="text-xs text-slate-400">Görev Tamamlanma</span>
             <span className="text-xs font-medium text-slate-600">{progress}%</span>
           </div>
           <ProgressBar value={progress} />
@@ -1777,7 +1766,13 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
       {project.budget > 0 && <p className="text-xs text-slate-500 mb-2"><span className="font-medium text-slate-700">₺{project.budget.toLocaleString("tr-TR")}</span></p>}
       {allTasks.length > 0 && (
         <div className="mb-2">
-          <div className="flex items-center justify-between mb-1"><span className="text-xs text-slate-400">Genel İlerleme</span><span className="text-xs font-medium text-slate-600">{progress}%</span></div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              Görev Tamamlanma
+              <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-500 cursor-help text-[8px] font-bold" title={`Tamamlanan / Toplam görev: Projenin kendi görevleri (${(project.tasks||[]).length}) + bağlı konuların görevleri (${projectTopics.flatMap(t=>t.tasks||[]).length}) = ${allTasks.length} görev`}>i</span>
+            </span>
+            <span className="text-xs font-medium text-slate-600">{progress}%</span>
+          </div>
           <ProgressBar value={progress} />
         </div>
       )}
@@ -2102,7 +2097,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
             </div>
           )}
 
-          {(item.tasks || []).length > 0 && <div><div className="flex items-center justify-between mb-2"><h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">İlerleme</h4><span className="text-sm font-bold" style={{ color: progress === 100 ? "#10b981" : "#6366f1" }}>{progress}%</span></div><ProgressBar value={progress} className="h-2" /></div>}
+          {(item.tasks || []).length > 0 && <div><div className="flex items-center justify-between mb-2"><h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Görev Tamamlanma</h4><span className="text-sm font-bold" style={{ color: progress === 100 ? "#10b981" : "#6366f1" }}>{progress}%</span></div><ProgressBar value={progress} className="h-2" /></div>}
 
           {isTopic && <div>
             <div className="flex items-center justify-between mb-2">
@@ -3766,9 +3761,9 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     ft.forEach(t => (t.researchers || []).filter(tr => tr.isIdeaOwner).forEach(tr => ideaOwnerIds.add(tr.researcherId)));
     fp.forEach(p => (p.researchers || []).filter(pr => pr.isIdeaOwner).forEach(pr => ideaOwnerIds.add(pr.researcherId)));
     const ideaOwners = ideaOwnerIds.size;
-    // Proje türü dağılımı
+    // Proje türü dağılımı (konular üzerinden)
     const projectTypeDistribution = {};
-    fp.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeDistribution[pt] = (projectTypeDistribution[pt] || 0) + 1; });
+    ft.forEach(t => { if (t.projectType) projectTypeDistribution[t.projectType] = (projectTypeDistribution[t.projectType] || 0) + 1; });
     return { topicCount: ft.length, projectCount: fp.length, topicsByStatus, projectsByStatus, totalBudget, totalTasks: allTasks.length, doneTasks: allTasks.filter(t => t.status === "done").length, uniqueResearchers: uniqueResearchers.size, totalResearchers, aofMembers, piExperienced, withTopics, withoutTopics, ideaOwners, projectTypeDistribution };
   }, [filteredTopics, filteredProjects, researchers]);
 
@@ -4098,18 +4093,11 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </div>
                 </div>
               </div>
-              {/* Proje Türü Dağılımı */}
+              {/* Proje Türü Dağılımı — Pie Chart */}
               {Object.keys(summary.projectTypeDistribution).length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
-                    <div key={type} className="flex items-center gap-2 px-3 py-2.5 bg-violet-50 rounded-xl border border-violet-100">
-                      <FolderKanban size={14} className="text-violet-500 flex-shrink-0" />
-                      <div className="min-w-0 flex-1"><p className="text-[10px] text-violet-500 truncate">{type}</p><p className="text-sm font-bold text-violet-700">{count}</p></div>
-                    </div>
-                  ))}
-                </div>
+                <SimplePieChart data={Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }))} title="" />
               </div>
               )}
               {/* Görevler */}
@@ -4228,32 +4216,17 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 <p className="text-[10px] text-slate-400 mt-2 text-right">Toplam: {titleDistribution.total} araştırmacı</p>
               </div>
               )}
-              {/* Proje Türü Bazlı Dağılım */}
+              {/* Proje Türü Bazlı Dağılım — topics üzerinden */}
               {(() => {
                 const ptDist = {};
-                (aofResearcherIds ? projects.filter(p => (p.researchers || []).some(r => aofResearcherIds.has(r.researcherId))) : projects).forEach(p => {
-                  const pt = p.projectType || "Belirtilmemiş";
-                  ptDist[pt] = (ptDist[pt] || 0) + 1;
-                });
+                const filteredT = aofResearcherIds ? topics.filter(t => (t.researchers || []).some(r => aofResearcherIds.has(r.researcherId))) : topics;
+                filteredT.forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                 const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                 if (entries.length === 0) return null;
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-indigo-500" />Proje Türü Dağılımı</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
-                      {entries.map(([pt, cnt]) => (
-                        <div key={pt} className="text-center p-3 bg-white rounded-lg border border-slate-100">
-                          <p className="text-2xl font-bold text-indigo-600">{cnt}</p>
-                          <p className="text-[10px] text-slate-500 mt-1 font-medium">{pt}</p>
-                        </div>
-                      ))}
-                    </div>
-                    {entries.length >= 2 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü (Pasta)" />
-                        <SimpleBarChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü (Çubuk)" color="#6366f1" />
-                      </div>
-                    )}
+                    <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="" />
                   </div>
                 );
               })()}
@@ -4392,23 +4365,16 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                       </div>
                     </div>
                   </div>
-                  {/* Proje Türü Dağılımı */}
+                  {/* Proje Türü Dağılımı — topics üzerinden + pie chart */}
                   {(() => {
                     const ptDist = {};
-                    personStats.myProjects.forEach(p => { const pt = p.projectType || p.type || "Belirtilmemiş"; ptDist[pt] = (ptDist[pt] || 0) + 1; });
+                    personStats.myTopics.forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                     const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                     if (entries.length === 0) return null;
                     return (
                       <div>
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                        <div className="flex flex-wrap gap-2">
-                          {entries.map(([pt, cnt]) => (
-                            <div key={pt} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-medium border border-indigo-100">
-                              <FolderKanban size={12} /><span>{pt}</span><span className="font-bold">{cnt}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {entries.length >= 2 && <div className="mt-2"><SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="Proje Türü" /></div>}
+                        <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="" />
                       </div>
                     );
                   })()}
@@ -4622,53 +4588,17 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
-              {/* Projelendirilme Durumu & Proje Türü Dağılımı */}
+              {/* Proje Türü Dağılımı — topics üzerinden pie chart */}
               {(() => {
                 const ft = filteredTopics;
-                const projectedTopics = ft.filter(t => (projects || []).some(p => (p.topics || []).includes(t.id)));
-                const notProjected = ft.length - projectedTopics.length;
-                // proje türü bazlı konu dağılımı: her konunun bağlı olduğu projelerin türleri
                 const topicPtDist = {};
-                projectedTopics.forEach(t => {
-                  const linkedProjects = (projects || []).filter(p => (p.topics || []).includes(t.id));
-                  linkedProjects.forEach(p => {
-                    const pt = p.projectType || "Belirtilmemiş";
-                    topicPtDist[pt] = (topicPtDist[pt] || 0) + 1;
-                  });
-                });
+                ft.forEach(t => { if (t.projectType) topicPtDist[t.projectType] = (topicPtDist[t.projectType] || 0) + 1; });
                 const ptEntries = Object.entries(topicPtDist).sort((a, b) => b[1] - a[1]);
+                if (ptEntries.length === 0) return null;
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Projelendirilme ve Proje Türü Dağılımı</h3>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="text-center p-4 bg-violet-50 rounded-xl border border-violet-200">
-                        <p className="text-[10px] text-violet-500 mb-1">Projelendirilmiş Konu</p>
-                        <p className="text-2xl font-bold text-violet-700">{projectedTopics.length}</p>
-                        <p className="text-[10px] text-violet-400 mt-0.5">{ft.length > 0 ? Math.round(projectedTopics.length / ft.length * 100) : 0}%</p>
-                      </div>
-                      <div className="text-center p-4 bg-slate-100 rounded-xl border border-slate-200">
-                        <p className="text-[10px] text-slate-500 mb-1">Projelendirilmemiş Konu</p>
-                        <p className="text-2xl font-bold text-slate-600">{notProjected}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{ft.length > 0 ? Math.round(notProjected / ft.length * 100) : 0}%</p>
-                      </div>
-                    </div>
-                    {ptEntries.length > 0 && (<>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türüne Göre Konu Dağılımı</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-3">
-                        {ptEntries.map(([pt, cnt]) => (
-                          <div key={pt} className="text-center p-2.5 bg-white rounded-lg border border-slate-100">
-                            <p className="text-lg font-bold text-indigo-600">{cnt}</p>
-                            <p className="text-[10px] text-slate-500 font-medium">{pt}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {ptEntries.length >= 2 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <SimplePieChart data={[{ label: "Projelendirilmiş", value: projectedTopics.length }, { label: "Projelendirilmemiş", value: notProjected }]} title="Projelendirilme" />
-                          <SimplePieChart data={ptEntries.map(([label, value]) => ({ label, value }))} title="Proje Türü" />
-                        </div>
-                      )}
-                    </>)}
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Proje Türü Dağılımı</h3>
+                    <SimplePieChart data={ptEntries.map(([label, value]) => ({ label, value }))} title="" />
                   </div>
                 );
               })()}
