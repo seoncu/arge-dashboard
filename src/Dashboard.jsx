@@ -1163,6 +1163,15 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
     t.researchers.some(r => r.researcherId === researcher.id)
   );
 
+  // Proje türü istatistikleri
+  const myTopicIds = new Set(assignedTopics.map(t => t.id));
+  const myProjects = (projects || []).filter(p =>
+    (p.researchers || []).some(r => r.researcherId === researcher.id) ||
+    (p.topics || []).some(tid => myTopicIds.has(tid))
+  );
+  const projectTypeCount = {};
+  myProjects.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeCount[pt] = (projectTypeCount[pt] || 0) + 1; });
+
   const handleSave = () => {
     onUpdate({
       ...form,
@@ -7409,10 +7418,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </div>
           )}
           {onlineUsersList.length > 0 && <div className="w-px h-6 bg-slate-200" />}
-          {/* Role Badge — compact */}
-          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
+          {/* Role Icon */}
+          <span className={`w-7 h-7 rounded-full flex items-center justify-center ${
             isMaster ? "bg-red-100 text-red-600" : isAdmin ? "bg-emerald-100 text-emerald-600" : isEditor ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"
-          }`}>{isMaster ? "Master" : isAdmin ? "Yönetici" : isEditor ? "Editör" : "Görüntüleme"}</span>
+          }`} title={isMaster ? "Master Yönetici" : isAdmin ? "Yönetici" : isEditor ? "Editör" : "Görüntüleme"}>
+            {isMaster ? <Award size={14} /> : isAdmin ? <Settings size={14} /> : isEditor ? <Edit3 size={14} /> : <Eye size={14} />}
+          </span>
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
