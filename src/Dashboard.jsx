@@ -22,7 +22,8 @@ import {
   Globe, Phone, Mail, GraduationCap, Building2, Wrench, Award,
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
-  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw, CloudUpload
+  Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw, CloudUpload,
+  Lightbulb
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -1046,7 +1047,7 @@ const TaskItem = ({ task, researchers, onStatusChange, onDelete }) => {
 const Toast = ({ message, type = "success", onClose }) => {
   const colors = { success: "bg-emerald-500", info: "bg-indigo-500", warning: "bg-amber-500", error: "bg-red-500" };
   return (
-    <div className={`fixed bottom-6 right-6 z-[60] ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-up text-sm font-medium`}>
+    <div className={`fixed bottom-6 left-6 z-[60] ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-up text-sm font-medium`}>
       {type === "success" && <CheckCircle2 size={16} />}{type === "info" && <Activity size={16} />}
       {message}
       <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded p-0.5"><X size={14} /></button>
@@ -1055,12 +1056,20 @@ const Toast = ({ message, type = "success", onClose }) => {
 };
 
 // ─── RESEARCHER CARD (Compact — just name shown, click for full profile) ──
-const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized, editingBy }) => {
+const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximized, editingBy }) => {
   const myTopics = (topics || []).filter(t => t.researchers.some(r => r.researcherId === researcher.id));
   const proposedCount = myTopics.filter(t => t.status === "proposed").length;
   const activeCount = myTopics.filter(t => t.status === "active").length;
   const completedCount = myTopics.filter(t => t.status === "completed").length;
   const totalCount = myTopics.length;
+  // Proje türü istatistikleri
+  const myTopicIds = new Set(myTopics.map(t => t.id));
+  const myProjects = (projects || []).filter(p =>
+    (p.researchers || []).some(r => r.researcherId === researcher.id) ||
+    (p.topics || []).some(tid => myTopicIds.has(tid))
+  );
+  const projectTypeCount = {};
+  myProjects.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeCount[pt] = (projectTypeCount[pt] || 0) + 1; });
   return (
     <div
       draggable={isAdmin}
@@ -1113,6 +1122,18 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, maximized, editi
               ))}
               {researcher.researchAreas.length > 2 && (
                 <Badge className="bg-slate-50 text-slate-400">+{researcher.researchAreas.length - 2}</Badge>
+              )}
+            </div>
+          )}
+          {/* Proje türü istatistikleri */}
+          {myProjects.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              <span className="text-[9px] text-violet-500 font-medium">📂{myProjects.length}P</span>
+              {Object.entries(projectTypeCount).slice(0, 3).map(([type, count]) => (
+                <Badge key={type} className="bg-violet-50 text-violet-600 border border-violet-200" style={{fontSize: "9px", padding: "1px 4px"}}>{count > 1 ? `${count}×` : ""}{type.length > 12 ? type.slice(0, 12) + "…" : type}</Badge>
+              ))}
+              {Object.keys(projectTypeCount).length > 3 && (
+                <Badge className="bg-violet-50 text-violet-400" style={{fontSize: "9px", padding: "1px 4px"}}>+{Object.keys(projectTypeCount).length - 3}</Badge>
               )}
             </div>
           )}
@@ -1652,9 +1673,16 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
         </div>
       )}
       <div className="flex items-center justify-between">
-        <div className="flex -space-x-1.5">
-          {topic.researchers.slice(0, 4).map(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); return r ? <Avatar key={r.id} name={r.name} color={r.color} size="xs" /> : null; })}
-          {topic.researchers.length > 4 && <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">+{topic.researchers.length - 4}</div>}
+        <div className="flex items-center gap-1">
+          <div className="flex -space-x-1.5">
+            {topic.researchers.slice(0, 4).map(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); return r ? <Avatar key={r.id} name={r.name} color={r.color} size="xs" /> : null; })}
+            {topic.researchers.length > 4 && <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">+{topic.researchers.length - 4}</div>}
+          </div>
+          {topic.researchers.some(tr => tr.isIdeaOwner) && (
+            <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded flex items-center gap-0.5" title={`Fikir: ${topic.researchers.filter(tr => tr.isIdeaOwner).map(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); return r ? r.name.split(" ").pop() : ""; }).join(", ")}`}>
+              💡{topic.researchers.filter(tr => tr.isIdeaOwner).map(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); return r ? r.name.split(" ").pop() : ""; }).join(", ")}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           {topic.workLink && <span title="Çalışma Linki"><ExternalLink size={12} className="text-indigo-400" /></span>}
@@ -1738,6 +1766,23 @@ const ProjectCard = ({ project, topics, allResearchers, onDrop, onClick, onCance
           {projectTopics.map(t => <Badge key={t.id} className="bg-blue-50 text-blue-600 text-xs"><BookOpen size={10} className="mr-0.5" />{t.title.slice(0, 20)}</Badge>)}
         </div></div>
       )}
+      {/* Fikir Sahipleri — konulardan ve projeden */}
+      {(() => {
+        const ideaOwners = new Set();
+        // Konulardaki fikir sahipleri
+        projectTopics.forEach(t => (t.researchers || []).filter(tr => tr.isIdeaOwner).forEach(tr => ideaOwners.add(tr.researcherId)));
+        // Projenin kendi fikir sahipleri
+        (project.researchers || []).filter(r => r.isIdeaOwner).forEach(r => ideaOwners.add(r.researcherId));
+        if (ideaOwners.size === 0) return null;
+        const names = [...ideaOwners].map(id => { const r = allResearchers.find(x => x.id === id); return r ? r.name.split(" ").pop() : ""; }).filter(Boolean);
+        return (
+          <div className="mb-2 flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded flex items-center gap-0.5 border border-yellow-200" title={`Fikir Sahibi: ${names.join(", ")}`}>
+              💡{names.join(", ")}
+            </span>
+          </div>
+        );
+      })()}
       <div className="flex items-center justify-between">
         <div className="flex -space-x-1.5">
           {projectResearchers.slice(0, 4).map(r => <Avatar key={r.id} name={r.name} color={r.color} size="xs" />)}
@@ -1805,11 +1850,11 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const isProject = type === "project";
 
   const itemResearchers = isTopic
-    ? (item.researchers || []).map(tr => ({ ...allResearchers.find(r => r.id === tr.researcherId), role: tr.role })).filter(Boolean)
+    ? (item.researchers || []).map(tr => ({ ...allResearchers.find(r => r.id === tr.researcherId), role: tr.role, isIdeaOwner: tr.isIdeaOwner || false })).filter(Boolean)
     : [];
   const projectTopics = isProject ? topics.filter(t => (item.topics || []).includes(t.id)) : [];
   const projectResearcherSet = isProject
-    ? (() => { const map = new Map(); projectTopics.forEach(t => { (t.researchers || []).forEach(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); if (r && !map.has(r.id)) map.set(r.id, { ...r, role: tr.role, topicTitle: t.title }); }); }); return Array.from(map.values()); })()
+    ? (() => { const map = new Map(); projectTopics.forEach(t => { (t.researchers || []).forEach(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); if (r && !map.has(r.id)) map.set(r.id, { ...r, role: tr.role, isIdeaOwner: tr.isIdeaOwner || false, topicTitle: t.title }); else if (r && tr.isIdeaOwner) { const existing = map.get(r.id); map.set(r.id, { ...existing, isIdeaOwner: true }); } }); }); return Array.from(map.values()); })()
     : [];
 
   const handleAddTask = () => { if (!newTaskTitle.trim()) return; onUpdate({ ...item, tasks: [...(item.tasks || []), { id: `tk_${Date.now()}`, title: newTaskTitle.trim(), status: "todo", assignedTo: null }] }); setNewTaskTitle(""); };
@@ -2095,6 +2140,14 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     className="cursor-pointer hover:opacity-80 transition-opacity">
                     <Badge className={roleConfig[r.role]?.color || "bg-slate-100 text-slate-600"}>{roleConfig[r.role]?.label || r.role}</Badge>
                   </button>
+                  {/* Fikir Sahibi checkbox */}
+                  <button onClick={() => {
+                    const newResearchers = (item.researchers || []).map(tr => tr.researcherId === r.id ? { ...tr, isIdeaOwner: !tr.isIdeaOwner } : tr);
+                    onUpdate({ ...item, researchers: newResearchers });
+                  }} className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors flex-shrink-0 flex items-center gap-0.5 ${r.isIdeaOwner ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300" : "bg-slate-100 text-slate-400 hover:bg-yellow-50 hover:text-yellow-600"}`}
+                    title={r.isIdeaOwner ? "Fikir sahibi (işareti kaldır)" : "Fikir sahibi olarak işaretle"}>
+                    💡{r.isIdeaOwner && <span>Fikir</span>}
+                  </button>
                   <button onClick={() => {
                     const newResearchers = (item.researchers || []).map(tr => tr.researcherId === r.id ? { ...tr, failed: !tr.failed } : tr);
                     onUpdate({ ...item, researchers: newResearchers });
@@ -2165,6 +2218,14 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     className="cursor-pointer hover:opacity-80 transition-opacity">
                     <Badge className={roleConfig[tr.role]?.color || "bg-slate-100 text-slate-600"}>{roleConfig[tr.role]?.label || tr.role}</Badge>
                   </button>
+                  {/* Fikir Sahibi checkbox (proje ekibi) */}
+                  <button onClick={() => {
+                    const newResearchers = (item.researchers || []).map(x => x.researcherId === tr.researcherId ? { ...x, isIdeaOwner: !x.isIdeaOwner } : x);
+                    onUpdate({ ...item, researchers: newResearchers });
+                  }} className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors flex-shrink-0 flex items-center gap-0.5 ${tr.isIdeaOwner ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300" : "bg-slate-100 text-slate-400 hover:bg-yellow-50 hover:text-yellow-600"}`}
+                    title={tr.isIdeaOwner ? "Fikir sahibi (işareti kaldır)" : "Fikir sahibi olarak işaretle"}>
+                    💡{tr.isIdeaOwner && <span>Fikir</span>}
+                  </button>
                   {isAdmin && <button onClick={() => {
                     const newResearchers = (item.researchers || []).filter(x => x.researcherId !== tr.researcherId);
                     onUpdate({ ...item, researchers: newResearchers });
@@ -2184,6 +2245,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     <div key={r.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50/50">
                       <Avatar name={r.name} color={r.color} size="xs" />
                       <span className="text-xs text-slate-500 truncate flex-1">{r.name}</span>
+                      {r.isIdeaOwner && <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded border border-yellow-200 flex items-center gap-0.5">💡Fikir</span>}
                       <span className="text-[10px] text-slate-400">{r.topicTitle}</span>
                       <Badge className={`${roleConfig[r.role]?.color || "bg-slate-100"} text-[10px]`}>{roleConfig[r.role]?.label || r.role}</Badge>
                     </div>
@@ -2196,15 +2258,19 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
           {isProject && <div>
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bağlı Konular ({projectTopics.length})</h4>
             {projectTopics.length === 0 ? <p className="text-sm text-slate-400 italic">Henüz konu eklenmedi. Konu kartını bu projeye sürükleyin.</p> : (
-              <div className="space-y-1.5">{projectTopics.map(t => (
+              <div className="space-y-1.5">{projectTopics.map(t => {
+                const ideaOwners = (t.researchers || []).filter(tr => tr.isIdeaOwner).map(tr => { const r = allResearchers.find(x => x.id === tr.researcherId); return r ? r.name.split(" ").pop() : ""; }).filter(Boolean);
+                return (
                 <button key={t.id} onClick={() => { if (onSelectTopic) onSelectTopic(t); }}
                   className="w-full flex items-center gap-2 p-2 rounded-lg bg-blue-50 hover:ring-2 hover:ring-indigo-200 transition-all text-left group">
                   <BookOpen size={14} className="text-blue-500" />
                   <span className="text-sm text-blue-700 font-medium flex-1 truncate group-hover:text-indigo-600">{t.title}</span>
+                  {ideaOwners.length > 0 && <span className="text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded border border-yellow-200 flex items-center gap-0.5 flex-shrink-0">💡{ideaOwners.join(", ")}</span>}
                   <Badge className={statusConfig[t.status]?.color || ""}>{statusConfig[t.status]?.label}</Badge>
                   <ExternalLink size={12} className="text-slate-300 group-hover:text-indigo-400 flex-shrink-0" />
                 </button>
-              ))}</div>
+                );
+              })}</div>
             )}
           </div>}
 
@@ -2745,7 +2811,8 @@ const SettingsModal = ({
   onResetDefaults, onClose,
   onExportData, onImportData, onResetAllData,
   quickLinks, onQuickLinksChange,
-  onForceSync, syncStatus, onForcePublish
+  onForceSync, syncStatus, onForcePublish,
+  isMaster, onBackupDownload, onBackupRestore, lastBackupAt
 }) => {
   const [activeTab, setActiveTab] = useState("roles");
   const fileInputRef = useRef(null);
@@ -3185,6 +3252,35 @@ const SettingsModal = ({
                   <Upload size={14} />Tüm Ekranlara Yayınla
                 </button>
               </div>
+
+              {/* Firestore Yedekleme — sadece Master */}
+              {isMaster && (
+                <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                  <h4 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2"><DatabaseBackup size={15} />Bulut Yedekleme (Firestore)</h4>
+                  <p className="text-xs text-amber-600 mb-2">Verileriniz Firestore'a yedeklenir ve JSON olarak da indirilir. Her "Yayınla" işleminde otomatik yedek alınır.</p>
+                  {lastBackupAt && (
+                    <p className="text-xs text-amber-700 mb-3 font-medium">
+                      Son yedek: {lastBackupAt.toLocaleDateString("tr-TR")} {lastBackupAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                      {(Date.now() - lastBackupAt.getTime() > 30 * 24 * 60 * 60 * 1000) && (
+                        <span className="text-red-600 font-bold ml-2">⚠️ 30 günü aştı!</span>
+                      )}
+                    </p>
+                  )}
+                  {!lastBackupAt && (
+                    <p className="text-xs text-red-600 font-bold mb-3">⚠️ Hiç yedek alınmamış!</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={onBackupDownload}
+                      className="px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2">
+                      <Download size={14} />Yedek Al (JSON + Firestore)
+                    </button>
+                    <button onClick={() => document.getElementById("backup-restore-input")?.click()}
+                      className="px-4 py-2 text-sm font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors flex items-center gap-2">
+                      <Upload size={14} />Yedekten Geri Yükle
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Reset All */}
               <div className="bg-red-50 rounded-xl p-4 border border-red-200">
@@ -3637,8 +3733,24 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     const allTasks = [...ft, ...fp].flatMap(item => item.tasks || []);
     const uniqueResearchers = new Set();
     ft.forEach(t => (t.researchers || []).forEach(r => uniqueResearchers.add(r.researcherId)));
-    return { topicCount: ft.length, projectCount: fp.length, topicsByStatus, projectsByStatus, totalBudget, totalTasks: allTasks.length, doneTasks: allTasks.filter(t => t.status === "done").length, uniqueResearchers: uniqueResearchers.size };
-  }, [filteredTopics, filteredProjects]);
+    // Projelerdeki doğrudan atanan araştırmacıları da say
+    fp.forEach(p => (p.researchers || []).forEach(r => uniqueResearchers.add(r.researcherId)));
+    // Kişi istatistikleri
+    const totalResearchers = researchers.length;
+    const aofMembers = researchers.filter(r => r.isAofMember).length;
+    const piExperienced = researchers.filter(r => r.hasPIExperience).length;
+    const withTopics = researchers.filter(r => ft.some(t => (t.researchers || []).some(tr => tr.researcherId === r.id))).length;
+    const withoutTopics = totalResearchers - withTopics;
+    // Fikir sahipleri sayısı
+    const ideaOwnerIds = new Set();
+    ft.forEach(t => (t.researchers || []).filter(tr => tr.isIdeaOwner).forEach(tr => ideaOwnerIds.add(tr.researcherId)));
+    fp.forEach(p => (p.researchers || []).filter(pr => pr.isIdeaOwner).forEach(pr => ideaOwnerIds.add(pr.researcherId)));
+    const ideaOwners = ideaOwnerIds.size;
+    // Proje türü dağılımı
+    const projectTypeDistribution = {};
+    fp.forEach(p => { const pt = p.projectType || "Belirtilmemiş"; projectTypeDistribution[pt] = (projectTypeDistribution[pt] || 0) + 1; });
+    return { topicCount: ft.length, projectCount: fp.length, topicsByStatus, projectsByStatus, totalBudget, totalTasks: allTasks.length, doneTasks: allTasks.filter(t => t.status === "done").length, uniqueResearchers: uniqueResearchers.size, totalResearchers, aofMembers, piExperienced, withTopics, withoutTopics, ideaOwners, projectTypeDistribution };
+  }, [filteredTopics, filteredProjects, researchers]);
 
   // Topic monthly data
   const topicMonthly = useMemo(() => {
@@ -3934,6 +4046,52 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </div>
                 </div>
               </div>
+              {/* Kişi İstatistikleri */}
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Araştırmacılar</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                    <Users size={16} className="text-indigo-500" />
+                    <div><p className="text-[10px] text-indigo-500">Toplam Kişi</p><p className="text-lg font-bold text-indigo-700">{summary.totalResearchers}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-teal-50 rounded-xl border border-teal-100">
+                    <Users size={16} className="text-teal-500" />
+                    <div><p className="text-[10px] text-teal-500">AÖF Üyesi</p><p className="text-lg font-bold text-teal-700">{summary.aofMembers}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <Award size={16} className="text-amber-500" />
+                    <div><p className="text-[10px] text-amber-500">PI Deneyimli</p><p className="text-lg font-bold text-amber-700">{summary.piExperienced}</p></div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-2">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <Users size={16} className="text-emerald-500" />
+                    <div><p className="text-[10px] text-emerald-500">Konusu Olan</p><p className="text-lg font-bold text-emerald-700">{summary.withTopics}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <Users size={16} className="text-slate-400" />
+                    <div><p className="text-[10px] text-slate-400">Konusu Olmayan</p><p className="text-lg font-bold text-slate-700">{summary.withoutTopics}</p></div>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-3 bg-yellow-50 rounded-xl border border-yellow-100">
+                    <Lightbulb size={16} className="text-yellow-500" />
+                    <div><p className="text-[10px] text-yellow-500">Fikir Sahibi</p><p className="text-lg font-bold text-yellow-700">{summary.ideaOwners}</p></div>
+                  </div>
+                </div>
+              </div>
+              {/* Proje Türü Dağılımı */}
+              {Object.keys(summary.projectTypeDistribution).length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
+                    <div key={type} className="flex items-center gap-2 px-3 py-2.5 bg-violet-50 rounded-xl border border-violet-100">
+                      <FolderKanban size={14} className="text-violet-500 flex-shrink-0" />
+                      <div className="min-w-0 flex-1"><p className="text-[10px] text-violet-500 truncate">{type}</p><p className="text-sm font-bold text-violet-700">{count}</p></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
               {/* Görevler */}
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Görevler</p>
@@ -4922,7 +5080,8 @@ const TableViewModal = ({ researchers, topics, projects, onClose }) => {
     { label: "Kategori", key: "category" },
     { label: "Proje Türü", key: "projectType" },
     { label: "Proje Türü Detayı", key: "projectTypeDetail" },
-    { label: "Ekip", get: t => (t.researchers || []).map(tr => { const r = researchers.find(x => x.id === tr.researcherId); return r ? `${r.name} (${roleConfig[tr.role]?.label || tr.role})` : ""; }).filter(Boolean).join(", ") },
+    { label: "Ekip", get: t => (t.researchers || []).map(tr => { const r = researchers.find(x => x.id === tr.researcherId); return r ? `${r.name} (${roleConfig[tr.role]?.label || tr.role}${tr.isIdeaOwner ? ", Fikir Sahibi" : ""})` : ""; }).filter(Boolean).join(", ") },
+    { label: "Fikir Sahibi", get: t => (t.researchers || []).filter(tr => tr.isIdeaOwner).map(tr => { const r = researchers.find(x => x.id === tr.researcherId); return r ? r.name : ""; }).filter(Boolean).join(", ") || "-" },
     { label: "Başlangıç", key: "startDate" },
     { label: "Bitiş", key: "endDate" },
     { label: "Hedef Dergi", key: "targetJournal" },
@@ -6110,6 +6269,117 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [syncStatus, setSyncStatus] = useState("idle"); // "idle" | "syncing" | "done"
   const [lastSavedAt, setLastSavedAt] = useState(null); // Son kayıt zamanı
   const [saveIndicator, setSaveIndicator] = useState("idle"); // "idle" | "saving" | "saved"
+  const [lastBackupAt, setLastBackupAt] = useState(null); // Son yedekleme zamanı
+  const [backupWarningDismissed, setBackupWarningDismissed] = useState(false);
+
+  // ─── Yedekleme Sistemi ───
+  // 1. Firestore'dan son yedekleme zamanını oku
+  useEffect(() => {
+    if (!isMaster) return;
+    const unsub = onSnapshot(doc(db, "arge", "_backup_meta"), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.lastBackupAt) setLastBackupAt(new Date(d.lastBackupAt));
+      }
+    }, () => {});
+    return () => unsub();
+  }, [isMaster]);
+
+  // 2. Firestore'a snapshot yedek yaz
+  const saveBackupToFirestore = useCallback(async (triggerType) => {
+    try {
+      const backupData = {
+        researchers, topics, projects, quickLinks: quickLinks,
+        cfg_roles: roleConfigSt, cfg_statuses: statusConfigSt,
+        cfg_priorities: priorityConfigSt, cfg_ptypes: projectTypeOptionsSt,
+        cfg_categories: categoryOptionsSt, cfg_degrees: eduDegreeOptionsSt,
+        cfg_edustatus: eduStatusOptionsSt,
+      };
+      const now = Date.now();
+      const dateStr = new Date(now).toISOString().slice(0, 10); // "2026-02-28"
+      const backupId = "backup_" + dateStr + "_" + now;
+      await withTimeout(setDoc(doc(db, "arge_backups", backupId), {
+        data: backupData,
+        createdAt: now,
+        trigger: triggerType, // "manual" | "auto_publish" | "auto_daily"
+        createdBy: user?.displayName || "Bilinmeyen",
+      }), 15000, "backup:" + backupId);
+      // Meta bilgi güncelle
+      await setDoc(doc(db, "arge", "_backup_meta"), {
+        lastBackupAt: now,
+        lastBackupId: backupId,
+        lastBackupBy: user?.displayName || "Bilinmeyen",
+        trigger: triggerType,
+      });
+      setLastBackupAt(new Date(now));
+      console.log("[BACKUP] ✅ Yedek kaydedildi:", backupId);
+      return backupId;
+    } catch (err) {
+      console.error("[BACKUP] ❌ Yedekleme hatası:", err.message);
+      throw err;
+    }
+  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+
+  // 3. JSON dosyası olarak indir + Firestore'a da yedekle
+  const downloadBackupJSON = useCallback(async () => {
+    try {
+      setToast({ type: "info", message: "Yedek hazırlanıyor..." });
+      // Firestore'a da kaydet
+      await saveBackupToFirestore("manual");
+      // JSON dosyası oluştur ve indir
+      const backupData = {
+        _meta: {
+          exportedAt: new Date().toISOString(),
+          exportedBy: user?.displayName || "Bilinmeyen",
+          version: "1.0",
+          projectId: "arge-dashboard",
+        },
+        researchers, topics, projects, quickLinks: quickLinks,
+        cfg_roles: roleConfigSt, cfg_statuses: statusConfigSt,
+        cfg_priorities: priorityConfigSt, cfg_ptypes: projectTypeOptionsSt,
+        cfg_categories: categoryOptionsSt, cfg_degrees: eduDegreeOptionsSt,
+        cfg_edustatus: eduStatusOptionsSt,
+      };
+      const json = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "arge-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setToast({ type: "success", message: "✅ Yedek indirildi ve Firestore'a da kaydedildi!" });
+    } catch (err) {
+      setToast({ type: "error", message: "Yedekleme hatası: " + err.message });
+    }
+  }, [saveBackupToFirestore, researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+
+  // 4. JSON dosyasından geri yükle
+  const restoreFromJSON = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.researchers) setResearchers(data.researchers);
+        if (data.topics) setTopics(data.topics);
+        if (data.projects) setProjects(data.projects);
+        if (data.quickLinks) setQuickLinks(data.quickLinks);
+        if (data.cfg_roles) setRoleConfig(data.cfg_roles);
+        if (data.cfg_statuses) setStatusConfig(data.cfg_statuses);
+        if (data.cfg_priorities) setPriorityConfig(data.cfg_priorities);
+        if (data.cfg_ptypes) setProjectTypeOptions(data.cfg_ptypes);
+        if (data.cfg_categories) setCategoryOptions(data.cfg_categories);
+        if (data.cfg_degrees) setEduDegreeOptions(data.cfg_degrees);
+        if (data.cfg_edustatus) setEduStatusOptions(data.cfg_edustatus);
+        setToast({ type: "success", message: "✅ Veriler yedeğten geri yüklendi! Firestore'a kaydediliyor..." });
+      } catch (err) {
+        setToast({ type: "error", message: "Geçersiz yedek dosyası: " + err.message });
+      }
+    };
+    reader.readAsText(file);
+  }, []);
 
   // ─── Bağlantı Testi — Firestore'a yaz ve oku (timeout'lu) ───
   const testConnection = useCallback(async () => {
@@ -6221,11 +6491,13 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       setLastSavedAt(new Date());
       setToast({ type: "success", message: "Veriler yayınlandı! Tüm ekranlar güncelleniyor..." });
       setTimeout(() => setSyncStatus("idle"), 3000);
+      // 3. Otomatik yedek al (arka planda, hata görmezden gelinir)
+      saveBackupToFirestore("auto_publish").catch(() => {});
     } catch (err) {
       setSyncStatus("idle");
       setToast({ type: "error", message: "Yayınlama hatası: " + err.message });
     }
-  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user, saveBackupToFirestore]);
   forcePublishRef.current = forcePublish;
 
   // Otomatik senkronizasyon — her 10 saniyede Firestore SUNUCUSUNDAN güncelle
@@ -6301,30 +6573,11 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           firestoreReady.current = true;
           setFirestoreStatus("ready");
           console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
-          // İlk yükleme sonrası tüm veriyi Firestore'a sessizce push et
-          // NOT: forcePublish kullanMIYORUZ çünkü o _force_reload sinyali gönderiyor
-          // ve sonsuz yeniden yükleme döngüsü yaratıyor!
-          setTimeout(async () => {
-            try {
-              console.log("[SYNC] 🚀 İlk veri push başlatılıyor (sessiz)...");
-              await withTimeout(Promise.all([
-                setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
-                setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
-              ]), 15000, "initialPush");
-              console.log("[SYNC] ✅ İlk veri push tamamlandı!");
-            } catch (err) {
-              console.warn("[SYNC] ⚠️ İlk veri push hatası:", err.message);
-            }
-          }, 1000);
+          // NOT: Initial push KALDIRILDI!
+          // Closure problemi: useEffect mount anındaki boş state'i yakalar,
+          // Firestore'dan yüklenen gerçek veriyi DEĞİL → projeler siliniyordu.
+          // onSnapshot zaten doküman yoksa varsayılan değerleri yazıyor (listen fonksiyonu).
+          // Doküman varsa state otomatik güncelleniyor. Ek push'a gerek yok.
         }
       }
     };
@@ -6542,7 +6795,19 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   };
   const handleRoleSelect = (role) => {
     if (!rolePopup) return;
-    setTopics(prev => prev.map(t => t.id === rolePopup.topicId ? { ...t, researchers: [...t.researchers, { researcherId: rolePopup.researcherId, role }] } : t));
+    const newEntry = { researcherId: rolePopup.researcherId, role };
+    setTopics(prev => prev.map(t => t.id === rolePopup.topicId ? { ...t, researchers: [...t.researchers, newEntry] } : t));
+    // Bağlı projeye de ekle (zaten projede yoksa)
+    const linkedProject = projects.find(p => (p.topics || []).includes(rolePopup.topicId));
+    if (linkedProject) {
+      const alreadyInProject = (linkedProject.researchers || []).some(r => r.researcherId === rolePopup.researcherId);
+      if (!alreadyInProject) {
+        setProjects(prev => prev.map(p => p.id === linkedProject.id
+          ? { ...p, researchers: [...(p.researchers || []), newEntry] }
+          : p
+        ));
+      }
+    }
     const researcher = researchers.find(r => r.id === rolePopup.researcherId);
     showToast(`${researcher?.name} konuya ${roleConfig[role].label} olarak atandı`);
     setRolePopup(null);
@@ -6593,25 +6858,37 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const topic = topics.find(t => t.id === topicId);
     if (!topic) return;
     const linkedProject = projects.find(p => (p.topics || []).includes(topicId));
-    let msg = `"${topic.title}" konusu kalıcı olarak silinecek.`;
+    // KURAL: Projenin tek konusuysa silinemez — önce proje iptal edilmeli
     if (linkedProject) {
       const remainingTopics = (linkedProject.topics || []).filter(tid => tid !== topicId);
       if (remainingTopics.length === 0) {
-        msg += `\n\n⚠️ DİKKAT: Bu konu "${linkedProject.title}" projesinin tek konusudur. Konu silinirse proje de tamamen silinecektir!`;
-      } else {
-        msg += `\n\n⚠️ Bu konu "${linkedProject.title}" projesiyle ilişkilidir. Konu projeden de çıkarılacaktır.`;
+        alert(`"${topic.title}" konusu silinemez!\n\n"${linkedProject.title}" projesinin tek konusu budur. Bir projenin en az bir konusu olmak zorundadır.\n\nÖnce projeyi iptal edin, ardından konuyu silebilirsiniz.\n(Proje kartında → "Projeyi İptal Et" butonu)`);
+        return;
       }
+    }
+    let msg = `"${topic.title}" konusu kalıcı olarak silinecek.`;
+    if (linkedProject) {
+      msg += `\n\n⚠️ Bu konu "${linkedProject.title}" projesiyle ilişkilidir. Konu projeden de çıkarılacaktır.`;
     }
     msg += "\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?";
     if (!confirm(msg)) return;
-    // Remove topic from any project
+    // Remove topic from project + silinen konunun araştırmacılarını temizle
+    // NOT: Tek konu kontrolü yukarıda yapıldı, buraya geldiysek remainingTopics.length > 0 garantili
     if (linkedProject) {
       const remainingTopics = (linkedProject.topics || []).filter(tid => tid !== topicId);
-      if (remainingTopics.length === 0) {
-        setProjects(prev => prev.filter(p => p.id !== linkedProject.id));
-      } else {
-        setProjects(prev => prev.map(p => p.id === linkedProject.id ? { ...p, topics: remainingTopics } : p));
-      }
+      const deletedTopicResIds = new Set((topic.researchers || []).map(r => r.researcherId));
+      const remainingTopicResIds = new Set();
+      remainingTopics.forEach(tid => {
+        const t = topics.find(x => x.id === tid);
+        if (t) (t.researchers || []).forEach(r => remainingTopicResIds.add(r.researcherId));
+      });
+      setProjects(prev => prev.map(p => {
+        if (p.id !== linkedProject.id) return p;
+        const cleanedResearchers = (p.researchers || []).filter(pr =>
+          !deletedTopicResIds.has(pr.researcherId) || remainingTopicResIds.has(pr.researcherId)
+        );
+        return { ...p, topics: remainingTopics, researchers: cleanedResearchers };
+      }));
     }
     setTopics(prev => prev.filter(t => t.id !== topicId));
     showToast(`"${topic.title}" konusu silindi`, "warning");
@@ -6661,17 +6938,84 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     if (!project) return;
     const topic = topics.find(t => t.id === topicId);
     const updatedTopics = (project.topics || []).filter(tid => tid !== topicId);
+    // KURAL: Projenin tek konusu çıkarılamaz — önce proje iptal edilmeli
     if (updatedTopics.length === 0) {
-      setProjects(prev => prev.filter(p => p.id !== project.id));
-      showToast(`"${topic?.title}" projeden çıkarıldı ve proje silindi (son konu)`, "warning");
+      alert(`"${topic?.title}" projeden çıkarılamaz!\n\n"${project.title}" projesinin tek konusu budur. Bir projenin en az bir konusu olmak zorundadır.\n\nÖnce projeyi iptal edin, ardından konuyu bağımsız kullanabilirsiniz.\n(Proje kartında → "Projeyi İptal Et" butonu)`);
+      return;
     } else {
-      setProjects(prev => prev.map(p => p.id === project.id ? { ...p, topics: updatedTopics } : p));
+      // Çıkarılan konunun araştırmacı ID'leri
+      const removedTopicResIds = new Set((topic?.researchers || []).map(r => r.researcherId));
+      // Kalan konulardaki araştırmacı ID'leri (bunlar korunmalı)
+      const remainingTopicResIds = new Set();
+      updatedTopics.forEach(tid => {
+        const t = topics.find(x => x.id === tid);
+        if (t) (t.researchers || []).forEach(r => remainingTopicResIds.add(r.researcherId));
+      });
+      setProjects(prev => prev.map(p => {
+        if (p.id !== project.id) return p;
+        // Sadece çıkarılan konuya özgü araştırmacıları kaldır (başka konuda olanları koru)
+        const cleanedResearchers = (p.researchers || []).filter(pr =>
+          !removedTopicResIds.has(pr.researcherId) || remainingTopicResIds.has(pr.researcherId)
+        );
+        return { ...p, topics: updatedTopics, researchers: cleanedResearchers };
+      }));
       showToast(`"${topic?.title}" projeden çıkarıldı`);
     }
   };
   const handleUpdateItem = (updatedItem) => {
-    if (selectedType === "topic") setTopics(prev => prev.map(t => t.id === updatedItem.id ? updatedItem : t));
-    else setProjects(prev => prev.map(p => p.id === updatedItem.id ? updatedItem : p));
+    if (selectedType === "topic") {
+      setTopics(prev => prev.map(t => t.id === updatedItem.id ? updatedItem : t));
+      // ─── Konu→Proje Senkronizasyonu ───
+      // topics state henüz güncellenmedi (React batching) → eski konu verisine erişebiliriz
+      const oldTopic = topics.find(t => t.id === updatedItem.id);
+      const oldTopicResIds = new Set((oldTopic?.researchers || []).map(r => r.researcherId));
+      const newTopicResIds = new Set((updatedItem.researchers || []).map(tr => tr.researcherId));
+      // Konudan SİLİNEN araştırmacılar
+      const removedFromTopic = new Set([...oldTopicResIds].filter(id => !newTopicResIds.has(id)));
+      // Konuya YENİ EKLENEN araştırmacılar
+      const addedToTopic = (updatedItem.researchers || []).filter(tr => !oldTopicResIds.has(tr.researcherId));
+
+      setProjects(prev => prev.map(p => {
+        if (!(p.topics || []).includes(updatedItem.id)) return p;
+        // Diğer konulardaki araştırmacı ID'leri (bu konudan silinen biri başka konuda olabilir)
+        const otherTopicResIds = new Set();
+        (p.topics || []).filter(tid => tid !== updatedItem.id).forEach(tid => {
+          const t = topics.find(x => x.id === tid);
+          if (t) (t.researchers || []).forEach(r => otherTopicResIds.add(r.researcherId));
+        });
+        // 1. Konudan silinen araştırmacıları projeden kaldır (başka konuda yoksa)
+        let updatedResearchers = (p.researchers || []).filter(pr => {
+          if (!removedFromTopic.has(pr.researcherId)) return true; // silinmedi → koru
+          if (otherTopicResIds.has(pr.researcherId)) return true;  // başka konuda var → koru
+          return false; // konudan silindi, başka konuda da yok → kaldır
+        });
+        // 2. Mevcut proje araştırmacılarının bilgilerini güncelle (rol, isIdeaOwner)
+        updatedResearchers = updatedResearchers.map(pr => {
+          const topicRes = (updatedItem.researchers || []).find(tr => tr.researcherId === pr.researcherId);
+          if (topicRes) return { ...pr, role: topicRes.role, isIdeaOwner: topicRes.isIdeaOwner || false };
+          return pr;
+        });
+        // 3. Konuya yeni eklenen araştırmacıları projeye de ekle
+        const existingProjResIds = new Set(updatedResearchers.map(r => r.researcherId));
+        addedToTopic.forEach(tr => {
+          if (!existingProjResIds.has(tr.researcherId)) updatedResearchers.push({ ...tr });
+        });
+        return { ...p, researchers: updatedResearchers };
+      }));
+    } else {
+      setProjects(prev => prev.map(p => p.id === updatedItem.id ? updatedItem : p));
+      // ─── Proje→Konu Senkronizasyonu ───
+      // Projede isIdeaOwner veya rol değiştiğinde bağlı konulara yansıt
+      setTopics(prev => prev.map(t => {
+        if (!(updatedItem.topics || []).includes(t.id)) return t;
+        const updatedResearchers = (t.researchers || []).map(tr => {
+          const projRes = (updatedItem.researchers || []).find(pr => pr.researcherId === tr.researcherId);
+          if (projRes) return { ...tr, isIdeaOwner: projRes.isIdeaOwner || false, role: projRes.role };
+          return tr;
+        });
+        return { ...t, researchers: updatedResearchers };
+      }));
+    }
     setSelectedItem(updatedItem);
   };
   const handleUpdateResearcher = (updated) => {
@@ -6901,6 +7245,19 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             title="Senkronize Et">
             <RefreshCw size={18} className={syncStatus === "syncing" ? "animate-spin" : ""} />
           </button>}
+          {/* Backup Button — sadece Master görür */}
+          {isMaster && (
+            <div className="relative group">
+              <button onClick={downloadBackupJSON}
+                className="p-2 rounded-lg hover:bg-amber-50 text-slate-500 hover:text-amber-600 transition-colors"
+                title={lastBackupAt ? `Son yedek: ${lastBackupAt.toLocaleDateString("tr-TR")} ${lastBackupAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}` : "Yedek al (JSON + Firestore)"}>
+                <DatabaseBackup size={18} />
+              </button>
+              {/* Yedek geri yükleme (gizli input) */}
+              <input type="file" accept=".json" id="backup-restore-input" className="hidden"
+                onChange={(e) => { if (e.target.files[0]) restoreFromJSON(e.target.files[0]); e.target.value = ""; }} />
+            </div>
+          )}
           {/* Settings Button */}
           {isAdmin && <button onClick={() => { setShowSettings(true); setShowDeadlines(false); }}
             className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
@@ -6986,6 +7343,35 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       )}
 
 
+
+      {/* 30 GÜN YEDEKLEME UYARISI — sadece Master görür */}
+      {isMaster && !backupWarningDismissed && (
+        lastBackupAt === null || (Date.now() - lastBackupAt.getTime() > 30 * 24 * 60 * 60 * 1000)
+      ) && (
+        <div className="bg-red-600 text-white px-5 py-3 flex items-center justify-between flex-shrink-0 shadow-md">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={20} className="text-yellow-300 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-bold">Yedekleme Uyarısı!</p>
+              <p className="text-xs text-red-100">
+                {lastBackupAt === null
+                  ? "Hiç yedek alınmamış! Veri kaybını önlemek için hemen yedek alın."
+                  : `Son yedek ${Math.floor((Date.now() - lastBackupAt.getTime()) / (24*60*60*1000))} gün önce alındı. 30 günü aştınız!`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={downloadBackupJSON}
+              className="px-4 py-1.5 bg-white text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1.5">
+              <DatabaseBackup size={14} /> Hemen Yedekle
+            </button>
+            <button onClick={() => setBackupWarningDismissed(true)}
+              className="p-1 hover:bg-red-500 rounded transition-colors" title="Kapat">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* STATS BAR */}
       <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center gap-3 flex-shrink-0 overflow-x-auto">
@@ -7100,7 +7486,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
           <div className={`flex-1 overflow-y-auto ${maximizedCol === "researchers" ? "p-4" : "p-3"}`}>
             <div className={maximizedCol === "researchers" ? "grid grid-cols-2 xl:grid-cols-3 gap-3" : "space-y-2"}>
-            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={canEdit} topics={topics} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} editingBy={editingByOthers[r.id]} />)}
+            {filteredResearchers.map(r => <ResearcherCard key={r.id} researcher={r} isAdmin={canEdit} topics={topics} projects={projects} onClick={setSelectedResearcher} maximized={maximizedCol === "researchers"} editingBy={editingByOthers[r.id]} />)}
             {filteredResearchers.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Araştırmacı bulunamadı</p>}
             </div>
           </div>
@@ -7298,6 +7684,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           showToast("Tüm veriler sıfırlandı", "warning");
         }}
         onForceSync={forceSync} syncStatus={syncStatus} onForcePublish={forcePublish}
+        isMaster={isMaster} onBackupDownload={downloadBackupJSON} onBackupRestore={restoreFromJSON} lastBackupAt={lastBackupAt}
         onClose={() => setShowSettings(false)}
       />}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
