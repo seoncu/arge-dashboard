@@ -1150,7 +1150,7 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
 };
 
 // ─── RESEARCHER DETAIL MODAL (Full profile) ──────────────
-const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose, onUpdate, onSelectTopic, onDeleteResearcher, editingBy }) => {
+const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose, onUpdate, onSelectTopic, onDeleteResearcher, editingBy, allResearchers }) => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...researcher });
   const ef = (key, val) => setForm({ ...form, [key]: val });
@@ -1166,7 +1166,14 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
   const projectTypeCount = {};
   projectedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
 
+  const [resDupWarning, setResDupWarning] = useState("");
   const handleSave = () => {
+    setResDupWarning("");
+    const nameNorm = (form.name || "").trim().toLowerCase();
+    if (nameNorm) {
+      const dup = (allResearchers || []).find(r => r.id !== researcher.id && r.name.trim().toLowerCase() === nameNorm);
+      if (dup) { setResDupWarning(`"${dup.name}" adında başka bir araştırmacı zaten mevcut!`); return; }
+    }
     onUpdate({
       ...form,
       languages: typeof form.languages === "string" ? form.languages.split(",").map(s => s.trim()).filter(Boolean) : form.languages,
@@ -1174,6 +1181,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
       tools: typeof form.tools === "string" ? form.tools.split(",").map(s => s.trim()).filter(Boolean) : form.tools,
     });
     setEditing(false);
+    setResDupWarning("");
   };
   const handleCancel = () => { setForm({ ...researcher }); setEditing(false); };
 
@@ -1595,9 +1603,12 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
 
           {/* Save/Cancel Buttons */}
           {editing && (
-            <div className="flex gap-2 pt-2 border-t border-slate-100">
-              <button onClick={handleSave} className="flex-1 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors">Kaydet</button>
-              <button onClick={handleCancel} className="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">İptal</button>
+            <div className="pt-2 border-t border-slate-100">
+              {resDupWarning && <p className="text-xs text-red-500 mb-2 flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertTriangle size={14} className="flex-shrink-0" />{resDupWarning}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleSave} className="flex-1 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors">Kaydet</button>
+                <button onClick={handleCancel} className="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">İptal</button>
+              </div>
             </div>
           )}
 
@@ -1854,9 +1865,22 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const [addResearcherRole, setAddResearcherRole] = useState("member");
   const eff = (key, val) => setEditForm({ ...editForm, [key]: val });
   const eInputD = "w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
+  const [detailDupWarning, setDetailDupWarning] = useState("");
   const handleSaveEdit = () => {
+    setDetailDupWarning("");
     const cleaned = { ...editForm };
     if (cleaned.budget !== undefined) cleaned.budget = parseFloat(cleaned.budget) || 0;
+    // Duplikasyon kontrolü: konu veya proje başlığı
+    const titleNorm = (cleaned.title || "").trim().toLowerCase();
+    if (titleNorm) {
+      if (isTopic) {
+        const dup = topics.find(t => t.id !== item.id && t.title.trim().toLowerCase() === titleNorm);
+        if (dup) { setDetailDupWarning(`"${dup.title}" başlığında bir konu zaten mevcut!`); return; }
+      } else if (isProject) {
+        const dup = projects.find(p => p.id !== item.id && p.title.trim().toLowerCase() === titleNorm);
+        if (dup) { setDetailDupWarning(`"${dup.title}" başlığında bir proje zaten mevcut!`); return; }
+      }
+    }
     // Kurum adlarını büyük harfe dönüştür
     cleaned.piInstitution = toUpperTR(cleaned.piInstitution || "");
     cleaned.piCountry = cleaned.piCountry || "Türkiye";
@@ -1865,6 +1889,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
     else cleaned.partnerInstitutions = [];
     if (!Array.isArray(cleaned.partnerCountries)) cleaned.partnerCountries = [];
     onUpdate({ ...item, ...cleaned }); setEditing(false);
+    setDetailDupWarning("");
   };
   const handleCancelEdit = () => { setEditForm({ ...itemWithDefaults }); setEditing(false); };
   const stCfg = statusConfig[item.status] || statusConfig.proposed;
@@ -2105,9 +2130,12 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
 
           {/* Save / Cancel buttons for edit mode */}
           {editing && (
-            <div className="flex gap-2 pt-2 border-t border-slate-100">
-              <button onClick={handleSaveEdit} className="flex-1 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors">Kaydet</button>
-              <button onClick={handleCancelEdit} className="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">İptal</button>
+            <div className="pt-2 border-t border-slate-100">
+              {detailDupWarning && <p className="text-xs text-red-500 mb-2 flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertTriangle size={14} className="flex-shrink-0" />{detailDupWarning}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleSaveEdit} className="flex-1 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors">Kaydet</button>
+                <button onClick={handleCancelEdit} className="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">İptal</button>
+              </div>
             </div>
           )}
 
@@ -2343,7 +2371,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
 };
 
 // ─── ADD ITEM MODAL (expanded researcher form) ───────────
-const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
+const AddItemModal = ({ type, onAdd, onClose, allTopics, projects, allResearchers }) => {
   const knownInsts = useMemo(() => getKnownInstitutions(projects), [projects]);
   const [form, setForm] = useState({
     title: "", description: "", status: type === "project" ? "planning" : "proposed",
@@ -2368,9 +2396,15 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
   const inputClass = "w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
   const labelClass = "block text-xs font-medium text-slate-500 mb-1";
 
+  const [dupWarning, setDupWarning] = useState("");
+
   const handleSubmit = () => {
+    setDupWarning("");
     if (isR) {
       if (!form.name.trim()) return;
+      const nameNorm = form.name.trim().toLowerCase();
+      const dup = (allResearchers || []).find(r => r.name.trim().toLowerCase() === nameNorm);
+      if (dup) { setDupWarning(`"${dup.name}" adında bir araştırmacı zaten mevcut!`); return; }
       onAdd({
         id: `r_${Date.now()}`, name: form.name, title: form.rTitle,
         institution: form.institution, unit: form.unit,
@@ -2387,10 +2421,16 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
     } else if (isT) {
       if (!form.title.trim()) return;
       if (!form.category) { alert("Lütfen bir kategori seçiniz (Ar-Ge İçi veya Ortak Çalışma)"); return; }
+      const titleNorm = form.title.trim().toLowerCase();
+      const dupT = (allTopics || []).find(t => t.title.trim().toLowerCase() === titleNorm);
+      if (dupT) { setDupWarning(`"${dupT.title}" başlığında bir konu zaten mevcut!`); return; }
       onAdd({ id: `t_${Date.now()}`, title: form.title, description: form.description, category: form.category, status: form.status, priority: form.priority, projectType: form.projectType, projectTypeDetail: form.projectTypeDetail, applicationDate: form.applicationDate, startDate: form.startDate, endDate: form.endDate, workLink: form.workLink, tags: [], researchers: [], tasks: [] });
     } else {
       if (!form.title.trim()) return;
       if (selectedTopics.length === 0) { setTopicError("Bir proje en az bir konuyla ilişkilendirilmelidir!"); return; }
+      const pTitleNorm = form.title.trim().toLowerCase();
+      const dupP = (projects || []).find(p => p.title.trim().toLowerCase() === pTitleNorm);
+      if (dupP) { setDupWarning(`"${dupP.title}" başlığında bir proje zaten mevcut!`); return; }
       const ourInst = toUpperTR(form.ourInstitution || DEFAULT_INSTITUTION);
       let finalPiInst = toUpperTR(form.piInstitution || "");
       let finalPartnerInsts = form.partnerInstitutions.split(",").map(s => toUpperTR(s.trim())).filter(Boolean);
@@ -2636,9 +2676,12 @@ const AddItemModal = ({ type, onAdd, onClose, allTopics, projects }) => {
             </>
           )}
         </div>
-        <div className="p-5 border-t border-slate-100 flex gap-2 justify-end">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">İptal</button>
-          <button onClick={handleSubmit} className="px-4 py-2 text-sm bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-medium">Ekle</button>
+        <div className="p-5 border-t border-slate-100">
+          {dupWarning && <p className="text-xs text-red-500 mb-3 flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2"><AlertTriangle size={14} className="flex-shrink-0" />{dupWarning}</p>}
+          <div className="flex gap-2 justify-end">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">İptal</button>
+            <button onClick={handleSubmit} className="px-4 py-2 text-sm bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 font-medium">Ekle</button>
+          </div>
         </div>
       </div>
     </>
@@ -7609,9 +7652,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
 
       {/* MODALS */}
       {rolePopup && <RoleSelectPopup position={rolePopup.position} onSelect={handleRoleSelect} onCancel={() => setRolePopup(null)} />}
-      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} editingBy={editingByOthers[selectedResearcher.id]} />}
+      {selectedResearcher && <ResearcherDetailModal researcher={selectedResearcher} topics={topics} projects={projects} allResearchers={researchers} isAdmin={canEdit} onClose={() => setSelectedResearcher(null)} onUpdate={handleUpdateResearcher} onDeleteResearcher={handleDeleteResearcher} onSelectTopic={(t) => { setSelectedResearcher(null); setSelectedItem(t); setSelectedType("topic"); }} editingBy={editingByOthers[selectedResearcher.id]} />}
       {selectedItem && <DetailModal item={selectedItem} type={selectedType} allResearchers={researchers} topics={topics} projects={projects} isAdmin={canEdit} onClose={() => { setSelectedItem(null); setSelectedType(null); }} onUpdate={handleUpdateItem} onRemoveFromProject={handleRemoveTopicFromProject} onCancelProject={handleCancelProject} onDeleteTopic={handleDeleteTopic} onSelectResearcher={(r) => { setSelectedItem(null); setSelectedType(null); setSelectedResearcher(r); }} onSelectTopic={(t) => { setSelectedItem(t); setSelectedType("topic"); }} editingBy={editingByOthers[selectedItem.id]} />}
-      {addModal && canEdit && <AddItemModal type={addModal} allTopics={topics} projects={projects} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
+      {addModal && canEdit && <AddItemModal type={addModal} allTopics={topics} projects={projects} allResearchers={researchers} onAdd={(item) => handleAddItem(addModal, item)} onClose={() => setAddModal(null)} />}
       {showCalendar && <CalendarModal topics={topics} projects={projects} onClose={() => setShowCalendar(false)} />}
       {showLeaderboard && <LeaderboardModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowLeaderboard(false)} />}
       {showTableView && <TableViewModal researchers={researchers} topics={topics} projects={projects} onClose={() => setShowTableView(false)} />}
