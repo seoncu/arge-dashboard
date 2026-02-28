@@ -6006,7 +6006,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 
   if (!open) return (
     <div className="fixed bottom-5 right-5 z-40 flex items-end gap-3">
-      <div className="relative bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50 rounded-2xl shadow-lg shadow-indigo-100/50 border border-indigo-200/60 px-4 py-3 max-w-[220px]" style={{animation:"fadeIn 0.6s ease-out"}}>
+      <div onClick={() => setOpen(true)} className="relative bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50 rounded-2xl shadow-lg shadow-indigo-100/50 border border-indigo-200/60 px-4 py-3 max-w-[220px] cursor-pointer hover:shadow-xl hover:border-indigo-300 transition-all" style={{animation:"fadeIn 0.6s ease-out"}}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
         <p className="text-xs text-indigo-700 font-medium leading-relaxed">Merhaba, ben Ar-Ge Asistanı! Nasıl yardımcı olabilirim?</p>
         <div className="absolute bottom-3 -right-2 w-3 h-3 bg-violet-50 border-r border-b border-indigo-200 rotate-[-45deg]" />
@@ -7009,9 +7009,51 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const getActiveWorkCount = useCallback((researcherId) =>
     topics.filter(t => t.researchers.some(r => r.researcherId === researcherId) && t.status !== "completed" && t.status !== "failed").length
   , [topics]);
+  // ─── İlişkili (cross-entity) arama: araştırmacı↔konu↔proje ────
+  const crossSearchIds = useMemo(() => {
+    if (!searchQuery) return { researcherIds: null, topicIds: null, projectIds: null };
+    const q = searchQuery.toLowerCase();
+    // Eşleşen araştırmacılar
+    const matchedResearchers = new Set(researchers.filter(r => r.name.toLowerCase().includes(q) || r.researchAreas.some(a => a.toLowerCase().includes(q)) || (r.institution || "").toLowerCase().includes(q)).map(r => r.id));
+    // Eşleşen konular
+    const matchedTopics = new Set(topics.filter(t => t.title.toLowerCase().includes(q) || (t.description || "").toLowerCase().includes(q)).map(t => t.id));
+    // Eşleşen projeler
+    const matchedProjects = new Set(projects.filter(p => p.title.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)).map(p => p.id));
+
+    // Araştırmacı → ilişkili konu ve projeler
+    const relTopicIds = new Set(matchedTopics);
+    const relProjectIds = new Set(matchedProjects);
+    const relResearcherIds = new Set(matchedResearchers);
+
+    // Eşleşen araştırmacının konularını ve projelerini bul
+    matchedResearchers.forEach(rid => {
+      topics.forEach(t => { if ((t.researchers || []).some(r => r.researcherId === rid)) relTopicIds.add(t.id); });
+      projects.forEach(p => {
+        if ((p.researchers || []).some(r => r.researcherId === rid)) relProjectIds.add(p.id);
+        if ((p.topics || []).some(tid => { const t = topics.find(x => x.id === tid); return t && (t.researchers || []).some(r => r.researcherId === rid); })) relProjectIds.add(p.id);
+      });
+    });
+    // Eşleşen konunun araştırmacılarını ve projelerini bul
+    matchedTopics.forEach(tid => {
+      const t = topics.find(x => x.id === tid);
+      if (t) (t.researchers || []).forEach(r => relResearcherIds.add(r.researcherId));
+      projects.forEach(p => { if ((p.topics || []).includes(tid)) relProjectIds.add(p.id); });
+    });
+    // Eşleşen projenin konularını ve araştırmacılarını bul
+    matchedProjects.forEach(pid => {
+      const p = projects.find(x => x.id === pid);
+      if (p) {
+        (p.topics || []).forEach(tid => { relTopicIds.add(tid); const t = topics.find(x => x.id === tid); if (t) (t.researchers || []).forEach(r => relResearcherIds.add(r.researcherId)); });
+        (p.researchers || []).forEach(r => relResearcherIds.add(r.researcherId));
+      }
+    });
+
+    return { researcherIds: relResearcherIds, topicIds: relTopicIds, projectIds: relProjectIds };
+  }, [searchQuery, researchers, topics, projects]);
+
   const filteredResearchers = useMemo(() => {
     const filtered = researchers.filter(r => {
-      if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase()) && !r.researchAreas.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())) && !r.institution?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && crossSearchIds.researcherIds && !crossSearchIds.researcherIds.has(r.id)) return false;
       if (researcherDeptFilter && r.institution !== researcherDeptFilter) return false;
       if (aofMemberFilter === "aof" && !r.isAofMember) return false;
       if (aofMemberFilter === "other" && r.isAofMember) return false;
@@ -7026,7 +7068,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const hasAnyActive = filtered.some(r => getActiveWorkCount(r.id) > 0);
     if (!hasAnyActive) return filtered;
     return filtered.sort((a, b) => getActiveWorkCount(b.id) - getActiveWorkCount(a.id));
-  }, [researchers, topics, searchQuery, researcherDeptFilter, aofMemberFilter, advRes, getActiveWorkCount]);
+  }, [researchers, topics, searchQuery, crossSearchIds, researcherDeptFilter, aofMemberFilter, advRes, getActiveWorkCount]);
   const researcherColumnStats = useMemo(() => {
     const aofIds = aofMemberFilter ? new Set(researchers.filter(r => aofMemberFilter === "aof" ? r.isAofMember : !r.isAofMember).map(r => r.id)) : null;
     const matchAof = (rid) => !aofIds || aofIds.has(rid);
@@ -7058,7 +7100,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
   const filteredTopics = useMemo(() => {
     const filtered = topics.filter(t => {
-      if (searchQuery && !t.title.toLowerCase().includes(searchQuery.toLowerCase()) && !t.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && crossSearchIds.topicIds && !crossSearchIds.topicIds.has(t.id)) return false;
       if (topicStatusFilter && t.status !== topicStatusFilter) return false;
       if (topicPriorityFilter && t.priority !== topicPriorityFilter) return false;
       if (advTopic.projectType && t.projectType !== advTopic.projectType) return false;
@@ -7078,10 +7120,10 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       if (aStatus !== bStatus) return aStatus - bStatus;
       return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
     });
-  }, [topics, projects, searchQuery, topicStatusFilter, topicPriorityFilter, advTopic]);
+  }, [topics, projects, searchQuery, crossSearchIds, topicStatusFilter, topicPriorityFilter, advTopic]);
   const filteredProjects = useMemo(() => {
     const filtered = projects.filter(p => {
-      if (searchQuery && !p.title.toLowerCase().includes(searchQuery.toLowerCase()) && !p.description?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && crossSearchIds.projectIds && !crossSearchIds.projectIds.has(p.id)) return false;
       if (projectStatusFilter && p.status !== projectStatusFilter) return false;
       if (projectPriorityFilter && p.priority !== projectPriorityFilter) return false;
       if (advProject.type && p.type !== advProject.type) return false;
@@ -7096,7 +7138,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       if (aStatus !== bStatus) return aStatus - bStatus;
       return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
     });
-  }, [projects, searchQuery, projectStatusFilter, projectPriorityFilter, advProject]);
+  }, [projects, searchQuery, crossSearchIds, projectStatusFilter, projectPriorityFilter, advProject]);
 
   const stats = useMemo(() => {
     const allTasks = [...topics.flatMap(t => t.tasks || []), ...projects.flatMap(p => p.tasks || [])];
@@ -7132,7 +7174,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         <div className="flex-1 max-w-md mx-6">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Araştırmacı, konu veya proje ara..."
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Ara... (ilişkili konu, proje ve kişileri de gösterir)"
               className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-all" />
             {searchQuery && <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>}
           </div>
@@ -7263,16 +7305,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             </div>
           )}
           {onlineUsersList.length > 0 && <div className="w-px h-6 bg-slate-200" />}
-          {/* Role Icon */}
-          <span className={`w-7 h-7 rounded-full flex items-center justify-center ${
-            isMaster ? "bg-red-100 text-red-600" : isAdmin ? "bg-emerald-100 text-emerald-600" : isEditor ? "bg-violet-100 text-violet-600" : "bg-blue-100 text-blue-600"
-          }`} title={isMaster ? "Master Yönetici" : isAdmin ? "Yönetici" : isEditor ? "Editör" : "Görüntüleme"}>
-            {isMaster ? <Award size={14} /> : isAdmin ? <Settings size={14} /> : isEditor ? <Edit3 size={14} /> : <Eye size={14} />}
-          </span>
           <div className="flex items-center gap-2">
             <div className="text-right">
               <p className="text-xs font-medium text-slate-700">{user?.displayName || "Kullanıcı"}</p>
-              <p className="text-[10px] text-slate-400">{role === "master" ? "Master Yönetici" : role === "admin" ? "Yönetici" : role === "editor" ? "Editör" : "Görüntüleyici"}</p>
             </div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs ${
               isMaster
