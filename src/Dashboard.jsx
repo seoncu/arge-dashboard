@@ -3949,13 +3949,32 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </div>
                 </div>
               </div>
-              {/* Proje Türü Dağılımı — Pie Chart */}
-              {Object.keys(summary.projectTypeDistribution).length > 0 && (
+              {/* Proje Türü Dağılımı — Bar Chart */}
+              {Object.keys(summary.projectTypeDistribution).length > 0 && (() => {
+                const ptEntries = Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]);
+                const ptMax = Math.max(...ptEntries.map(e => e[1]), 1);
+                const ptTotal = ptEntries.reduce((s, e) => s + e[1], 0);
+                return (
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                <SimplePieChart data={Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="space-y-2">
+                    {ptEntries.map(([label, count], i) => (
+                      <div key={label} className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-600 w-28 text-right flex-shrink-0 truncate" title={label}>{label}</span>
+                        <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                          <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / ptMax) * 100, 12)}%`, backgroundColor: getPtColor(label, i) }}>
+                            <span className="text-[10px] font-bold text-white">{count}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-3 text-right">Toplam: {ptTotal} projelendirilmiş konu</p>
+                </div>
               </div>
-              )}
+                );
+              })()}
               {/* Görevler */}
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Görevler</p>
@@ -4079,10 +4098,24 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 filteredT.filter(t => projects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                 const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                 if (entries.length === 0) return null;
+                const ptMax2 = Math.max(...entries.map(e => e[1]), 1);
+                const ptTotal2 = entries.reduce((s, e) => s + e[1], 0);
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-indigo-500" />Proje Türü Dağılımı</h3>
-                    <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
+                    <div className="space-y-2">
+                      {entries.map(([label, count], i) => (
+                        <div key={label} className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-slate-600 w-28 text-right flex-shrink-0 truncate" title={label}>{label}</span>
+                          <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                            <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / ptMax2) * 100, 12)}%`, backgroundColor: getPtColor(label, i) }}>
+                              <span className="text-[10px] font-bold text-white">{count}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-3 text-right">Toplam: {ptTotal2} projelendirilmiş konu</p>
                   </div>
                 );
               })()}
@@ -4221,16 +4254,28 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                       </div>
                     </div>
                   </div>
-                  {/* Proje Türü Dağılımı — sadece projelendirilmiş konular + pie chart */}
+                  {/* Proje Türü Dağılımı — sadece projelendirilmiş konular bar chart */}
                   {(() => {
                     const ptDist = {};
                     personStats.myTopics.filter(t => projects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                     const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                     if (entries.length === 0) return null;
+                    const ptMax3 = Math.max(...entries.map(e => e[1]), 1);
                     return (
                       <div>
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                        <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
+                          {entries.map(([label, count], i) => (
+                            <div key={label} className="flex items-center gap-3">
+                              <span className="text-xs font-medium text-slate-600 w-24 text-right flex-shrink-0 truncate" title={label}>{label}</span>
+                              <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                                <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / ptMax3) * 100, 15)}%`, backgroundColor: getPtColor(label, i) }}>
+                                  <span className="text-[10px] font-bold text-white">{count}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
                   })()}
@@ -4444,17 +4489,31 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
-              {/* Proje Türü Dağılımı — sadece projelendirilmiş konular pie chart */}
+              {/* Proje Türü Dağılımı — sadece projelendirilmiş konular bar chart */}
               {(() => {
                 const ft = filteredTopics;
                 const topicPtDist = {};
                 ft.filter(t => filteredProjects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) topicPtDist[t.projectType] = (topicPtDist[t.projectType] || 0) + 1; });
                 const ptEntries = Object.entries(topicPtDist).sort((a, b) => b[1] - a[1]);
                 if (ptEntries.length === 0) return null;
+                const ptMax4 = Math.max(...ptEntries.map(e => e[1]), 1);
+                const ptTotal4 = ptEntries.reduce((s, e) => s + e[1], 0);
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Proje Türü Dağılımı</h3>
-                    <SimplePieChart data={ptEntries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
+                    <div className="space-y-2">
+                      {ptEntries.map(([label, count], i) => (
+                        <div key={label} className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-slate-600 w-28 text-right flex-shrink-0 truncate" title={label}>{label}</span>
+                          <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                            <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((count / ptMax4) * 100, 12)}%`, backgroundColor: getPtColor(label, i) }}>
+                              <span className="text-[10px] font-bold text-white">{count}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-3 text-right">Toplam: {ptTotal4} projelendirilmiş konu</p>
                   </div>
                 );
               })()}
