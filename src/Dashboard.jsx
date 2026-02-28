@@ -23,7 +23,7 @@ import {
   Languages, ExternalLink, StickyNote, Briefcase, MapPin,
   Bell, CalendarDays, ChevronLeft, AlertTriangle, Link2, Pencil,
   Table2, Download, Upload, DatabaseBackup, Maximize2, Minimize2, Send, Bot, RefreshCw, CloudUpload,
-  Lightbulb
+  Lightbulb, Undo2
 } from "lucide-react";
 
 // ─── MOCK DATA (Notion Aktarımı) ────────────────────────
@@ -1062,9 +1062,11 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
   const activeCount = myTopics.filter(t => t.status === "active").length;
   const completedCount = myTopics.filter(t => t.status === "completed").length;
   const totalCount = myTopics.length;
-  // Proje türü istatistikleri (konular üzerinden)
+  // Proje türü istatistikleri (sadece projelendirilmiş konular)
+  const projectedTopics = myTopics.filter(t => (projects || []).some(p => (p.topics || []).includes(t.id)));
+  const projectedCount = projectedTopics.length;
   const projectTypeCount = {};
-  myTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
+  projectedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
   return (
     <div
       draggable={isAdmin}
@@ -1120,11 +1122,12 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
               )}
             </div>
           )}
-          {/* Proje türü istatistikleri (topics üzerinden) */}
-          {Object.keys(projectTypeCount).length > 0 && (
+          {/* Projelendirilmiş konu sayısı + tür dağılımı */}
+          {projectedCount > 0 && (
             <div className="flex items-center gap-1 mt-1 flex-wrap">
+              <Badge className="bg-violet-100 text-violet-700 border border-violet-200" style={{fontSize: "10px", padding: "1px 5px"}}><FolderKanban size={10} className="mr-0.5 inline" />{projectedCount}p</Badge>
               {Object.entries(projectTypeCount).slice(0, 3).map(([type, count]) => (
-                <Badge key={type} className="bg-violet-50 text-violet-600 border border-violet-200" style={{fontSize: "9px", padding: "1px 4px"}}>{count > 1 ? `${count}×` : ""}{type.length > 12 ? type.slice(0, 12) + "…" : type}</Badge>
+                <Badge key={type} className="bg-violet-50 text-violet-600 border border-violet-200" style={{fontSize: "9px", padding: "1px 4px"}}>{type.length > 12 ? type.slice(0, 12) + "…" : type} ×{count}</Badge>
               ))}
               {Object.keys(projectTypeCount).length > 3 && (
                 <Badge className="bg-violet-50 text-violet-400" style={{fontSize: "9px", padding: "1px 4px"}}>+{Object.keys(projectTypeCount).length - 3}</Badge>
@@ -1157,9 +1160,11 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
     t.researchers.some(r => r.researcherId === researcher.id)
   );
 
-  // Proje türü istatistikleri (konular üzerinden)
+  // Proje türü istatistikleri (sadece projelendirilmiş konular)
+  const projectedTopics = assignedTopics.filter(t => (projects || []).some(p => (p.topics || []).includes(t.id)));
+  const projectedCount = projectedTopics.length;
   const projectTypeCount = {};
-  assignedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
+  projectedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
 
   const handleSave = () => {
     onUpdate({
@@ -1190,7 +1195,7 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
             {isAdmin && <button onClick={() => editing ? handleCancel() : setEditing(true)}
               className={`p-1.5 rounded-lg text-white ${editing ? "bg-white/30" : "bg-white/20 hover:bg-white/30"}`}
               title={editing ? "Düzenlemeyi iptal et" : "Profili düzenle"}>
-              {editing ? <X size={16} /> : <Edit3 size={16} />}
+              {editing ? <Undo2 size={16} /> : <Edit3 size={16} />}
             </button>}
             <button onClick={onClose} className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white">
               <X size={16} />
@@ -1327,13 +1332,13 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
                     </div>
                   </div>
                 </div>
-                {/* Proje Türü Dağılımı */}
-                {Object.keys(projectTypeCount).length > 0 && (<>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Proje Türü Dağılımı</p>
+                {/* Proje Türü Dağılımı (sadece projelendirilmiş) */}
+                {projectedCount > 0 && (<>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Projelendirilmiş Konular ({projectedCount})</p>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {Object.entries(projectTypeCount).sort((a, b) => b[1] - a[1]).map(([pt, cnt]) => (
                       <div key={pt} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium border border-indigo-100">
-                        <FolderKanban size={10} /><span>{pt}</span><span className="font-bold">{cnt}</span>
+                        <FolderKanban size={10} /><span>{pt}</span><span className="font-bold">×{cnt}</span>
                       </div>
                     ))}
                   </div>
@@ -1668,7 +1673,7 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <Badge className={stCfg.color}><span className={`w-1.5 h-1.5 rounded-full ${stCfg.dot} mr-1`} />{stCfg.label}</Badge>
         <Badge className={prCfg.color}>{prCfg.icon} {prCfg.label}</Badge>
-        {topic.projectType && <Badge className="bg-violet-50 text-violet-600">{topic.projectType}{topic.projectTypeDetail ? `: ${topic.projectTypeDetail}` : ""}</Badge>}
+        {topic.projectType && (projects || []).some(p => (p.topics || []).includes(topic.id)) && <Badge className="bg-violet-50 text-violet-600">{topic.projectType}{topic.projectTypeDetail ? `: ${topic.projectTypeDetail}` : ""}</Badge>}
         {topic.category && <Badge className="bg-blue-50 text-blue-600">{topic.category}</Badge>}
       </div>
       <p className={`text-slate-500 mb-3 ${maximized ? "text-sm line-clamp-3" : "text-xs line-clamp-2"}`}>{topic.description}</p>
@@ -2047,7 +2052,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {isTopic && item.projectType && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Öngörülen Proje Türü</p><p className="text-sm font-medium text-indigo-700">{item.projectType}{item.projectTypeDetail ? ` — ${item.projectTypeDetail}` : ""}</p></div>}
+              {isTopic && item.projectType && (projects || []).some(p => (p.topics || []).includes(item.id)) && <div className="bg-indigo-50 rounded-lg p-2.5"><p className="text-xs text-indigo-400 mb-0.5">Proje Türü</p><p className="text-sm font-medium text-indigo-700">{item.projectType}{item.projectTypeDetail ? ` — ${item.projectTypeDetail}` : ""}</p></div>}
               {isTopic && item.applicationStatus && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Başvuru Durumu</p><p className="text-sm font-medium text-slate-700">{item.applicationStatus}</p></div>}
               {isTopic && item.targetJournal && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Hedef Dergi</p><p className="text-sm font-medium text-slate-700">{item.targetJournal}</p></div>}
               {isTopic && item.applicationDate && <div className="bg-slate-50 rounded-lg p-2.5"><p className="text-xs text-slate-400 mb-0.5">Başvuru Tarihi</p><p className="text-sm font-medium text-slate-700">{new Date(item.applicationDate).toLocaleDateString("tr-TR")}</p></div>}
@@ -3596,6 +3601,11 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
   );
 };
 
+// ─── Otomatik Proje Türü Renk Paleti ────────────────────
+const PT_COLOR_PALETTE = ["#6366f1","#10b981","#3b82f6","#f59e0b","#ec4899","#8b5cf6","#14b8a6","#f97316","#06b6d4","#a78bfa","#84cc16","#ef4444","#0ea5e9","#d946ef"];
+const getPtColor = (label, index) => PT_COLOR_PALETTE[index % PT_COLOR_PALETTE.length];
+const withPtColors = (entries) => entries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }));
+
 // ─── STATS PANEL MODAL ──────────────────────────────────
 const SimplePieChart = ({ data, size = 160 }) => {
   const total = data.reduce((s, d) => s + d.value, 0);
@@ -3761,9 +3771,9 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     ft.forEach(t => (t.researchers || []).filter(tr => tr.isIdeaOwner).forEach(tr => ideaOwnerIds.add(tr.researcherId)));
     fp.forEach(p => (p.researchers || []).filter(pr => pr.isIdeaOwner).forEach(pr => ideaOwnerIds.add(pr.researcherId)));
     const ideaOwners = ideaOwnerIds.size;
-    // Proje türü dağılımı (konular üzerinden)
+    // Proje türü dağılımı (sadece projelendirilmiş konular)
     const projectTypeDistribution = {};
-    ft.forEach(t => { if (t.projectType) projectTypeDistribution[t.projectType] = (projectTypeDistribution[t.projectType] || 0) + 1; });
+    ft.filter(t => fp.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) projectTypeDistribution[t.projectType] = (projectTypeDistribution[t.projectType] || 0) + 1; });
     return { topicCount: ft.length, projectCount: fp.length, topicsByStatus, projectsByStatus, totalBudget, totalTasks: allTasks.length, doneTasks: allTasks.filter(t => t.status === "done").length, uniqueResearchers: uniqueResearchers.size, totalResearchers, aofMembers, piExperienced, withTopics, withoutTopics, ideaOwners, projectTypeDistribution };
   }, [filteredTopics, filteredProjects, researchers]);
 
@@ -4097,7 +4107,7 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
               {Object.keys(summary.projectTypeDistribution).length > 0 && (
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                <SimplePieChart data={Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }))} title="" />
+                <SimplePieChart data={Object.entries(summary.projectTypeDistribution).sort((a, b) => b[1] - a[1]).map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
               </div>
               )}
               {/* Görevler */}
@@ -4216,17 +4226,17 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                 <p className="text-[10px] text-slate-400 mt-2 text-right">Toplam: {titleDistribution.total} araştırmacı</p>
               </div>
               )}
-              {/* Proje Türü Bazlı Dağılım — topics üzerinden */}
+              {/* Proje Türü Bazlı Dağılım — sadece projelendirilmiş konular */}
               {(() => {
                 const ptDist = {};
                 const filteredT = aofResearcherIds ? topics.filter(t => (t.researchers || []).some(r => aofResearcherIds.has(r.researcherId))) : topics;
-                filteredT.forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
+                filteredT.filter(t => projects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                 const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                 if (entries.length === 0) return null;
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-indigo-500" />Proje Türü Dağılımı</h3>
-                    <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="" />
+                    <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
                   </div>
                 );
               })()}
@@ -4365,16 +4375,16 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                       </div>
                     </div>
                   </div>
-                  {/* Proje Türü Dağılımı — topics üzerinden + pie chart */}
+                  {/* Proje Türü Dağılımı — sadece projelendirilmiş konular + pie chart */}
                   {(() => {
                     const ptDist = {};
-                    personStats.myTopics.forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
+                    personStats.myTopics.filter(t => projects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) ptDist[t.projectType] = (ptDist[t.projectType] || 0) + 1; });
                     const entries = Object.entries(ptDist).sort((a, b) => b[1] - a[1]);
                     if (entries.length === 0) return null;
                     return (
                       <div>
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Proje Türü Dağılımı</p>
-                        <SimplePieChart data={entries.map(([label, value]) => ({ label, value }))} title="" />
+                        <SimplePieChart data={entries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
                       </div>
                     );
                   })()}
@@ -4588,17 +4598,17 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
                   </table>
                 </div>
               </div>
-              {/* Proje Türü Dağılımı — topics üzerinden pie chart */}
+              {/* Proje Türü Dağılımı — sadece projelendirilmiş konular pie chart */}
               {(() => {
                 const ft = filteredTopics;
                 const topicPtDist = {};
-                ft.forEach(t => { if (t.projectType) topicPtDist[t.projectType] = (topicPtDist[t.projectType] || 0) + 1; });
+                ft.filter(t => filteredProjects.some(p => (p.topics || []).includes(t.id))).forEach(t => { if (t.projectType) topicPtDist[t.projectType] = (topicPtDist[t.projectType] || 0) + 1; });
                 const ptEntries = Object.entries(topicPtDist).sort((a, b) => b[1] - a[1]);
                 if (ptEntries.length === 0) return null;
                 return (
                   <div className="bg-slate-50 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><FolderKanban size={14} className="text-violet-500" />Proje Türü Dağılımı</h3>
-                    <SimplePieChart data={ptEntries.map(([label, value]) => ({ label, value }))} title="" />
+                    <SimplePieChart data={ptEntries.map(([label, value], i) => ({ label, value, color: getPtColor(label, i) }))} title="" />
                   </div>
                 );
               })()}
@@ -6550,7 +6560,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       }), 8000, "forceReload");
       setSyncStatus("done");
       setLastSavedAt(new Date());
-      setToast({ type: "success", message: "Veriler yayınlandı! Tüm ekranlar güncelleniyor..." });
+      // Toast kaldırıldı — kullanıcıya bildirim gösterilmez, işlem sessizce tamamlanır
       setTimeout(() => setSyncStatus("idle"), 3000);
       // 3. Otomatik yedek al (arka planda, hata görmezden gelinir)
       saveBackupToFirestore("auto_publish").catch(() => {});
