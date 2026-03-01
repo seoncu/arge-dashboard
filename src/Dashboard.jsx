@@ -920,6 +920,17 @@ const getKnownInstitutions = (projects) => {
   return [...set].sort((a, b) => a.localeCompare(b, "tr"));
 };
 const DEFAULT_CATEGORY_OPTIONS = ["Ar-Ge İçi", "Ortak Çalışma", "Diğer"];
+const DEFAULT_INDEX_TYPES = [
+  { id: "sci", label: "SCI", coefficient: 10, color: "#3b82f6" },
+  { id: "sci-e", label: "SCI-E", coefficient: 9, color: "#06b6d4" },
+  { id: "ssci", label: "SSCI", coefficient: 8, color: "#8b5cf6" },
+  { id: "ahci", label: "AHCI", coefficient: 7, color: "#ec4899" },
+  { id: "esci", label: "ESCI", coefficient: 6, color: "#f59e0b" },
+  { id: "scopus", label: "Scopus", coefficient: 5, color: "#14b8a6" },
+  { id: "tr-dizin", label: "TR Dizin", coefficient: 4, color: "#10b981" },
+  { id: "diger", label: "Diğer", coefficient: 2, color: "#94a3b8" },
+];
+const DEFAULT_PROJECT_TYPE_COEFF = 5;
 
 // Module-level config refs (synced from component state on each render)
 let roleConfig = DEFAULT_ROLE_CONFIG;
@@ -929,6 +940,8 @@ let projectTypeOptions = DEFAULT_PROJECT_TYPES;
 let categoryOptions = DEFAULT_CATEGORY_OPTIONS;
 let eduDegreeOptions = DEFAULT_EDU_DEGREES;
 let eduStatusOptions = DEFAULT_EDU_STATUSES;
+let indexTypesConfig = DEFAULT_INDEX_TYPES;
+let projectTypeCoeff = DEFAULT_PROJECT_TYPE_COEFF;
 
 const getInitials = (name) => name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 const getProgress = (tasks) => {
@@ -1134,6 +1147,20 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
               )}
             </div>
           )}
+          {/* Yayın İndeksleri */}
+          {(() => {
+            const pubTopics = myTopics.filter(t => t.status === "completed" && t.publishingIndex?.types?.length > 0);
+            if (pubTopics.length === 0) return null;
+            const idxCounts = {};
+            pubTopics.forEach(t => t.publishingIndex.types.forEach(iid => { idxCounts[iid] = (idxCounts[iid] || 0) + 1; }));
+            return (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                <span className="text-[10px] text-blue-500 font-medium">{pubTopics.length} yayın:</span>
+                {Object.entries(idxCounts).slice(0, 3).map(([iid, cnt]) => { const ic = (indexTypesConfig || []).find(i => i.id === iid); return ic ? <span key={iid} className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: ic.color }}>{ic.label} {cnt > 1 ? `×${cnt}` : ""}</span> : null; })}
+                {Object.keys(idxCounts).length > 3 && <span className="text-[9px] text-slate-400">+{Object.keys(idxCounts).length - 3}</span>}
+              </div>
+            );
+          })()}
         </div>
         <div className="flex flex-col items-center gap-1">
           <GripVertical size={16} className="text-slate-300" />
@@ -1587,6 +1614,39 @@ const ResearcherDetailModal = ({ researcher, topics, projects, isAdmin, onClose,
             );
           })()}
 
+          {/* Yayın İndeksleri Dağılımı */}
+          {(() => {
+            const pubTopics = assignedTopics.filter(t => t.status === "completed" && t.publishingIndex?.types?.length > 0);
+            if (pubTopics.length === 0) return null;
+            const idxCounts = {};
+            pubTopics.forEach(t => t.publishingIndex.types.forEach(iid => { idxCounts[iid] = (idxCounts[iid] || 0) + 1; }));
+            const entries = Object.entries(idxCounts).sort((a, b) => b[1] - a[1]);
+            const maxVal = Math.max(...entries.map(e => e[1]), 1);
+            return (
+              <div>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Yayın İndeksleri ({pubTopics.length} yayın)</h4>
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                  <div className="space-y-2">
+                    {entries.map(([iid, cnt]) => {
+                      const ic = (indexTypesConfig || []).find(i => i.id === iid);
+                      if (!ic) return null;
+                      return (
+                        <div key={iid} className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-slate-600 w-20 text-right flex-shrink-0">{ic.label}</span>
+                          <div className="flex-1 bg-blue-100 rounded-full h-5 overflow-hidden">
+                            <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((cnt / maxVal) * 100, 15)}%`, backgroundColor: ic.color }}>
+                              <span className="text-[10px] font-bold text-white">{cnt}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Performance Notes */}
           <div>
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Performans Takip Notları</h4>
@@ -1689,6 +1749,8 @@ const TopicCard = ({ topic, allResearchers, onDrop, onClick, isAdmin, projects, 
         <Badge className={prCfg.color}>{prCfg.icon} {prCfg.label}</Badge>
         {topic.projectType && (projects || []).some(p => (p.topics || []).includes(topic.id)) && <Badge className="bg-violet-50 text-violet-600">{topic.projectType}{topic.projectTypeDetail ? `: ${topic.projectTypeDetail}` : ""}</Badge>}
         {topic.category && <Badge className="bg-blue-50 text-blue-600">{topic.category}</Badge>}
+        {topic.publishingIndex?.types?.length > 0 && topic.publishingIndex.types.slice(0, 3).map(iid => { const ic = (indexTypesConfig || []).find(i => i.id === iid); return ic ? <span key={iid} className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: ic.color }}>{ic.label}</span> : null; })}
+        {topic.publishingIndex?.types?.length > 3 && <span className="text-[9px] text-slate-400">+{topic.publishingIndex.types.length - 3}</span>}
       </div>
       <p className={`text-slate-500 mb-3 ${maximized ? "text-sm line-clamp-3" : "text-xs line-clamp-2"}`}>{topic.description}</p>
       {topic.tasks.length > 0 && (
@@ -1863,7 +1925,14 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
   const [editForm, setEditForm] = useState({ ...itemWithDefaults });
   const [showAddResearcher, setShowAddResearcher] = useState(false);
   const [addResearcherRole, setAddResearcherRole] = useState("member");
-  const eff = (key, val) => setEditForm({ ...editForm, [key]: val });
+  const eff = (key, val) => {
+    const next = { ...editForm, [key]: val };
+    // Status "completed"dan çıkınca publishingIndex'i temizle
+    if (key === "status" && editForm.status === "completed" && val !== "completed") {
+      next.publishingIndex = { types: [], date: "", notes: "" };
+    }
+    setEditForm(next);
+  };
   const eInputD = "w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
   const [detailDupWarning, setDetailDupWarning] = useState("");
   const handleSaveEdit = () => {
@@ -1952,6 +2021,35 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>}
                 </div>
+                {/* Yayın İndeksleri — sadece tamamlanmış konularda */}
+                {isTopic && editForm.status === "completed" && (
+                  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5"><Award size={13} />Yayın İndeksleri</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(indexTypesConfig || []).map(idx => {
+                        const sel = (editForm.publishingIndex?.types || []).includes(idx.id);
+                        return (
+                          <label key={idx.id} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border ${sel ? "text-white border-transparent" : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"}`}
+                            style={sel ? { backgroundColor: idx.color, borderColor: idx.color } : {}}>
+                            <input type="checkbox" checked={sel} onChange={() => {
+                              const cur = editForm.publishingIndex?.types || [];
+                              const next = sel ? cur.filter(t => t !== idx.id) : [...cur, idx.id];
+                              eff("publishingIndex", { ...(editForm.publishingIndex || {}), types: next });
+                            }} className="sr-only" />
+                            {sel ? <Check size={12} /> : <Circle size={12} className="text-slate-300" />}
+                            {idx.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="date" value={editForm.publishingIndex?.date || ""} onChange={e => eff("publishingIndex", { ...(editForm.publishingIndex || {}), date: e.target.value })}
+                        className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-200" />
+                      <input value={editForm.publishingIndex?.notes || ""} onChange={e => eff("publishingIndex", { ...(editForm.publishingIndex || {}), notes: e.target.value })}
+                        placeholder="Not (opsiyonel)" className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-200" />
+                    </div>
+                  </div>
+                )}
               ) : (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={stCfg.color}><span className={`w-1.5 h-1.5 rounded-full ${stCfg.dot} mr-1`} />{stCfg.label}</Badge>
@@ -1976,6 +2074,15 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                   </div>
                 );
               })()}
+              {/* Yayın İndeksleri badge'leri — sadece okuma modu */}
+              {isTopic && !editing && item.publishingIndex?.types?.length > 0 && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 flex-wrap">
+                  <Award size={14} className="text-blue-500 flex-shrink-0" />
+                  {item.publishingIndex.types.map(iid => { const ic = (indexTypesConfig || []).find(i => i.id === iid); return ic ? <span key={iid} className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: ic.color }}>{ic.label}</span> : null; })}
+                  {item.publishingIndex.date && <span className="text-[10px] text-slate-400 ml-auto">{new Date(item.publishingIndex.date).toLocaleDateString("tr-TR")}</span>}
+                  {item.publishingIndex.notes && <span className="text-[10px] text-slate-500 italic">{item.publishingIndex.notes}</span>}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1">
               {isAdmin && <button onClick={() => { if (editing) { handleCancelEdit(); } else { setEditForm({ ...itemWithDefaults }); setEditing(true); } }}
@@ -2779,6 +2886,8 @@ const SettingsModal = ({
   categoryOptions, onCategoryOptionsChange,
   eduDegreeOptions, onEduDegreeOptionsChange,
   eduStatusOptions, onEduStatusOptionsChange,
+  indexTypesConfig: itcProp, onIndexTypesConfigChange,
+  projectTypeCoeffConfig, onProjectTypeCoeffChange,
   onResetDefaults, onClose,
   onExportData, onImportData, onResetAllData,
   quickLinks, onQuickLinksChange,
@@ -2796,6 +2905,8 @@ const SettingsModal = ({
     { key: "priorities", label: "Öncelik", icon: Target },
     { key: "categories", label: "Kategoriler", icon: Tag },
     { key: "education", label: "Eğitim", icon: GraduationCap },
+    { key: "indexTypes", label: "Yayın İndeksleri", icon: Award },
+    { key: "scoring", label: "Puanlama", icon: TrendingUp },
     { key: "links", label: "Bağlantılar", icon: Link2 },
     { key: "data", label: "Veri", icon: DatabaseBackup },
     { key: "report", label: "Rapor", icon: FileText },
@@ -3055,6 +3166,142 @@ const SettingsModal = ({
     );
   };
 
+  // ── Index Types Tab ──
+  const IndexTypesTab = () => {
+    const [editIdx, setEditIdx] = useState(null);
+    const [editForm, setEditForm] = useState({ label: "", coefficient: 1, color: "#3b82f6" });
+    const [showNew, setShowNew] = useState(false);
+    const [newForm, setNewForm] = useState({ id: "", label: "", coefficient: 1, color: "#3b82f6" });
+    const itc = itcProp || [];
+    const HEX_COLORS = ["#3b82f6","#06b6d4","#8b5cf6","#ec4899","#f59e0b","#14b8a6","#10b981","#94a3b8","#f97316","#ef4444","#6366f1","#84cc16","#0ea5e9","#d946ef"];
+    const saveEdit = () => {
+      if (!editForm.label.trim()) return;
+      const updated = [...itc]; updated[editIdx] = { ...updated[editIdx], label: editForm.label.trim(), coefficient: Number(editForm.coefficient) || 1, color: editForm.color };
+      onIndexTypesConfigChange(updated); setEditIdx(null);
+    };
+    const remove = (idx) => { if (itc.length <= 1) return; if (!confirm(`"${itc[idx].label}" silinsin mi?`)) return; onIndexTypesConfigChange(itc.filter((_, i) => i !== idx)); };
+    const add = () => {
+      const id = newForm.id.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      if (!id || !newForm.label.trim() || itc.some(i => i.id === id)) return;
+      onIndexTypesConfigChange([...itc, { id, label: newForm.label.trim(), coefficient: Number(newForm.coefficient) || 1, color: newForm.color }]);
+      setNewForm({ id: "", label: "", coefficient: 1, color: "#3b82f6" }); setShowNew(false);
+    };
+    const move = (idx, dir) => { const arr = [...itc]; [arr[idx], arr[idx + dir]] = [arr[idx + dir], arr[idx]]; onIndexTypesConfigChange(arr); };
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500 mb-3">Yayın indeks türlerini yönetin. Katsayı değeri Leaderboard puan hesabında kullanılır.</p>
+        {itc.map((item, idx) => (
+          <div key={item.id} className="border border-slate-200 rounded-xl p-3 bg-white">
+            {editIdx === idx ? (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input value={editForm.label} onChange={e => setEditForm({ ...editForm, label: e.target.value })} className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-200 outline-none" placeholder="İndeks adı" />
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-slate-400">×</span>
+                    <input type="number" value={editForm.coefficient} onChange={e => setEditForm({ ...editForm, coefficient: e.target.value })} className="w-14 text-sm border border-slate-200 rounded-lg px-2 py-1.5 text-center focus:ring-2 focus:ring-indigo-200 outline-none" min="0" max="100" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {HEX_COLORS.map(c => (
+                    <button key={c} onClick={() => setEditForm({ ...editForm, color: c })}
+                      className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${editForm.color === c ? "border-indigo-500 ring-1 ring-indigo-200" : "border-transparent hover:border-slate-300"}`}
+                      style={{ backgroundColor: c }}>{editForm.color === c && <Check size={12} className="text-white" />}</button>
+                  ))}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button onClick={() => setEditIdx(null)} className="px-3 py-1.5 text-xs text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200">İptal</button>
+                  <button onClick={saveEdit} className="px-3 py-1.5 text-xs text-white bg-indigo-500 rounded-lg hover:bg-indigo-600">Kaydet</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => move(idx, -1)} disabled={idx === 0} className="text-slate-300 hover:text-slate-500 disabled:opacity-30"><ChevronLeft size={12} className="rotate-90" /></button>
+                  <button onClick={() => move(idx, 1)} disabled={idx === itc.length - 1} className="text-slate-300 hover:text-slate-500 disabled:opacity-30"><ChevronRight size={12} className="rotate-90" /></button>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: item.color }}>{item.label}</span>
+                <span className="text-xs text-slate-400 font-mono">×{item.coefficient}</span>
+                <span className="text-[10px] text-slate-300 ml-auto">{item.id}</span>
+                <button onClick={() => { setEditIdx(idx); setEditForm({ label: item.label, coefficient: item.coefficient, color: item.color }); }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><Edit3 size={13} /></button>
+                <button onClick={() => remove(idx)} disabled={itc.length <= 1} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 disabled:opacity-30"><Trash2 size={13} /></button>
+              </div>
+            )}
+          </div>
+        ))}
+        {showNew ? (
+          <div className="border border-dashed border-indigo-300 rounded-xl p-3 bg-indigo-50/30 space-y-3">
+            <div className="flex gap-2">
+              <input value={newForm.id} onChange={e => setNewForm({ ...newForm, id: e.target.value })} className="w-24 text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white outline-none" placeholder="anahtar" />
+              <input value={newForm.label} onChange={e => setNewForm({ ...newForm, label: e.target.value })} className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white outline-none" placeholder="İndeks adı" />
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-400">×</span>
+                <input type="number" value={newForm.coefficient} onChange={e => setNewForm({ ...newForm, coefficient: e.target.value })} className="w-14 text-sm border border-slate-200 rounded-lg px-2 py-1.5 text-center bg-white outline-none" min="0" max="100" />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {HEX_COLORS.map(c => (
+                <button key={c} onClick={() => setNewForm({ ...newForm, color: c })}
+                  className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${newForm.color === c ? "border-indigo-500 ring-1 ring-indigo-200" : "border-transparent hover:border-slate-300"}`}
+                  style={{ backgroundColor: c }}>{newForm.color === c && <Check size={12} className="text-white" />}</button>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowNew(false)} className="px-3 py-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded-lg">İptal</button>
+              <button onClick={add} disabled={!newForm.id.trim() || !newForm.label.trim()} className="px-3 py-1.5 text-xs text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-50">Ekle</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowNew(true)} className="w-full py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs font-medium text-slate-400 hover:text-indigo-500 hover:border-indigo-300 transition-colors flex items-center justify-center gap-1.5"><Plus size={14} />Yeni İndeks Türü Ekle</button>
+        )}
+      </div>
+    );
+  };
+
+  // ── Scoring Tab ──
+  const ScoringTab = () => {
+    const [localCoeff, setLocalCoeff] = useState(projectTypeCoeffConfig || DEFAULT_PROJECT_TYPE_COEFF);
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><TrendingUp size={14} />Proje Türü Bonus Katsayısı</h3>
+          <p className="text-xs text-slate-500 mb-3">Tamamlanmış ve projelendirilmiş konular için ek puan katsayısı. Bu değer yayın indeks puanından daha yüksek olmalıdır.</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-3 py-2">
+              <span className="text-xs text-slate-400">×</span>
+              <input type="number" value={localCoeff} onChange={e => setLocalCoeff(Number(e.target.value) || 1)} className="w-16 text-sm text-center outline-none focus:ring-1 focus:ring-indigo-200 rounded" min="1" max="100" />
+            </div>
+            <button onClick={() => onProjectTypeCoeffChange(localCoeff)} className="px-4 py-2 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600">Kaydet</button>
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Her tamamlanmış ve projelendirilmiş konu için araştırmacıya bu katsayı kadar ek puan verilir.</p>
+        </div>
+        <div className="border-t border-slate-200 pt-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2"><Award size={14} />Yayın İndeks Katsayıları</h3>
+          <p className="text-xs text-slate-500 mb-3">Her indeks türünün katsayısı "Yayın İndeksleri" sekmesinden düzenlenir. Aşağıda özet:</p>
+          <div className="space-y-1.5">
+            {(itcProp || []).map(item => (
+              <div key={item.id} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
+                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-sm text-slate-700 flex-1">{item.label}</span>
+                <span className="text-xs text-slate-500 font-mono">×{item.coefficient}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="border-t border-slate-200 pt-5">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Puan Formülü</h3>
+          <div className="bg-slate-50 rounded-xl p-4 text-xs text-slate-600 space-y-1.5 font-mono">
+            <p>puan = rol_puanları</p>
+            <p className="pl-6">+ tamamlanan × 15</p>
+            <p className="pl-6">+ görev × 3</p>
+            <p className="pl-6">- başarısız × 20</p>
+            <p className="pl-6 text-indigo-600">+ indeks_bonusu (her indeks türü katsayısı toplamı)</p>
+            <p className="pl-6 text-violet-600">+ proje_bonusu (tamamlanmış + projelendirilmiş × {projectTypeCoeffConfig || DEFAULT_PROJECT_TYPE_COEFF})</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Education Tab (two sections) ──
   const EducationTab = () => (
     <div className="space-y-6">
@@ -3094,6 +3341,8 @@ const SettingsModal = ({
           {activeTab === "statuses" && <ObjectConfigTab config={statusConfig} onChange={onStatusConfigChange} description="Konu ve projelerde kullanılan durum seçeneklerini yönetin." />}
           {activeTab === "priorities" && <ObjectConfigTab config={priorityConfig} onChange={onPriorityConfigChange} description="Öncelik seviyelerini ve renklerini düzenleyin." />}
           {activeTab === "categories" && <ListTab items={categoryOptions} onChange={onCategoryOptionsChange} itemLabel="Kategori" placeholder="Yeni kategori ekle..." />}
+          {activeTab === "indexTypes" && <IndexTypesTab />}
+          {activeTab === "scoring" && <ScoringTab />}
           {activeTab === "education" && <EducationTab />}
           {activeTab === "links" && (
             <div className="space-y-3">
@@ -3324,10 +3573,19 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
       const allTasks = [...topics.flatMap(t => t.tasks || []), ...projects.flatMap(p => p.tasks || [])];
       const myTasks = allTasks.filter(tk => tk.assignedTo === r.id);
       const doneTasks = myTasks.filter(tk => tk.status === "done").length;
+      // Yayın indeks bonusu
+      let indexBonus = 0;
+      topicEntries.filter(t => t.status === "completed" && t.publishingIndex?.types?.length > 0).forEach(t => {
+        t.publishingIndex.types.forEach(iid => { const ic = (indexTypesConfig || []).find(i => i.id === iid); indexBonus += ic ? ic.coefficient : 1; });
+      });
+      // Proje türü bonusu (tamamlanmış + projelendirilmiş konular)
+      const projBonusCount = topicEntries.filter(t => t.status === "completed" && projects.some(p => (p.topics || []).includes(t.id))).length;
+      const projBonus = projBonusCount * (projectTypeCoeff || 5);
+      const baseScore = leadCount * 10 + unitManagerCount * 9 + responsibleCount * 8 + memberCount * 4 + advisorCount * 2 + scholarCount * 1 + completedCount * 15 + doneTasks * 3 - failedCount * 20;
       return {
         ...r, total: topicEntries.length, leadCount, unitManagerCount, responsibleCount, memberCount, advisorCount, scholarCount,
-        completedCount, failedCount, tasksDone: doneTasks, tasksTotal: myTasks.length,
-        score: leadCount * 10 + unitManagerCount * 9 + responsibleCount * 8 + memberCount * 4 + advisorCount * 2 + scholarCount * 1 + completedCount * 15 + doneTasks * 3 - failedCount * 20
+        completedCount, failedCount, tasksDone: doneTasks, tasksTotal: myTasks.length, indexBonus, projBonus,
+        score: baseScore + indexBonus + projBonus
       };
     }).filter(r => r.total > 0);
   }, [filteredResearchers, topics, projects]);
@@ -3343,6 +3601,8 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
     else if (sortBy === "scholar") arr.sort((a, b) => b.scholarCount - a.scholarCount);
     else if (sortBy === "score") arr.sort((a, b) => b.score - a.score);
     else if (sortBy === "completed") arr.sort((a, b) => b.completedCount - a.completedCount);
+    else if (sortBy === "indexBonus") arr.sort((a, b) => b.indexBonus - a.indexBonus);
+    else if (sortBy === "projBonus") arr.sort((a, b) => b.projBonus - a.projBonus);
     return arr;
   }, [leaderboard, sortBy]);
 
@@ -3413,6 +3673,12 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
                 <th className={thStatic}>
                   <div className="flex items-center justify-center gap-0.5">Görev<InfoTip tip="Tamamlanan / toplam atanmış görev sayısı — Her biten görev: ×3 puan" /></div>
                 </th>
+                <th onClick={() => setSortBy("indexBonus")} className={sortBy === "indexBonus" ? thAct : thNorm}>
+                  <div className="flex items-center justify-center gap-0.5">Yayın<InfoTip tip="Tamamlanmış konulardaki yayın indeks katsayıları toplamı" /></div>
+                </th>
+                <th onClick={() => setSortBy("projBonus")} className={sortBy === "projBonus" ? thAct : thNorm}>
+                  <div className="flex items-center justify-center gap-0.5">Proje Pn.<InfoTip tip="Tamamlanmış ve projelendirilmiş konu başına ek puan" /></div>
+                </th>
                 <th onClick={() => setSortBy("score")} className={`${sortBy === "score" ? thAct : thNorm} border-l-2 border-slate-200`}>
                   <div className="flex items-center justify-center gap-0.5">Puan<InfoTip tip="Tüm metriklerin ağırlıklı toplamı. Detaylar için alttaki açıklamaya bakınız." /></div>
                 </th>
@@ -3451,6 +3717,12 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
                   <td className="px-3 py-2.5 text-center text-sm text-slate-500">
                     {r.tasksTotal > 0 ? <span>{r.tasksDone}/{r.tasksTotal}</span> : <span className="text-slate-300">-</span>}
                   </td>
+                  <td className={`px-3 py-2.5 text-center text-sm font-medium text-blue-600 ${sortBy === "indexBonus" ? "bg-indigo-50/30" : ""}`}>
+                    {r.indexBonus > 0 ? <span>+{r.indexBonus}</span> : <span className="text-slate-300">0</span>}
+                  </td>
+                  <td className={`px-3 py-2.5 text-center text-sm font-medium text-violet-600 ${sortBy === "projBonus" ? "bg-indigo-50/30" : ""}`}>
+                    {r.projBonus > 0 ? <span>+{r.projBonus}</span> : <span className="text-slate-300">0</span>}
+                  </td>
                   <td className={`px-3 py-2.5 text-center border-l-2 border-slate-200 ${sortBy === "score" ? "bg-indigo-50/30" : ""}`}>
                     <span className="text-sm font-bold text-amber-600">{r.score}</span>
                   </td>
@@ -3482,8 +3754,12 @@ const LeaderboardModal = ({ researchers, topics, projects, onClose }) => {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400" />Görev <span className="font-mono text-slate-600">×3</span></span>
             <span className="font-bold text-slate-300">&minus;</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Başarısız <span className="font-mono text-red-600">×20</span></span>
+            <span className="font-bold text-slate-300">+</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />Yayın İndeks <span className="font-mono text-blue-600">katsayı</span></span>
+            <span className="font-bold text-slate-300">+</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500" />Proje Pn. <span className="font-mono text-violet-600">×{projectTypeCoeff || 5}</span></span>
           </div>
-          <p className="text-xs text-slate-400 mt-2">Sütun başlıklarına tıklayarak sıralama değiştirebilirsiniz. "Başarısız" = durumu Tamamlanamadı olan konu sayısı.</p>
+          <p className="text-xs text-slate-400 mt-2">Sütun başlıklarına tıklayarak sıralama değiştirebilirsiniz. Yayın = tamamlanmış konulardaki indeks katsayıları toplamı. Proje Pn. = tamamlanmış ve projelendirilmiş konu başına ek puan.</p>
         </div>
       </div>
     </>
@@ -3851,6 +4127,8 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
     { key: "timeStats", label: "Zaman İstatistikleri", icon: CalendarDays },
     { key: "topics", label: "Konu Bazlı", icon: BookOpen },
     { key: "projects", label: "Proje Bazlı", icon: FolderKanban },
+    { key: "publishingIndex", label: "Yayın İndeksleri", icon: Award },
+    { key: "collaboration", label: "İşbirliği", icon: Users },
   ];
 
   const statCard = (label, value, icon, color) => (
@@ -5044,6 +5322,281 @@ const StatsModal = ({ researchers, topics, projects, onClose }) => {
               })()}
             </div>
           )}
+
+          {/* ── Yayın İndeksleri Tab ── */}
+          {activeTab === "publishingIndex" && (
+            <div className="space-y-6">
+              {(() => {
+                const pubTopics = filteredTopics.filter(t => t.status === "completed" && t.publishingIndex?.types?.length > 0);
+                const pubCount = pubTopics.length;
+                if (pubCount === 0) return <p className="text-sm text-slate-400 text-center py-12">Henüz yayın indeksi girilmiş tamamlanmış konu yok.</p>;
+
+                // 1. Genel indeks dağılımı
+                const overallIdx = {};
+                pubTopics.forEach(t => t.publishingIndex.types.forEach(iid => { overallIdx[iid] = (overallIdx[iid] || 0) + 1; }));
+                const overallEntries = Object.entries(overallIdx).sort((a, b) => b[1] - a[1]);
+                const overallMax = Math.max(...overallEntries.map(e => e[1]), 1);
+
+                // 2. Kişi bazlı indeks
+                const personIdx = {};
+                pubTopics.forEach(t => { t.researchers?.forEach(r => { t.publishingIndex.types.forEach(iid => { const k = r.researcherId + "|" + iid; personIdx[k] = (personIdx[k] || 0) + 1; }); }); });
+                const personTotals = {};
+                Object.entries(personIdx).forEach(([k, v]) => { const rid = k.split("|")[0]; personTotals[rid] = (personTotals[rid] || 0) + v; });
+                const topPersons = Object.entries(personTotals).sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+                // 3. Unvan bazlı
+                const titleIdx = {};
+                pubTopics.forEach(t => { t.researchers?.forEach(r => { const res = researchers.find(x => x.id === r.researcherId); const title = res?.title || "Belirtilmemiş"; t.publishingIndex.types.forEach(() => { titleIdx[title] = (titleIdx[title] || 0) + 1; }); }); });
+                const titleEntries = Object.entries(titleIdx).sort((a, b) => b[1] - a[1]);
+                const titleMax = Math.max(...titleEntries.map(e => e[1]), 1);
+
+                // 4. Projelendirilmiş vs bağımsız
+                const withProj = pubTopics.filter(t => projects.some(p => (p.topics || []).includes(t.id))).length;
+                const withoutProj = pubCount - withProj;
+
+                // 5. Yıl bazlı
+                const yearIdx = {};
+                pubTopics.forEach(t => {
+                  const yr = t.publishingIndex.date ? t.publishingIndex.date.slice(0, 4) : (t.completedDate ? t.completedDate.slice(0, 4) : "Belirsiz");
+                  t.publishingIndex.types.forEach(iid => {
+                    if (!yearIdx[yr]) yearIdx[yr] = {};
+                    yearIdx[yr][iid] = (yearIdx[yr][iid] || 0) + 1;
+                  });
+                });
+                const yearKeys = Object.keys(yearIdx).sort();
+                const allIdxIds = [...new Set(pubTopics.flatMap(t => t.publishingIndex.types))];
+
+                return (<>
+                  {/* Özet kartlar */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {statCard("Toplam Yayın", pubCount, <FileText size={16} className="text-blue-500" />, "bg-blue-50")}
+                    {statCard("Projelendirilmiş", withProj, <FolderKanban size={16} className="text-violet-500" />, "bg-violet-50")}
+                    {statCard("Bağımsız", withoutProj, <BookOpen size={16} className="text-emerald-500" />, "bg-emerald-50")}
+                  </div>
+
+                  {/* Genel indeks dağılımı */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">İndeks Türü Dağılımı</p>
+                    <div className="space-y-2">
+                      {overallEntries.map(([iid, cnt]) => {
+                        const ic = (indexTypesConfig || []).find(i => i.id === iid);
+                        if (!ic) return null;
+                        return (
+                          <div key={iid} className="flex items-center gap-3">
+                            <span className="text-xs font-medium text-slate-600 w-20 text-right flex-shrink-0">{ic.label}</span>
+                            <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                              <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((cnt / overallMax) * 100, 12)}%`, backgroundColor: ic.color }}>
+                                <span className="text-[10px] font-bold text-white">{cnt}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 text-right">Toplam: {pubCount} yayın</p>
+                  </div>
+
+                  {/* Kişi bazlı */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Kişi Bazlı Yayın Dağılımı</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead><tr className="text-left border-b border-slate-200">
+                          <th className="pb-2 font-semibold text-slate-500">Araştırmacı</th>
+                          {(indexTypesConfig || []).map(ic => <th key={ic.id} className="pb-2 text-center font-semibold" style={{ color: ic.color }}>{ic.label}</th>)}
+                          <th className="pb-2 text-center font-semibold text-slate-700">Toplam</th>
+                        </tr></thead>
+                        <tbody>
+                          {topPersons.map(([rid, total]) => {
+                            const res = researchers.find(r => r.id === rid);
+                            if (!res) return null;
+                            return (
+                              <tr key={rid} className="border-b border-slate-100 hover:bg-white/70">
+                                <td className="py-1.5 font-medium text-slate-700">{res.title ? `${res.title} ` : ""}{res.name}</td>
+                                {(indexTypesConfig || []).map(ic => {
+                                  const cnt = personIdx[rid + "|" + ic.id] || 0;
+                                  return <td key={ic.id} className="text-center">{cnt > 0 ? <span className="font-medium" style={{ color: ic.color }}>{cnt}</span> : <span className="text-slate-300">-</span>}</td>;
+                                })}
+                                <td className="text-center font-bold text-slate-700">{total}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Unvan bazlı */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Unvan Bazlı Yayın Dağılımı</p>
+                    <div className="space-y-2">
+                      {titleEntries.map(([title, cnt], i) => (
+                        <div key={title} className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-slate-600 w-32 text-right flex-shrink-0 truncate">{title || "Belirtilmemiş"}</span>
+                          <div className="flex-1 bg-slate-200 rounded-full h-5 overflow-hidden">
+                            <div className="h-full rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((cnt / titleMax) * 100, 12)}%`, backgroundColor: PT_COLOR_PALETTE[i % PT_COLOR_PALETTE.length] }}>
+                              <span className="text-[10px] font-bold text-white">{cnt}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Projelendirilmiş vs bağımsız */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Projelendirme Durumu</p>
+                      <SimplePieChart data={[
+                        { label: "Projelendirilmiş", value: withProj, color: "#8b5cf6" },
+                        { label: "Bağımsız", value: withoutProj, color: "#94a3b8" },
+                      ]} size={140} />
+                    </div>
+                    {/* Yıl bazlı */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Yıl Bazlı Yayın Dağılımı</p>
+                      {yearKeys.length > 0 ? (
+                        <div className="space-y-2">
+                          {yearKeys.map(yr => {
+                            const yrTotal = Object.values(yearIdx[yr]).reduce((s, v) => s + v, 0);
+                            return (
+                              <div key={yr}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-medium text-slate-600">{yr}</span>
+                                  <span className="text-xs text-slate-400">{yrTotal}</span>
+                                </div>
+                                <div className="flex h-4 rounded-full overflow-hidden bg-slate-200">
+                                  {allIdxIds.map(iid => {
+                                    const cnt = yearIdx[yr][iid] || 0;
+                                    if (cnt === 0) return null;
+                                    const ic = (indexTypesConfig || []).find(i => i.id === iid);
+                                    return <div key={iid} className="h-full" style={{ width: `${(cnt / yrTotal) * 100}%`, backgroundColor: ic?.color || "#94a3b8" }} title={`${ic?.label}: ${cnt}`} />;
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {allIdxIds.map(iid => { const ic = (indexTypesConfig || []).find(i => i.id === iid); return ic ? <span key={iid} className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ic.color }} />{ic.label}</span> : null; })}
+                          </div>
+                        </div>
+                      ) : <p className="text-xs text-slate-400 text-center py-4">Tarih verisi yok</p>}
+                    </div>
+                  </div>
+                </>);
+              })()}
+            </div>
+          )}
+
+          {/* ── İşbirliği Matrisi Tab ── */}
+          {activeTab === "collaboration" && (
+            <div className="space-y-6">
+              {(() => {
+                // Matrisi hesapla: aynı konuda bulunan araştırmacı çiftleri
+                const matrix = new Map();
+                const involvedIds = new Set();
+                filteredTopics.forEach(t => {
+                  const rs = t.researchers || [];
+                  rs.forEach(r => involvedIds.add(r.researcherId));
+                  for (let i = 0; i < rs.length; i++) {
+                    for (let j = i + 1; j < rs.length; j++) {
+                      const key = [rs[i].researcherId, rs[j].researcherId].sort().join("-");
+                      matrix.set(key, (matrix.get(key) || 0) + 1);
+                    }
+                  }
+                });
+                if (involvedIds.size === 0) return <p className="text-sm text-slate-400 text-center py-12">Henüz işbirliği verisi yok.</p>;
+
+                const sortedRes = researchers.filter(r => involvedIds.has(r.id)).sort((a, b) => a.name.localeCompare(b.name, "tr"));
+                const maxCollab = Math.max(...[...matrix.values()], 1);
+                const totalCollabs = [...matrix.values()].reduce((s, v) => s + v, 0);
+                const getCount = (id1, id2) => { const key = [id1, id2].sort().join("-"); return matrix.get(key) || 0; };
+
+                // En çok işbirliği yapan çiftler
+                const topPairs = [...matrix.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+                return (<>
+                  <div className="grid grid-cols-3 gap-3">
+                    {statCard("Araştırmacı", sortedRes.length, <Users size={16} className="text-indigo-500" />, "bg-indigo-50")}
+                    {statCard("Toplam İşbirliği", totalCollabs, <Activity size={16} className="text-emerald-500" />, "bg-emerald-50")}
+                    {statCard("Eşsiz Çift", matrix.size, <UserCheck size={16} className="text-violet-500" />, "bg-violet-50")}
+                  </div>
+
+                  {/* En çok işbirliği yapan çiftler */}
+                  {topPairs.length > 0 && (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">En Çok İşbirliği Yapan Çiftler</p>
+                      <div className="space-y-1.5">
+                        {topPairs.map(([key, cnt]) => {
+                          const [id1, id2] = key.split("-");
+                          const r1 = researchers.find(r => r.id === id1);
+                          const r2 = researchers.find(r => r.id === id2);
+                          if (!r1 || !r2) return null;
+                          return (
+                            <div key={key} className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 w-60 flex-shrink-0">
+                                <Avatar name={r1.name} color={r1.color} size="xs" />
+                                <span className="text-xs text-slate-600 truncate">{r1.name.split(" ").pop()}</span>
+                                <span className="text-[10px] text-slate-300">↔</span>
+                                <Avatar name={r2.name} color={r2.color} size="xs" />
+                                <span className="text-xs text-slate-600 truncate">{r2.name.split(" ").pop()}</span>
+                              </div>
+                              <div className="flex-1 bg-slate-200 rounded-full h-4 overflow-hidden">
+                                <div className="h-full bg-indigo-500 rounded-full flex items-center justify-end pr-2 transition-all" style={{ width: `${Math.max((cnt / maxCollab) * 100, 10)}%` }}>
+                                  <span className="text-[9px] font-bold text-white">{cnt}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Heatmap matrisi */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">İşbirliği Matrisi</p>
+                    <p className="text-[10px] text-slate-400 mb-3">Sayılar iki araştırmacının birlikte çalıştığı konu sayısını gösterir. Renk yoğunluğu işbirliği sıklığını yansıtır.</p>
+                    <div className="overflow-x-auto">
+                      <table className="border-collapse text-[10px]">
+                        <thead>
+                          <tr>
+                            <th className="p-1.5 text-left bg-slate-100 border border-slate-200 sticky left-0 z-10 min-w-[100px]">Araştırmacı</th>
+                            {sortedRes.map(r => (
+                              <th key={r.id} className="p-1.5 text-center bg-slate-100 border border-slate-200 max-w-[50px] min-w-[40px]" title={r.name}>
+                                <span className="block truncate">{r.name.split(" ").pop().slice(0, 4)}</span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedRes.map(r1 => (
+                            <tr key={r1.id}>
+                              <td className="p-1.5 border border-slate-200 bg-slate-100 font-medium text-slate-700 truncate max-w-[100px] sticky left-0 z-10" title={r1.name}>
+                                {r1.name.split(" ").slice(-1)[0]}
+                              </td>
+                              {sortedRes.map(r2 => {
+                                if (r1.id === r2.id) return <td key={r2.id} className="p-1.5 border border-slate-200 bg-slate-300/30 text-center text-slate-400">—</td>;
+                                const cnt = getCount(r1.id, r2.id);
+                                const intensity = cnt > 0 ? cnt / maxCollab : 0;
+                                return (
+                                  <td key={r2.id} className="p-1.5 border border-slate-200 text-center font-medium"
+                                    style={{ backgroundColor: intensity > 0 ? `rgba(99, 102, 241, ${0.15 + intensity * 0.65})` : "transparent", color: intensity > 0.5 ? "white" : (cnt > 0 ? "#4338ca" : "#cbd5e1") }}
+                                    title={`${r1.name} ↔ ${r2.name}: ${cnt} konu`}>
+                                    {cnt > 0 ? cnt : "·"}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>);
+              })()}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -5535,6 +6088,43 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
       return `Proje T\u00fcr\u00fc Da\u011f\u0131l\u0131m\u0131:\n${lines}`;
     }
 
+        // ── YAYIN İNDEKS TÜRLERİ ──
+    if (hasWord("yay\u0131n", "indeks", "sci", "ssci", "scopus", "ahci", "esci", "tr dizin", "tr-dizin", "publikasyon", "yay\u0131n indeks")) {
+      const pubTopics = topics.filter(t => t.status === "completed" && t.publishingIndex?.types?.length > 0);
+      if (pubTopics.length === 0) return "Hen\u00fcz yay\u0131n indeksi atanm\u0131\u015f tamamlanm\u0131\u015f konu bulunmamaktad\u0131r.";
+      const idxCounts = {};
+      pubTopics.forEach(t => (t.publishingIndex.types || []).forEach(iid => { idxCounts[iid] = (idxCounts[iid] || 0) + 1; }));
+      const idxLines = Object.entries(idxCounts).sort((a, b) => b[1] - a[1]).map(([iid, cnt]) => {
+        const ic = (indexTypesConfig || []).find(i => i.id === iid);
+        return `\u2022 ${ic ? ic.label : iid}: ${cnt} yay\u0131n (\u00d7${ic ? ic.coefficient : "?"} puan)`;
+      }).join("\n");
+      const resPub = {};
+      pubTopics.forEach(t => (t.researchers || []).forEach(tr => { resPub[tr.researcherId] = (resPub[tr.researcherId] || 0) + 1; }));
+      const topPub = Object.entries(resPub).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([rid, cnt]) => {
+        const r = researchers.find(r => r.id === rid);
+        return r ? `${r.title ? r.title + " " : ""}${r.name}: ${cnt} yay\u0131n` : null;
+      }).filter(Boolean).join("\n");
+      return `\ud83d\udcc4 Yay\u0131n \u0130ndeks Da\u011f\u0131l\u0131m\u0131:\n${idxLines}\n\nToplam: ${pubTopics.length} yay\u0131nl\u0131 konu\n\n\ud83c\udfc6 En \u00e7ok yay\u0131na sahip ara\u015ft\u0131rmac\u0131lar:\n${topPub || "Veri yok"}`;
+    }
+
+    // ── PROJE TÜRÜ DETAY ──
+    if (hasWord("proje t\u00fcr\u00fc detay", "proje t\u00fcrleri detay", "t\u00fcr detay")) {
+      const typeCounts = {};
+      projects.forEach(p => { 
+        const t = p.type || "Belirtilmemi\u015f"; 
+        if (!typeCounts[t]) typeCounts[t] = { total: 0, active: 0, completed: 0, proposed: 0, budget: 0 };
+        typeCounts[t].total++;
+        if (p.status === "active") typeCounts[t].active++;
+        if (p.status === "completed") typeCounts[t].completed++;
+        if (p.status === "proposed" || p.status === "planning") typeCounts[t].proposed++;
+        typeCounts[t].budget += parseFloat(p.budget) || 0;
+      });
+      const lines = Object.entries(typeCounts).sort((a, b) => b[1].total - a[1].total).map(([k, v]) => 
+        `\u2022 ${k}: ${v.total} proje (${v.active} aktif, ${v.completed} tamamlanan) \u2014 \u20ba${v.budget.toLocaleString("tr-TR")}`
+      ).join("\n");
+      return `\ud83d\udcc1 Proje T\u00fcr\u00fc Detayl\u0131 Da\u011f\u0131l\u0131m:\n${lines}`;
+    }
+
     // ── BAP SPESIFIK ──
     if (hasWord("bap")) {
       let items = projects.filter(p => (p.type || "").toLowerCase() === "bap"); if (year) items = filterByYear(items, year);
@@ -5720,7 +6310,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 
     // ── YARDIM ──
     if (hasWord("yard\u0131m", "help", "ne sor", "neler sor", "komut")) {
-      return "Sorabilece\u011finiz soru kategorileri:\n\n\ud83d\udcca Genel: \u00d6zet, durum, kar\u015f\u0131la\u015ft\u0131rma\n\ud83d\udc65 Ara\u015ft\u0131rmac\u0131: Ka\u00e7 ki\u015fi, A\u00d6F, unvan\n\ud83d\udcd6 Konu: Ka\u00e7 konu, aktif/tamamlanan\n\ud83d\udcc1 Proje: BAP/T\u00dcB\u0130TAK, b\u00fct\u00e7e\n\ud83c\udf10 Uluslararas\u0131: Ortakl\u0131klar, \u00fclkeler\n\ud83d\udcc8 Performans: Verimlilik, g\u00f6revler\n\ud83d\udd0d Arama: Herhangi bir kelime yaz\u0131n!\n\n\u00d6rne\u011fin: \"yapay zeka\", \"XR\", \"uzaktan e\u011fitim\", \"Almanya\" gibi kelimelerle konular\u0131, projeleri ve ara\u015ft\u0131rmac\u0131lar\u0131 arayabilirsiniz.";
+      return "Sorabilece\u011finiz soru kategorileri:\n\n\ud83d\udcca Genel: \u00d6zet, durum, kar\u015f\u0131la\u015ft\u0131rma\n\ud83d\udc65 Ara\u015ft\u0131rmac\u0131: Ka\u00e7 ki\u015fi, A\u00d6F, unvan\n\ud83d\udcd6 Konu: Ka\u00e7 konu, aktif/tamamlanan\n\ud83d\udcc1 Proje: BAP/T\u00dcB\u0130TAK, b\u00fct\u00e7e\n\ud83d\udcc4 Yay\u0131n \u0130ndeksleri: SCI, SSCI, Scopus da\u011f\u0131l\u0131m\u0131\n\ud83d\uddc2\ufe0f Proje T\u00fcrleri: T\u00fcr detaylar\u0131, b\u00fct\u00e7e da\u011f\u0131l\u0131m\u0131\n\ud83c\udf10 Uluslararas\u0131: Ortakl\u0131klar, \u00fclkeler\n\ud83d\udcc8 Performans: Verimlilik, g\u00f6revler\n\ud83d\udd0d Arama: Herhangi bir kelime yaz\u0131n!\n\n\u00d6rne\u011fin: \"yapay zeka\", \"SCI\", \"BAP\", \"Almanya\" gibi kelimelerle arayabilirsiniz.";
     }
 
     // ── FALLBACK ──
@@ -5932,6 +6522,8 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
     if (low.includes("xr") || low.includes("vr") || low.includes("ar ")) return ["yapay zeka", "STEM konuları", "Erasmus+ projeleri"];
     if (low.includes("uzaktan") || low.includes("eğitim") || low.includes("öğretim")) return ["yapay zeka", "e-Kampüs", "Araştırmacı sayısı"];
     if (low.includes("horizon") || low.includes("erasmus")) return ["Uluslararası projeler", "BAP projeleri", "Toplam bütçe"];
+    if (low.includes("yayın") || low.includes("indeks") || low.includes("sci") || low.includes("ssci") || low.includes("scopus") || low.includes("publikasyon")) return ["Yayın indeks dağılımı", "Proje türü dağılımı", "Verimlilik metrikleri"];
+    if (low.includes("proje türü detay") || low.includes("proje türleri")) return ["BAP projeleri", "TÜBİTAK projeleri", "Yayın indeks dağılımı"];
     return ["Genel özet", "yapay zeka", "Yardım"];
   }, []);
 
@@ -6014,6 +6606,8 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
       { label: "Konular", emoji: "📖", subs: ["Kaç konu var?", "Aktif konular", "En çok konusu olan"] },
       { label: "Projeler", emoji: "📁", subs: ["Proje türü dağılımı", "BAP projeleri", "TÜBİTAK projeleri", "Uluslararası projeler", "Toplam bütçe"] },
       { label: "Performans", emoji: "📈", subs: ["Verimlilik metrikleri", "Görev özeti", "Rol dağılımı", "PI deneyimi olanlar"] },
+      { label: "Yayın İndeksleri", emoji: "📄", subs: ["Yayın indeks dağılımı", "SCI yayınları", "SSCI yayınları", "Scopus yayınları"] },
+      { label: "Proje Türleri", emoji: "🗂️", subs: ["Proje türü dağılımı", "Proje türü detayları", "BAP projeleri", "TÜBİTAK projeleri"] },
     ];
     if (searchThemes.themes.length > 0) cats.push({ label: "Temalar", emoji: "🏷️", subs: searchThemes.themes.slice(0, 4) });
     if (searchThemes.areas.length > 0) cats.push({ label: "Araştırma Alanları", emoji: "🔬", subs: searchThemes.areas.slice(0, 4) });
@@ -6284,6 +6878,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [categoryOptionsSt, setCategoryOptions] = useState(DEFAULT_CATEGORY_OPTIONS);
   const [eduDegreeOptionsSt, setEduDegreeOptions] = useState(DEFAULT_EDU_DEGREES);
   const [eduStatusOptionsSt, setEduStatusOptions] = useState(DEFAULT_EDU_STATUSES);
+  const [indexTypesConfigSt, setIndexTypesConfig] = useState(DEFAULT_INDEX_TYPES);
+  const [projectTypeCoeffSt, setProjectTypeCoeff] = useState(DEFAULT_PROJECT_TYPE_COEFF);
   const [showSettings, setShowSettings] = useState(false);
   const [syncStatus, setSyncStatus] = useState("idle"); // "idle" | "syncing" | "done"
   const [lastSavedAt, setLastSavedAt] = useState(null); // Son kayıt zamanı
@@ -6313,6 +6909,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         cfg_priorities: priorityConfigSt, cfg_ptypes: projectTypeOptionsSt,
         cfg_categories: categoryOptionsSt, cfg_degrees: eduDegreeOptionsSt,
         cfg_edustatus: eduStatusOptionsSt,
+        cfg_indexTypes: indexTypesConfigSt, cfg_projectTypeCoeff: projectTypeCoeffSt,
       };
       const now = Date.now();
       const dateStr = new Date(now).toISOString().slice(0, 10); // "2026-02-28"
@@ -6373,7 +6970,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     } catch (err) {
       setToast({ type: "error", message: "Yedekleme hatası: " + err.message });
     }
-  }, [saveBackupToFirestore, researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+  }, [saveBackupToFirestore, researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, indexTypesConfigSt, projectTypeCoeffSt, user]);
 
   // 4. JSON dosyasından geri yükle
   const restoreFromJSON = useCallback((file) => {
@@ -6392,6 +6989,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         if (data.cfg_categories) setCategoryOptions(data.cfg_categories);
         if (data.cfg_degrees) setEduDegreeOptions(data.cfg_degrees);
         if (data.cfg_edustatus) setEduStatusOptions(data.cfg_edustatus);
+        if (data.cfg_indexTypes) setIndexTypesConfig(data.cfg_indexTypes);
+        if (data.cfg_projectTypeCoeff !== undefined) setProjectTypeCoeff(data.cfg_projectTypeCoeff);
         setToast({ type: "success", message: "✅ Veriler yedeğten geri yüklendi! Firestore'a kaydediliyor..." });
       } catch (err) {
         setToast({ type: "error", message: "Geçersiz yedek dosyası: " + err.message });
@@ -6587,8 +7186,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const markReady = (docId) => {
       if (!readyDocs.has(docId)) {
         readyDocs.add(docId);
-        console.log("[SYNC] Doc hazır:", docId, "(" + readyDocs.size + "/11)");
-        if (readyDocs.size >= 11) {
+        console.log("[SYNC] Doc hazır:", docId, "(" + readyDocs.size + "/13)");
+        if (readyDocs.size >= 13) {
           firestoreReady.current = true;
           setFirestoreStatus("ready");
           console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
@@ -6634,7 +7233,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     // Fallback: 5 saniye sonra firestoreReady'yi zorla
     const readyTimeout = setTimeout(() => {
       if (!firestoreReady.current) {
-        console.warn("[SYNC] ⚠️ 5s timeout — firestoreReady zorlanıyor (" + readyDocs.size + "/11 hazır)");
+        console.warn("[SYNC] ⚠️ 5s timeout — firestoreReady zorlanıyor (" + readyDocs.size + "/13 hazır)");
         firestoreReady.current = true;
         setFirestoreStatus(readyDocs.size > 0 ? "ready" : "error");
       }
@@ -6651,6 +7250,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     listen("cfg_categories", setCategoryOptions, DEFAULT_CATEGORY_OPTIONS, true);
     listen("cfg_degrees", setEduDegreeOptions, DEFAULT_EDU_DEGREES, true);
     listen("cfg_edustatus", setEduStatusOptions, DEFAULT_EDU_STATUSES, true);
+    listen("cfg_indexTypes", setIndexTypesConfig, DEFAULT_INDEX_TYPES, false);
+    listen("cfg_projectTypeCoeff", setProjectTypeCoeff, DEFAULT_PROJECT_TYPE_COEFF, true);
 
     // ─── Force Reload dinleyicisi ───
     const forceReloadUnsub = onSnapshot(doc(db, "arge", "_force_reload"), (snap) => {
@@ -6747,6 +7348,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_ptypes", projectTypeOptionsSt); }, [projectTypeOptionsSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_categories", categoryOptionsSt); }, [categoryOptionsSt, writeConfigToFirestore]);
+  useEffect(() => { writeToFirestore("cfg_indexTypes", indexTypesConfigSt); }, [indexTypesConfigSt, writeToFirestore]);
+  useEffect(() => { writeConfigToFirestore("cfg_projectTypeCoeff", projectTypeCoeffSt); }, [projectTypeCoeffSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_degrees", eduDegreeOptionsSt); }, [eduDegreeOptionsSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_edustatus", eduStatusOptionsSt); }, [eduStatusOptionsSt, writeConfigToFirestore]);
 
@@ -6804,6 +7407,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   categoryOptions = categoryOptionsSt;
   eduDegreeOptions = eduDegreeOptionsSt;
   eduStatusOptions = eduStatusOptionsSt;
+  indexTypesConfig = indexTypesConfigSt;
+  projectTypeCoeff = projectTypeCoeffSt;
 
   const showToast = (message, type = "success") => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -7668,6 +8273,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         categoryOptions={categoryOptions} onCategoryOptionsChange={setCategoryOptions}
         eduDegreeOptions={eduDegreeOptions} onEduDegreeOptionsChange={setEduDegreeOptions}
         eduStatusOptions={eduStatusOptions} onEduStatusOptionsChange={setEduStatusOptions}
+        indexTypesConfig={indexTypesConfig} onIndexTypesConfigChange={setIndexTypesConfig}
+        projectTypeCoeffConfig={projectTypeCoeff} onProjectTypeCoeffChange={setProjectTypeCoeff}
         quickLinks={quickLinks} onQuickLinksChange={setQuickLinks}
         onResetDefaults={() => {
           if (confirm("Tüm ayarları varsayılana sıfırlamak istediğinize emin misiniz?")) {
@@ -7675,6 +8282,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             setPriorityConfig(DEFAULT_PRIORITY_CONFIG); setProjectTypeOptions(DEFAULT_PROJECT_TYPES);
             setCategoryOptions(DEFAULT_CATEGORY_OPTIONS); setEduDegreeOptions(DEFAULT_EDU_DEGREES);
             setEduStatusOptions(DEFAULT_EDU_STATUSES);
+            setIndexTypesConfig(DEFAULT_INDEX_TYPES); setProjectTypeCoeff(DEFAULT_PROJECT_TYPE_COEFF);
           }
         }}
         onExportData={() => {
@@ -7686,6 +8294,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               roles: roleConfigSt, statuses: statusConfigSt, priorities: priorityConfigSt,
               projectTypes: projectTypeOptionsSt, categories: categoryOptionsSt,
               eduDegrees: eduDegreeOptionsSt, eduStatuses: eduStatusOptionsSt,
+              indexTypes: indexTypesConfigSt, projectTypeCoeff: projectTypeCoeffSt,
             }
           };
           const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -7710,6 +8319,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             if (data.config.categories) setCategoryOptions(data.config.categories);
             if (data.config.eduDegrees) setEduDegreeOptions(data.config.eduDegrees);
             if (data.config.eduStatuses) setEduStatusOptions(data.config.eduStatuses);
+            if (data.config.indexTypes) setIndexTypesConfig(data.config.indexTypes);
+            if (data.config.projectTypeCoeff !== undefined) setProjectTypeCoeff(data.config.projectTypeCoeff);
           }
           showToast(`Veriler içe aktarıldı: ${data.researchers.length} araştırmacı, ${data.topics.length} konu, ${(data.projects || []).length} proje`);
         }}
@@ -7723,6 +8334,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           setPriorityConfig(DEFAULT_PRIORITY_CONFIG); setProjectTypeOptions(DEFAULT_PROJECT_TYPES);
           setCategoryOptions(DEFAULT_CATEGORY_OPTIONS); setEduDegreeOptions(DEFAULT_EDU_DEGREES);
           setEduStatusOptions(DEFAULT_EDU_STATUSES);
+          setIndexTypesConfig(DEFAULT_INDEX_TYPES); setProjectTypeCoeff(DEFAULT_PROJECT_TYPE_COEFF);
           showToast("Tüm veriler sıfırlandı", "warning");
         }}
         onForceSync={forceSync} syncStatus={syncStatus} onForcePublish={forcePublish}

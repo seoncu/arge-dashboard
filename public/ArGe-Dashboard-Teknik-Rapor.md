@@ -6,7 +6,7 @@
 
 **Hazırlayan:** Sefa Emre Öncü
 **Kurum:** Anadolu Üniversitesi — Açıköğretim Fakültesi
-**Versiyon:** 3.0 | **Tarih:** 28 Şubat 2026
+**Versiyon:** 4.0 | **Tarih:** 1 Mart 2026
 
 ---
 
@@ -14,7 +14,7 @@
 
 Bu çalışmada, Anadolu Üniversitesi Açıköğretim Fakültesi bünyesinde geliştirilen Ar-Ge Yönetim Dashboard'ının teknik mimarisi, yazılım geliştirme süreci, işlevsel özellikleri ve kurumsal katkıları akademik bir çerçevede kapsamlı biçimde ele alınmaktadır. Yükseköğretim kurumlarında Ar-Ge faaliyetlerinin etkin yönetimi, kurumsal performans değerlendirmesi ve stratejik karar alma süreçleri açısından kritik bir gereksinim olarak öne çıkmaktadır. Geleneksel yöntemlerle — Excel tabloları, e-posta yazışmaları ve fiziksel dosyalama sistemleri gibi — yürütülen Ar-Ge takibi; veri bütünlüğü, erişilebilirlik ve gerçek zamanlı işbirliği konularında ciddi sınırlılıklar barındırmaktadır. Bu bağlamda geliştirilen platform, React 18 ve Firebase Firestore bulut altyapısı üzerine inşa edilmiş olup araştırmacı, konu ve proje yönetimini merkezi bir web arayüzünden gerçek zamanlı olarak yürütmeyi mümkün kılmaktadır.
 
-Geliştirme sürecinde, üretken yapay zekâ modellerinin yazılım mühendisliğine entegrasyonunu konu alan güncel bir yaklaşım olan 'Vibe Coding' metodolojisi benimsenmiştir. Bu metodoloji çerçevesinde, yaklaşık 7.700 satırlık monolitik bileşen mimarisi büyük ölçüde yapay zekâ destekli olarak üretilmiştir. Sistem; dört kademeli rol tabanlı erişim kontrolü (master, yönetici, editör, görüntüleyici), sürükle-bırak etkileşimi ile veri yönetimi, altı sekmeli çok boyutlu istatistik modülleri (özet, araştırmacı istatistikleri, kişi bazlı rapor, zaman istatistikleri, konu bazlı ve proje bazlı analizler), Firebase Firestore ile gerçek zamanlı çoklu kullanıcı senkronizasyonu, Gemini API tabanlı yapay zekâ chatbot asistanı ve kapsamlı filtreleme mekanizmaları gibi ileri düzey özellikler sunmaktadır. Ayrıca proje türü dağılımı, projelendirilme durumu, uluslararası ortaklık analizleri ve araştırmacı performans değerlendirmesi gibi karar destek fonksiyonları da sistemin temel bileşenleri arasında yer almaktadır. Bu çalışma, yükseköğretim kurumlarında Ar-Ge faaliyetlerinin dijital yönetimi için ölçeklenebilir, sürdürülebilir ve tekrarlanabilir bir referans model ortaya koymaktadır.
+Geliştirme sürecinde, üretken yapay zekâ modellerinin yazılım mühendisliğine entegrasyonunu konu alan güncel bir yaklaşım olan 'Vibe Coding' metodolojisi benimsenmiştir. Bu metodoloji çerçevesinde, yaklaşık 8.300 satırlık monolitik bileşen mimarisi büyük ölçüde yapay zekâ destekli olarak üretilmiştir. Sistem; dört kademeli rol tabanlı erişim kontrolü (master, yönetici, editör, görüntüleyici), sürükle-bırak etkileşimi ile veri yönetimi, sekiz sekmeli çok boyutlu istatistik modülleri (özet, araştırmacı istatistikleri, kişi bazlı rapor, zaman istatistikleri, konu bazlı, proje bazlı, yayın indeksleri ve işbirliği matrisi analizleri), Firebase Firestore ile gerçek zamanlı çoklu kullanıcı senkronizasyonu, Gemini API tabanlı yapay zekâ chatbot asistanı ve kapsamlı filtreleme mekanizmaları gibi ileri düzey özellikler sunmaktadır. Ayrıca, akademik yayın indeks türü takip sistemi (SCI, SCI-E, SSCI, AHCI, ESCI, Scopus, TR Dizin) ve araştırmacılar arası işbirliği matrisi analitik modülleri de sistemin temel bileşenleri arasında yer almaktadır. Ayrıca proje türü dağılımı, projelendirilme durumu, uluslararası ortaklık analizleri ve araştırmacı performans değerlendirmesi gibi karar destek fonksiyonları da sistemin temel bileşenleri arasında yer almaktadır. Bu çalışma, yükseköğretim kurumlarında Ar-Ge faaliyetlerinin dijital yönetimi için ölçeklenebilir, sürdürülebilir ve tekrarlanabilir bir referans model ortaya koymaktadır.
 
 **Anahtar Kelimeler:** *Ar-Ge Yönetimi, Vibe Coding, React Dashboard, Firebase Firestore, Yapay Zekâ Destekli Yazılım Geliştirme*
 
@@ -24,7 +24,7 @@ Geliştirme sürecinde, üretken yapay zekâ modellerinin yazılım mühendisli�
 
 *This study comprehensively examines the technical architecture, software development process, functional features, and institutional contributions of the R&D Management Dashboard developed at Anadolu University, Faculty of Open Education. Effective management of research and development activities in higher education institutions constitutes a critical requirement for institutional performance evaluation and strategic decision-making processes. Traditional methods of R&D tracking — including spreadsheets, email correspondence, and physical filing systems — present significant limitations in terms of data integrity, accessibility, and real-time collaboration. The platform developed within this context is built upon React 18 and Firebase Firestore cloud infrastructure, enabling centralized, real-time management of researchers, research topics, and projects through a unified web interface.*
 
-*Throughout the development process, the 'Vibe Coding' methodology — a contemporary approach addressing the integration of generative AI models into software engineering — was adopted. Within this framework, a monolithic component architecture of approximately 7,700 lines was largely produced with AI assistance. The system offers advanced capabilities including four-tier role-based access control (master, administrator, editor, viewer), drag-and-drop data management interactions, six-tab multi-dimensional statistics modules (summary, researcher statistics, person-based reports, time statistics, topic-based and project-based analyses), real-time multi-user synchronization via Firebase Firestore, a Gemini API-powered AI chatbot assistant, and comprehensive filtering mechanisms. Additionally, decision support functions such as project type distribution analysis, project conversion tracking, international partnership analytics, and researcher performance evaluation constitute core components of the system. This work presents a scalable, sustainable, and replicable reference model for the digital management of R&D activities in higher education institutions.*
+*Throughout the development process, the 'Vibe Coding' methodology — a contemporary approach addressing the integration of generative AI models into software engineering — was adopted. Within this framework, a monolithic component architecture of approximately 8,300 lines was largely produced with AI assistance. The system offers advanced capabilities including four-tier role-based access control (master, administrator, editor, viewer), drag-and-drop data management interactions, eight-tab multi-dimensional statistics modules (summary, researcher statistics, person-based reports, time statistics, topic-based, project-based, publication indices, and collaboration matrix analyses), real-time multi-user synchronization via Firebase Firestore, a Gemini API-powered AI chatbot assistant, and comprehensive filtering mechanisms. Furthermore, the publication index type tracking system (SCI, SCI-E, SSCI, AHCI, ESCI, Scopus, TR Dizin) and inter-researcher collaboration matrix analytics modules represent additional core components of the system. Additionally, decision support functions such as project type distribution analysis, project conversion tracking, international partnership analytics, and researcher performance evaluation constitute core components of the system. This work presents a scalable, sustainable, and replicable reference model for the digital management of R&D activities in higher education institutions.*
 
 **Keywords:** *R&D Management, Vibe Coding, React Dashboard, Firebase Firestore, AI-Assisted Software Development*
 
@@ -57,6 +57,8 @@ Bu çalışma, yukarıda tanımlanan problemlere çözüm sunmak üzere tasarlan
 - **İstatistik ve Analitik:** Özet, kişi, zaman, kurum bazlı grafikler; sıralama tablosu
 - **Yedekleme Sistemi:** JSON dışa/içe aktarım, Firestore yedekleme, 30 günlük otomatik hatırlatma
 - **Yapılandırma Yönetimi:** Roller, durumlar, öncelikler, kategoriler, proje türleri
+- **Yayın İndeks Türü Sistemi:** Akademik yayın indeksleri (SCI, SSCI, Scopus vb.) takibi, katsayılı puanlama, konfigürasyon yönetimi
+- **İşbirliği Matrisi:** Araştırmacılar arası ortak çalışma analizi, çapraz tablo heatmap görselleştirmesi
 
 ---
 
@@ -163,7 +165,7 @@ Uygulama, monolitik tek dosya mimarisi kullanmaktadır. Dashboard.jsx dosyası y
 
 ### 3.3 Firestore Veri Modeli
 
-Tüm veriler Firestore'da 'arge' koleksiyonu altında 11 doküman halinde tutulmaktadır. Her doküman, belirli bir veri tipini temsil etmekte ve items veya data alanı içermektedir. Bu yapı, Firestore'un doküman boyutu sınırlamalarına uygun olup aynı zamanda onSnapshot ile tek seferde tüm koleksiyonun dinlenmesine olanak tanımaktadır.
+Tüm veriler Firestore'da 'arge' koleksiyonu altında 13 doküman halinde tutulmaktadır. Her doküman, belirli bir veri tipini temsil etmekte ve items veya data alanı içermektedir. Bu yapı, Firestore'un doküman boyutu sınırlamalarına uygun olup aynı zamanda onSnapshot ile tek seferde tüm koleksiyonun dinlenmesine olanak tanımaktadır.
 
 | Doküman | Yapı | Açıklama |
 |---------|------|----------|
@@ -178,6 +180,8 @@ Tüm veriler Firestore'da 'arge' koleksiyonu altında 11 doküman halinde tutulm
 | cfg_categories | { items: [...] } | Konu kategorileri |
 | cfg_degrees | { items: [...] } | Akademik dereceler |
 | cfg_edustatus | { items: [...] } | Eğitim durumları |
+| cfg_indexTypes | { items: [...] } | Yayın indeks türleri (SCI, SSCI, Scopus vb.) ve katsayıları |
+| cfg_projectTypeCoeff | { data: {...} } | Proje türü bonus katsayısı |
 
 ### 3.4 Varlık İlişki Modeli
 
@@ -313,7 +317,7 @@ Proje kartları konu kartlarına benzer yapıda olup ek bilgiler içermektedir: 
 
 ### 4.3 İstatistik ve Analitik Modülü (StatsModal)
 
-İstatistik modalı altı sekmeden oluşmakta olup her sekme farklı bir analiz perspektifi sunmaktadır. Modal başında beş adet filtre bulunmaktadır: araştırmacı, durum, proje türü, yıl ve AÖF üyelik filtresi. Filtreler uygulandığında tüm sekmelerdeki istatistikler otomatik olarak güncellenmektedir. Grafikler SimplePieChart, SimpleBarChart ve SimpleLineChart bileşenleri ile oluşturulmaktadır.
+İstatistik modalı sekiz sekmeden oluşmakta olup her sekme farklı bir analiz perspektifi sunmaktadır. Modal başında beş adet filtre bulunmaktadır: araştırmacı, durum, proje türü, yıl ve AÖF üyelik filtresi. Filtreler uygulandığında tüm sekmelerdeki istatistikler otomatik olarak güncellenmektedir. Grafikler SimplePieChart, SimpleBarChart ve SimpleLineChart bileşenleri ile oluşturulmaktadır.
 
 **Proje Türü Filtre Mantığı:** Tüm istatistik hesaplamalarında, proje türü metrikleri yalnızca projelendirilmiş konuları (bir projeye bağlı konuları) dikkate almaktadır. Projelendirilmemiş konular (taslak fikirleri) proje türü dağılımları, sayımları ve oranlarından hariç tutulur.
 
@@ -325,6 +329,8 @@ Proje kartları konu kartlarına benzer yapıda olup ek bilgiler içermektedir: 
 | Zaman İstatistikleri | Yıl/ay bazlı konu ve proje dağılımı, trend çizgi grafikleri, detay tablosu |
 | Konu Bazlı | Konu durumu dağılımı, aylık başlangıç/bitiş grafikleri, detay tablosu |
 | Proje Bazlı | Uluslararası ortaklık, proje türü dağılımı, ülke/kurum analizi, drill-down |
+| Yayın İndeksleri | Genel indeks dağılımı, kişi/unvan bazlı dağılım, projelendirilme durumu, yıl bazlı trend |
+| İşbirliği | Araştırmacılar arası işbirliği matrisi heatmap'i, en sık birlikte çalışan çiftler |
 
 #### 4.3.1 Özet Sekmesi
 
@@ -379,7 +385,7 @@ Kart görünümüne alternatif olarak tablo biçiminde veri görüntüleme seçe
 
 #### 4.5.3 Sıralama Tablosu (LeaderboardModal)
 
-Araştırmacıları çeşitli kriterlere göre sıralayan ve puanlayan bu modal, konu sayısı, proje katılımı ve görev tamamlama oranı gibi metrikleri hesaplayarak bir liderlik tablosu oluşturmaktadır. AÖF üyelik filtresi ve sıralama kriteri seçimi desteklenmektedir.
+Araştırmacıları çeşitli kriterlere göre sıralayan ve puanlayan bu modal, konu sayısı, proje katılımı, görev tamamlama oranı, yayın indeks bonusu ve proje türü bonusu gibi metrikleri hesaplayarak bir liderlik tablosu oluşturmaktadır. Puanlama formülü, rol ağırlıkları, tamamlanan konu sayısı, görev tamamlama oranı, yayın indeks katsayıları (SCI: 10, SCI-E: 9, SSCI: 8, AHCI: 7 vb.) ve proje türü bonus katsayısı (varsayılan: 5) bileşenlerinden oluşmaktadır. AÖF üyelik filtresi ve çoklu sıralama kriteri seçimi desteklenmektedir.
 
 #### 4.5.4 Takvim (CalendarModal)
 
@@ -399,7 +405,7 @@ Dashboard bünyesinde basit bir kural tabanlı sohbet asistanı bulunmaktadır. 
 
 #### 4.5.8 Ayarlar Paneli (SettingsModal)
 
-Yapılandırılabilir parametrelerin yönetildiği bu panel; roller, konu/proje durumları, öncelik seviyeleri, konu kategorileri, proje türleri, akademik dereceler ve eğitim durumlarını kapsamaktadır. Her yapılandırma öğesi eklenebilmekte, düzenlenebilmekte ve silinebilmektedir. Değişiklikler Firestore'a anında yansıtılmakta ve tüm bağlı istemcilerde gerçek zamanlı olarak güncellenmektedir.
+Yapılandırılabilir parametrelerin yönetildiği bu panel; roller, konu/proje durumları, öncelik seviyeleri, konu kategorileri, proje türleri, akademik dereceler, eğitim durumları, yayın indeks türleri ve puanlama katsayıları olmak üzere dokuz yapılandırma sekmesini kapsamaktadır. Yayın İndeksleri sekmesinde her indeks türü için etiket, katsayı ve renk bilgisi düzenlenebilmekte; Puanlama sekmesinde proje türü bonus katsayısı ve tüm puanlama formülü görüntülenebilmektedir. Her yapılandırma öğesi eklenebilmekte, düzenlenebilmekte ve silinebilmektedir. Değişiklikler Firestore'a anında yansıtılmakta ve tüm bağlı istemcilerde gerçek zamanlı olarak güncellenmektedir.
 
 ### 4.6 Yetkilendirme ve Rol Sistemi
 
@@ -411,6 +417,42 @@ Sistem, dört kademeli bir yetkilendirme modeli uygulamaktadır. Her kullanıcı
 | admin | Tüm CRUD işlemleri + ayar düzenleme + manuel senkronizasyon |
 | editor | Ekleme ve düzenleme yetkileri, silme kısıtlı |
 | user | Yalnızca görüntüleme (salt okunur erişim) |
+
+### 4.7 Yayın İndeks Türü Sistemi
+
+Araştırma konularının tamamlanmasının ardından, ilgili konunun akademik bir yayına dönüştürülüp dönüştürülmediğini ve bu yayının hangi uluslararası indekslerde yer aldığını takip etmek amacıyla kapsamlı bir yayın indeks türü sistemi geliştirilmiştir. Bu sistem, kurumsal Ar-Ge çıktılarının akademik etkisinin ölçülmesi, araştırmacı performansının değerlendirilmesi ve kurumsal araştırma stratejisinin yönlendirilmesi açısından kritik bir bileşen olarak tasarlanmıştır.
+
+#### 4.7.1 Veri Modeli ve Yapılandırma
+
+Sistem, iki yeni Firestore yapılandırma dokümanı üzerine inşa edilmiştir. `cfg_indexTypes` dokümanı, her indeks türü için benzersiz tanımlayıcı (`id`), kullanıcıya gösterilen etiket (`label`), puanlama katsayısı (`coefficient`) ve görsel renk kodu (`color`) bilgilerini barındırmaktadır. Varsayılan yapılandırma sekiz indeks türünü kapsamaktadır: SCI (katsayı: 10), SCI-E (9), SSCI (8), AHCI (7), ESCI (6), Scopus (5), TR Dizin (4) ve Diğer (2). `cfg_projectTypeCoeff` dokümanı ise projelendirilmiş konulara uygulanan bonus katsayısını (varsayılan: 5) saklamaktadır. Her iki yapılandırma öğesi de SettingsModal üzerinden dinamik olarak düzenlenebilmektedir.
+
+Konu veri modelinde, tamamlanmış konulara eklenen `publishingIndex` alanı üç bileşen içermektedir: seçilen indeks türlerinin dizisi (`types`), yayınlama tarihi (`date`) ve opsiyonel not (`notes`). Bu yapı, bir konunun aynı anda birden fazla indekste yer alması senaryosunu desteklemektedir (örneğin, hem SCI hem SSCI indekslerinde listelenen disiplinler arası bir yayın).
+
+#### 4.7.2 Kullanıcı Arayüzü Entegrasyonu
+
+Yayın indeks bilgileri, sistemin beş farklı bileşeninde görüntülenmektedir. DetailModal'da konu düzenleme modunda, status "completed" seçildiğinde otomatik olarak indeks seçim arayüzü açılmaktadır. Bu arayüz, renkli checkbox'lar, tarih seçici ve not alanından oluşmaktadır. Okuma modunda ise seçilen indeksler renkli badge'ler olarak gösterilmektedir. TopicCard bileşeninde ilk üç indeks badge'i kompakt biçimde görüntülenmekte; fazla indeksler "+N" göstergesiyle belirtilmektedir. ResearcherCard'da araştırmacının toplam yayın sayısı ve indeks dağılımı sunulmaktadır. ResearcherDetailModal'da kişi bazlı yatay çubuk grafik ile indeks türlerinin detaylı dağılımı görselleştirilmektedir.
+
+Konunun durumu "tamamlandı"dan başka bir duruma değiştirildiğinde, `publishingIndex` verisi otomatik olarak temizlenmekte; böylelikle eski veri kalıntılarının önüne geçilmektedir.
+
+#### 4.7.3 Puanlama Sistemi ve Leaderboard Entegrasyonu
+
+Sıralama tablosundaki puanlama formülü, yayın indeks sistemiyle genişletilmiştir. Temel puan (rol ağırlıkları + tamamlanan konu sayısı × 15 + tamamlanan görev sayısı × 3 − başarısız konu sayısı × 20) hesaplandıktan sonra, iki yeni bonus bileşeni eklenmektedir. İndeks bonusu, araştırmacının tamamlanmış ve indekslenmiş konularındaki tüm indeks katsayılarının toplamıdır (örneğin, SCI + SSCI = 10 + 8 = 18 puan). Proje bonusu, tamamlanmış ve bir projeye bağlanmış konu sayısı ile proje türü katsayısının çarpımıdır. Leaderboard tablosuna "Yayın" ve "Proje Pn." sütunları eklenmiştir.
+
+#### 4.7.4 İstatistik Modülü: Yayın İndeksleri Sekmesi
+
+StatsModal'a eklenen "Yayın İndeksleri" sekmesi beş analitik bileşen içermektedir. Özet kartlarında toplam yayın sayısı, projelendirilmiş yayın sayısı ve bağımsız yayın sayısı gösterilmektedir. Genel indeks dağılımı çubuk grafiği ile her indeks türünün toplam kullanım sayısı görselleştirilmektedir. Kişi bazlı tablo, her araştırmacının her indeks türündeki yayın sayısını matris formatında sunmaktadır. Unvan bazlı çubuk grafik, akademik unvanlara göre yayın dağılımını göstermektedir. Projelendirilme durumu pasta grafiği, yayınların proje bağlantılılık oranını görselleştirmektedir. Yıl bazlı yığılmış çubuk grafik, `publishingIndex.date` alanından çıkarılan yıl bilgisine göre indeks türlerinin zaman serisini sunmaktadır.
+
+### 4.8 İşbirliği Matrisi
+
+Araştırma ekosisteminin dinamiklerini anlamak ve kurumsal işbirliği kültürünü ölçmek amacıyla, araştırmacılar arası işbirliği matrisini gösteren kapsamlı bir analitik modül geliştirilmiştir. Bu modül, StatsModal'ın "İşbirliği" sekmesinde yer almaktadır.
+
+#### 4.8.1 Hesaplama Yöntemi
+
+İşbirliği verileri, aynı araştırma konusunda birlikte yer alan araştırmacı çiftlerinin tespitine dayanmaktadır. Sistemdeki her konu için, konuya atanmış araştırmacıların tüm ikili kombinasyonları (C(n,2)) hesaplanmakta ve her çift için ortak konu sayısı kaydedilmektedir. Örneğin, bir konuda Ali, Ayşe ve Murat birlikte çalışıyorsa; Ali-Ayşe, Ali-Murat ve Ayşe-Murat çiftlerinin her biri için birer işbirliği sayılmaktadır.
+
+#### 4.8.2 Görselleştirme
+
+Modül üç görselleştirme bileşeni sunmaktadır. Özet kartlarında toplam araştırmacı sayısı, toplam işbirliği sayısı ve benzersiz çift sayısı gösterilmektedir. En sık işbirliği yapan çiftler çubuk grafiği, en fazla 10 çifti indigo tonlarında çubuklarla görselleştirmektedir. Heatmap matrisi, tüm araştırmacıların çapraz tablosunu indigo renk yoğunluğuyla sunmaktadır; renk tonu işbirliği sayısına göre koyulaşmaktadır. Matris, simetrik yapıdadır (Ali-Ayşe = Ayşe-Ali) ve köşegen hücreleri devre dışı bırakılmıştır.
 
 ---
 
@@ -575,7 +617,7 @@ Veri kaybı riskinin sistematik biçimde denetlenmesi amacıyla kapsamlı bir ko
 
 ### 9.1 Gerçekleştirilen Çalışmanın Kapsamlı Özet Sonuçları
 
-Bu çalışmada, Anadolu Üniversitesi Açıköğretim Fakültesi'nin, geleneksel Ar-Ge yönetim sorunlarıyla karşı karşıya olan araştırma birimi için, merkezi, bulut tabanlı, gerçek zamanlı ve ölçeklenebilir bir web tabanlı yönetim dashboard'ı geliştirilmiştir. Sistem tasarlanmasında, araştırmacı katalog yönetimi, araştırma konularının ve proje portföyünün merkezi takibi, birden fazla yöneticinin eş zamanlı erişim ve düzenleme kapasitesi, çapraz varlık ilişkilerinin tutarlılığı ve bütünlüğü, çok katmanlı veri koruma ve yedekleme mekanizmaları, ve kullanıcı düzeyinde iş akışlarının analitik takibi gibi çok çeşitli kurumsal gereksinimleri karşılanmıştır. Teknik implementasyon açısından, uygulama yaklaşık 7.650 satır React (v18) fonksiyonel bileşen kodu içermekte olup, 20'den fazla ana ve yan bileşenden, 11 Firestore NoSQL doküman koleksiyonundan, 4 kademeli yetkilendirme ve rol yönetimi modelinden ve gerçek zamanlı snapshot dinleme mekanizmalarından oluşmaktadır. Sistem, tarayıcı önbelleğe alma (offline mode), otomatik veri senkronizasyonu ve çakışma çözme mekanizmaları da içermektedir, bu da yüksek erişilebilirlik ve dayanıklılık sağlamaktadır.
+Bu çalışmada, Anadolu Üniversitesi Açıköğretim Fakültesi'nin, geleneksel Ar-Ge yönetim sorunlarıyla karşı karşıya olan araştırma birimi için, merkezi, bulut tabanlı, gerçek zamanlı ve ölçeklenebilir bir web tabanlı yönetim dashboard'ı geliştirilmiştir. Sistem tasarlanmasında, araştırmacı katalog yönetimi, araştırma konularının ve proje portföyünün merkezi takibi, birden fazla yöneticinin eş zamanlı erişim ve düzenleme kapasitesi, çapraz varlık ilişkilerinin tutarlılığı ve bütünlüğü, çok katmanlı veri koruma ve yedekleme mekanizmaları, ve kullanıcı düzeyinde iş akışlarının analitik takibi gibi çok çeşitli kurumsal gereksinimleri karşılanmıştır. Teknik implementasyon açısından, uygulama yaklaşık 8.300 satır React (v18) fonksiyonel bileşen kodu içermekte olup, 20'den fazla ana ve yan bileşenden, 13 Firestore NoSQL doküman koleksiyonundan, 4 kademeli yetkilendirme ve rol yönetimi modelinden ve gerçek zamanlı snapshot dinleme mekanizmalarından oluşmaktadır. Sistem, tarayıcı önbelleğe alma (offline mode), otomatik veri senkronizasyonu ve çakışma çözme mekanizmaları da içermektedir, bu da yüksek erişilebilirlik ve dayanıklılık sağlamaktadır. Ayrıca, akademik yayın indeks türü takip sistemi ve işbirliği matrisi analitik modülleri, kapsamlı filtreleme mekanizmaları ile birlikte sistemin ileri düzey analitik yeteneklerini desteklemektedir.
 
 Projenin bilim ve teknoloji açısından en özgün ve değerli boyutu, geliştirme sürecinin tamamında yapay zekâ ajanlarının, geleneksel yazılım mühendisliği rollerine eşdeğer katılımcı olarak yer almasıdır. Anthropic'in Claude Opus 4 modeli; başlangıç mimarisinin tasarlanmasından, bileşen düzeyinde kod üretimi, karmaşık hata ayıklama operasyonları (closure kapanış sorunları, useState ve useEffect zamanlama hataları gibi), çapraz modül senkronizasyon auditinden, bu teknik raporun yazılmasına ve öz-değerlendirmesine kadar geliştirme sürecinin neredeyse tüm aşamalarında etkin ve müstakil rol üstlenmiştir. Bu deneyim, Karpathy (2025) tarafından ortaya konan 'vibe coding' paradigmasının (doğal dille iletişim kurarak kod üretme), gerçek dünya endüstriyel koşullarında, karmaşık ve çok modüllü yazılım sistemleri bağlamında başarıyla uygulanabilir olduğunu gösteren somut ve kapsamlı bir vaka çalışması niteliğindedir.
 
@@ -585,7 +627,7 @@ Bu çalışma, yükseköğretim yönetimi, yapay zekâ uygulamaları ve yazılı
 
 **Yükseköğretimde Ar-Ge Yönetimi ve Kurumsal Zeka:** Türkiye'deki çoğu üniversitenin karşı karşıya olduğu dağınık, yapılandırılmamış veri yönetimi sorununa, bulut tabanlı gerçek zamanlı merkezi bir çözüm geliştirilmiştir. Bu çözüm, kurumsal araştırma intelijen (research intelligence) oluşturulmesini, portföy analitikleri yapılmasını ve stratejik karar alma süreçlerinin iyileştirilmesini sağlamaktadır. Proje öncesi ve sonrası durumu karşılaştırdığında, veri erişim süresi yüzde 85 azalmış, veri tutarlılık sorunları ortadan kaldırılmış, ve yönetim raporlarının hazırlanma süresi yüzde 70 kısalmıştır.
 
-**Yapay Zekâ Destekli Yazılım Geliştirme ve Vibe Coding Paradigması:** Bu proje, 2025 yılında yazılım geliştirme topluluğunda ortaya konan vibe coding metodolojisinin, sadece basit prototipler veya gösterim amaçlı ufak uygulamalarda değil, 7.650+ satırlık, üretim ortamında çalışan, çoklu kullanıcılı, durum yönetimi karmaşık bir enterprise uygulamasında başarıyla kullanılabileceğini göstermiştir. Bu bulgu, LLM tabanlı yazılım geliştirme araçlarının olgunlaşma seviyesi hakkında önemli bilgiler sunmaktadır.
+**Yapay Zekâ Destekli Yazılım Geliştirme ve Vibe Coding Paradigması:** Bu proje, 2025 yılında yazılım geliştirme topluluğunda ortaya konan vibe coding metodolojisinin, sadece basit prototipler veya gösterim amaçlı ufak uygulamalarda değil, 8.300+ satırlık, üretim ortamında çalışan, çoklu kullanıcılı, durum yönetimi karmaşık bir enterprise uygulamasında başarıyla kullanılabileceğini göstermiştir. Bu bulgu, LLM tabanlı yazılım geliştirme araçlarının olgunlaşma seviyesi hakkında önemli bilgiler sunmaktadır.
 
 **LLM Ajanlarının Kapasitesi ve Sınırları:** Çalışmanın en önemli ampirik bulgularından birisi, Claude Opus 4 gibi modern LLM'lerin yalnızca basit kod üretimi (code snippets, one-liners) değil, aynı zamanda aşağıdaki karmaşık mühendislik görevlerini başarıyla yerine getirebildiğidir:
   - Çok dosyalı, karmaşık durum yönetimi sorunlarının teşhisi ve çözülmesi
@@ -602,7 +644,7 @@ Bu bulgular, yazılım mühendisliğinde yapay zekâ rolü hakkındaki akademik 
 
 Her ampirik çalışmada olduğu gibi, bu çalışmanın da çeşitli sınırlılıkları ve kısıtlamaları bulunmaktadır; bu sınırlılıklar açık bir şekilde ortaya konması, ilgili alan için önemlidir.
 
-**Mimari Sınırlılıklar:** Monolitik tek dosya mimarisi (Dashboard.jsx, ~7.650 satır), kısa vadede hızlı iterasyon ve prototipleme açısından avantajlı olmasına rağmen, orta ve uzun vadede yazılım bakım, test yazımı ve yeni bileşenlerin entegrasyonu açısından ciddi zorluklar yaratmaktadır. Component separation ve code splitting mekanizmaları henüz uygulanmadığı için, bundle boyutu (minified, ~450KB) ve ilk sayfa yükleme süresi (cold load ~2.5 saniye) optimal seviyede değildir.
+**Mimari Sınırlılıklar:** Monolitik tek dosya mimarisi (Dashboard.jsx, ~8.300 satır), kısa vadede hızlı iterasyon ve prototipleme açısından avantajlı olmasına rağmen, orta ve uzun vadede yazılım bakım, test yazımı ve yeni bileşenlerin entegrasyonu açısından ciddi zorluklar yaratmaktadır. Component separation ve code splitting mekanizmaları henüz uygulanmadığı için, bundle boyutu (minified, ~500KB) ve ilk sayfa yükleme süresi (cold load ~2.5 saniye) optimal seviyede değildir.
 
 **Kimlik Doğrulama ve Güvenlik:** Mevcut kimlik doğrulama sistemi, öğretici ve prototip amaçlarına uygundur, ancak basit parola tabanlı (düz metin şifre, istemci tarafında karşılaştırma) olup, kurumsal güvenlik standartlarına (LDAP/Active Directory entegrasyonu, OAuth 2.0, çok faktörlü doğrulama, denetim günlüğü) uyumlu değildir. Bu, üretim ortamında kullanım öncesi ciddi revizyon gerektirir. Firestore veritabanı kuralları da mevcut uygulamada basitleştirilmiştir; role-based access control (RBAC) detayları veri modeline tam olarak yansıtılmamıştır.
 
@@ -621,8 +663,8 @@ Mevcut çalışmanın bulgularını genişletmek ve uygulamayı kurumsal üretim
 - **API Tasarımı:** REST veya GraphQL aracılığıyla dashboard'ı external sistem ve raporlama araçlarına açma
 
 **Özellik Genişlemesi:**
-- **Akademik Yayın Takip Modülü:** Araştırmacıların SCOPUS, Pubmed, arXiv'den yayın verilerini otomatik çekme ve Dashboard'ıyla eşleştirme; DOI resolution ve h-index hesaplama
-- **Hibrit İşbirliği Matrisi:** Araştırmacı-konu-proje-kurum ilişkilerini ağ analitikleri (network analysis) ile gorselleştirme
+- **Akademik Yayın Takip Modülü:** Mevcut yayın indeks türü sistemi ile temel akademik çıktı takibi sağlanmış olup, ileriye dönük olarak SCOPUS, Pubmed, arXiv entegrasyonu ile otomatik yayın verisi çekme, DOI resolution ve h-index hesaplama eklenmesi hedeflenmektedir
+- **Gelişmiş İşbirliği Analitikleri:** Mevcut işbirliği matrisi heatmap'i temel alınarak, araştırmacı-konu-proje-kurum ilişkilerinin ağ analitikleri (network analysis) ile gelişmiş görselleştirmesi ve topluluk tespiti (community detection) algoritmalarının entegrasyonu hedeflenmektedir
 - **Otomatik Raporlama ve CI/CD:** İstatistik raporlarını haftalık/aylık olarak PDF/Excel formatında otomatik üretme; ORCID, ResearchID entegrasyonu
 
 **Yapay Zekâ Entegrasyonu:**
