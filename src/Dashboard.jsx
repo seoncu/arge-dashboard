@@ -2008,7 +2008,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                   ? <input value={editForm.title} onChange={e => eff("title", e.target.value)} className={eInputD + " text-lg font-bold"} />
                   : <h2 className="text-lg font-bold text-slate-800">{item.title}</h2>}
               </div>
-              {editing ? (
+              {editing ? (<>
                 <div className="flex items-center gap-2 flex-wrap">
                   <select value={editForm.status} onChange={e => eff("status", e.target.value)} className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                     {statusOptions.map(s => <option key={s} value={s}>{statusConfig[s]?.label || s}</option>)}
@@ -2050,7 +2050,7 @@ const DetailModal = ({ item, type, allResearchers, topics, projects, isAdmin, on
                     </div>
                   </div>
                 )}
-              ) : (
+              </>) : (
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={stCfg.color}><span className={`w-1.5 h-1.5 rounded-full ${stCfg.dot} mr-1`} />{stCfg.label}</Badge>
                   <Badge className={prCfg.color}>{prCfg.icon} {prCfg.label}</Badge>
@@ -8344,10 +8344,13 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Footer */}
-      <footer className="bg-slate-100 border-t border-slate-200 px-5 py-1.5 flex items-center justify-center gap-1.5 text-[10px] text-slate-400 flex-shrink-0 select-none">
-        <span>&#169; SEÖ, 2026</span>
-        <span className="text-slate-300">|</span>
-        <span>Bu uygulama, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge birimi içi bilgi amaçlı olup izinsiz kullanılamaz.</span>
+      <footer className="bg-slate-100 border-t border-slate-200 px-5 py-1.5 flex flex-col items-center gap-0.5 text-[10px] text-slate-400 flex-shrink-0 select-none">
+        <div className="flex items-center gap-1.5">
+          <span>&#169; SEÖ, 2026</span>
+          <span className="text-slate-300">|</span>
+          <span>Bu uygulama, Anadolu Üniversitesi Açıköğretim Fakültesi Ar-Ge birimi içi bilgi amaçlı olup izinsiz kullanılamaz.</span>
+        </div>
+        <div className="text-[9px] text-slate-300">Son Sistem Güncellemesi: 1 Mart 2026, 10:50</div>
       </footer>
 
       <style>{`
