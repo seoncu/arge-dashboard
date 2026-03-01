@@ -1071,12 +1071,21 @@ const Toast = ({ message, type = "success", onClose }) => {
 // ─── RESEARCHER CARD (Compact — just name shown, click for full profile) ──
 const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximized, editingBy }) => {
   const myTopics = (topics || []).filter(t => t.researchers.some(r => r.researcherId === researcher.id));
-  const proposedCount = myTopics.filter(t => t.status === "proposed").length;
-  const activeCount = myTopics.filter(t => t.status === "active").length;
-  const completedCount = myTopics.filter(t => t.status === "completed").length;
   const totalCount = myTopics.length;
+  const isProjected = (t) => (projects || []).some(p => (p.topics || []).includes(t.id));
+  // Her durum için projelendirilen / projelendirilmeyen ayrımı
+  const proposedFree = myTopics.filter(t => t.status === "proposed" && !isProjected(t)).length;
+  const proposedProj = myTopics.filter(t => t.status === "proposed" && isProjected(t)).length;
+  const activeFree = myTopics.filter(t => t.status === "active" && !isProjected(t)).length;
+  const activeProj = myTopics.filter(t => t.status === "active" && isProjected(t)).length;
+  const completedFree = myTopics.filter(t => t.status === "completed" && !isProjected(t)).length;
+  const completedProj = myTopics.filter(t => t.status === "completed" && isProjected(t)).length;
+  const failedCount = myTopics.filter(t => t.status === "failed").length;
+  const proposedCount = proposedFree + proposedProj;
+  const activeCount = activeFree + activeProj;
+  const completedCount = completedFree + completedProj;
   // Proje türü istatistikleri (sadece projelendirilmiş konular)
-  const projectedTopics = myTopics.filter(t => (projects || []).some(p => (p.topics || []).includes(t.id)));
+  const projectedTopics = myTopics.filter(t => isProjected(t));
   const projectedCount = projectedTopics.length;
   const projectTypeCount = {};
   projectedTopics.forEach(t => { if (t.projectType) projectTypeCount[t.projectType] = (projectTypeCount[t.projectType] || 0) + 1; });
@@ -1110,7 +1119,7 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
           <Avatar name={researcher.name} color={researcher.color} size="md" />
           {totalCount > 0 && (
             <div className={`absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-2 ring-white shadow-sm ${activeCount > 0 ? "bg-emerald-500" : completedCount > 0 ? "bg-blue-500" : "bg-slate-400"}`}
-              title={`${proposedCount} önerilen · ${activeCount} aktif · ${completedCount} tamamlanan`}>
+              title={`${totalCount} konu: ${proposedCount} önerilen, ${activeCount} aktif, ${completedCount} tamamlanan${projectedCount > 0 ? ` (${projectedCount} projelendirilen)` : ""}`}>
               {totalCount}
             </div>
           )}
@@ -1120,10 +1129,13 @@ const ResearcherCard = ({ researcher, onClick, isAdmin, topics, projects, maximi
           <p className={`text-slate-500 truncate ${maximized ? "text-sm" : "text-xs"}`}>{researcher.institution}{researcher.unit ? ` · ${researcher.unit}` : ""}</p>
           {totalCount > 0 ? (
             <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {proposedCount > 0 && <Badge className="bg-slate-100 text-slate-600">{proposedCount} Önerilen</Badge>}
-              {activeCount > 0 && <Badge className="bg-emerald-50 text-emerald-700">{activeCount} Aktif</Badge>}
-              {completedCount > 0 && <Badge className="bg-blue-50 text-blue-700">{completedCount} Tamamlanan</Badge>}
-              {totalCount > proposedCount + activeCount + completedCount && <Badge className="bg-red-50 text-red-600">+{totalCount - proposedCount - activeCount - completedCount}</Badge>}
+              {proposedFree > 0 && <Badge className="bg-slate-100 text-slate-600">{proposedFree} önerilen konu</Badge>}
+              {proposedProj > 0 && <Badge className="bg-violet-50 text-violet-600">{proposedProj} projelendirilen önerilen konu</Badge>}
+              {activeFree > 0 && <Badge className="bg-emerald-50 text-emerald-700">{activeFree} aktif konu</Badge>}
+              {activeProj > 0 && <Badge className="bg-emerald-100 text-violet-700">{activeProj} projelendirilen aktif konu</Badge>}
+              {completedFree > 0 && <Badge className="bg-blue-50 text-blue-700">{completedFree} tamamlanan konu</Badge>}
+              {completedProj > 0 && <Badge className="bg-blue-100 text-violet-700">{completedProj} projelendirilen tamamlanan konu</Badge>}
+              {failedCount > 0 && <Badge className="bg-red-50 text-red-600">{failedCount} tamamlanamayan konu</Badge>}
             </div>
           ) : (
             <div className="flex flex-wrap gap-1 mt-1.5">
