@@ -6844,6 +6844,23 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
     }
   }, [selectedNote]);
 
+  // Konu/proje/link seçimi değiştiğinde otomatik kaydet
+  const autoSaveRef = useRef(false);
+  useEffect(() => {
+    if (!canEdit || !selectedNote) return;
+    if (!autoSaveRef.current) { autoSaveRef.current = true; return; } // ilk render'ı atla
+    const updated = notes.map(n => n.id === selectedNote.id ? {
+      ...n,
+      title: newTitle || "Başlıksız Not",
+      content: newContent,
+      links: newLinks,
+      topicLinks: newTopicLinks,
+      projectLinks: newProjectLinks,
+      updatedAt: Date.now()
+    } : n);
+    onNotesChange(updated);
+  }, [newTopicLinks, newProjectLinks, newLinks]);
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
@@ -6963,7 +6980,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
                       {topics.map(topic => (
                         <button
                           key={topic.id}
-                          onClick={() => { toggleTopicLink(topic.id); setTimeout(updateNote, 50); }}
+                          onClick={() => toggleTopicLink(topic.id)}
                           disabled={!canEdit}
                           className={`text-[11px] px-2.5 py-1 rounded-full transition-all border ${
                             newTopicLinks.includes(topic.id)
@@ -6982,7 +6999,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
                       {projects.map(project => (
                         <button
                           key={project.id}
-                          onClick={() => { toggleProjectLink(project.id); setTimeout(updateNote, 50); }}
+                          onClick={() => toggleProjectLink(project.id)}
                           disabled={!canEdit}
                           className={`text-[11px] px-2.5 py-1 rounded-full transition-all border ${
                             newProjectLinks.includes(project.id)
@@ -7010,7 +7027,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
                         </a>
                         {canEdit && (
                           <button
-                            onClick={() => { const nl = newLinks.filter((_, i) => i !== idx); setNewLinks(nl); setTimeout(updateNote, 50); }}
+                            onClick={() => setNewLinks(newLinks.filter((_, i) => i !== idx))}
                             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
                           >
                             <X size={12} className="text-red-500" />
