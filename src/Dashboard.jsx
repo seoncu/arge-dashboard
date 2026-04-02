@@ -6762,6 +6762,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
   const [newProjectLinks, setNewProjectLinks] = useState([]);
   const [newUrlTitle, setNewUrlTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const filteredNotes = notes.filter(n =>
     n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -6807,6 +6808,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
 
   const deleteNote = () => {
     if (!canEdit || !selectedNote) return;
+    if (!confirm("Bu notu silmek istediğinize emin misiniz?")) return;
     onNotesChange(notes.filter(n => n.id !== selectedNote.id));
     setSelectedNoteId(null);
     setNewTitle("");
@@ -6825,17 +6827,11 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
   };
 
   const toggleTopicLink = (topicId) => {
-    setNewTopicLinks(newTopicLinks.includes(topicId)
-      ? newTopicLinks.filter(id => id !== topicId)
-      : [...newTopicLinks, topicId]
-    );
+    setNewTopicLinks(prev => prev.includes(topicId) ? prev.filter(id => id !== topicId) : [...prev, topicId]);
   };
 
   const toggleProjectLink = (projectId) => {
-    setNewProjectLinks(newProjectLinks.includes(projectId)
-      ? newProjectLinks.filter(id => id !== projectId)
-      : [...newProjectLinks, projectId]
-    );
+    setNewProjectLinks(prev => prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]);
   };
 
   useEffect(() => {
@@ -6849,62 +6845,77 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
   }, [selectedNote]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/10 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={`bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        isFullscreen ? "w-full h-full max-w-full max-h-full rounded-none" : "w-full max-w-5xl max-h-[90vh]"
+      }`}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <StickyNote size={24} className="text-indigo-600" />
-            <h2 className="text-xl font-bold text-slate-800">Notlar</h2>
-            {notes.length > 0 && <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-medium">{notes.length}</span>}
+            <StickyNote size={22} className="text-indigo-600" />
+            <h2 className="text-lg font-bold text-slate-800">Notlar</h2>
+            {notes.length > 0 && <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-medium">{notes.length} not</span>}
+            {!canEdit && <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium border border-amber-200">Salt okunur</span>}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
-            <X size={20} className="text-slate-500" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors" title={isFullscreen ? "Küçült" : "Tam Ekran"}>
+              {isFullscreen ? <Minimize2 size={16} className="text-slate-500" /> : <Maximize2 size={16} className="text-slate-500" />}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+              <X size={18} className="text-slate-500" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-h-0">
           {/* Left: Notes List */}
-          <div className="w-64 border-r border-slate-200 flex flex-col bg-slate-50/50 overflow-hidden">
+          <div className="w-72 border-r border-slate-200 flex flex-col bg-slate-50/50 overflow-hidden flex-shrink-0">
             <div className="p-3 border-b border-slate-200 space-y-2 flex-shrink-0">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Ara..."
+                  placeholder="Notlarda ara..."
                   className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 />
               </div>
               {canEdit && (
                 <button
                   onClick={createNote}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500 text-white text-xs font-medium rounded-lg hover:bg-indigo-600 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-500 text-white text-xs font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm"
                 >
-                  <Plus size={14} /> Yeni Not
+                  <Plus size={14} /> Yeni Not Oluştur
                 </button>
               )}
             </div>
             <div className="flex-1 overflow-y-auto space-y-1 p-2">
               {filteredNotes.length === 0 ? (
-                <p className="text-xs text-slate-400 p-2 text-center">Henüz not yok</p>
+                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                  <StickyNote size={32} className="text-slate-300 mb-3" />
+                  <p className="text-xs text-slate-400 font-medium">{search ? "Sonuç bulunamadı" : "Henüz not yok"}</p>
+                  {!search && !canEdit && <p className="text-[10px] text-amber-500 mt-2">Not oluşturmak için Editör veya üstü yetki gerekir</p>}
+                  {!search && canEdit && <p className="text-[10px] text-slate-400 mt-1">Yukarıdaki butona tıklayarak ilk notunuzu oluşturun</p>}
+                </div>
               ) : (
-                filteredNotes.map(note => (
+                filteredNotes.sort((a, b) => b.updatedAt - a.updatedAt).map(note => (
                   <button
                     key={note.id}
                     onClick={() => setSelectedNoteId(note.id)}
-                    className={`w-full text-left p-2.5 rounded-lg transition-all text-xs ${
+                    className={`w-full text-left p-3 rounded-lg transition-all text-xs ${
                       selectedNoteId === note.id
                         ? "bg-indigo-100 border border-indigo-300 shadow-sm"
-                        : "hover:bg-slate-200 border border-transparent"
+                        : "hover:bg-slate-100 border border-transparent"
                     }`}
                   >
-                    <p className="font-medium text-slate-800 truncate">{note.title}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{note.content || "İçerik yok"}</p>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      {new Date(note.updatedAt).toLocaleDateString("tr-TR")}
-                    </p>
+                    <p className="font-semibold text-slate-800 truncate">{note.title}</p>
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5">{note.content || "İçerik yok"}</p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[10px] text-slate-400">{new Date(note.updatedAt).toLocaleDateString("tr-TR")}</span>
+                      {(note.topicLinks || []).length > 0 && <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{(note.topicLinks || []).length} konu</span>}
+                      {(note.links || []).length > 0 && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{(note.links || []).length} link</span>}
+                    </div>
                   </button>
                 ))
               )}
@@ -6914,151 +6925,142 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
           {/* Right: Note Editor */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {selectedNote ? (
-              <div className="flex-1 flex flex-col overflow-hidden p-6 space-y-4">
+              <div className="flex-1 flex flex-col overflow-y-auto p-6 space-y-4">
                 {/* Title */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Başlık</label>
                   <input
                     value={newTitle}
                     onChange={e => setNewTitle(e.target.value)}
                     onBlur={updateNote}
                     disabled={!canEdit}
                     placeholder="Not başlığı..."
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-400 text-sm"
+                    className="w-full px-0 py-2 border-0 border-b-2 border-slate-200 bg-transparent focus:outline-none focus:border-indigo-400 disabled:text-slate-500 text-xl font-bold text-slate-800 placeholder-slate-300"
                   />
+                  <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-400">
+                    <span>Oluşturulma: {new Date(selectedNote.createdAt).toLocaleString("tr-TR")}</span>
+                    <span>·</span>
+                    <span>Son güncelleme: {new Date(selectedNote.updatedAt).toLocaleString("tr-TR")}</span>
+                  </div>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 flex flex-col min-h-0">
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">İçerik</label>
+                <div className="flex-1 flex flex-col min-h-[200px]">
                   <textarea
                     value={newContent}
                     onChange={e => setNewContent(e.target.value)}
                     onBlur={updateNote}
                     disabled={!canEdit}
                     placeholder="Not içeriği yazın..."
-                    className="flex-1 px-4 py-3 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-400 text-sm resize-none"
+                    className="flex-1 px-0 py-2 border-0 bg-transparent focus:outline-none disabled:text-slate-400 text-sm text-slate-700 resize-none leading-relaxed placeholder-slate-300"
                   />
                 </div>
 
-                {/* Scrollable section for links */}
-                <div className="flex-1 overflow-y-auto space-y-4">
-                  {/* Related Topics & Projects */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700">İlgili Çalışmalar</label>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      <div>
-                        <p className="text-[11px] font-medium text-slate-600 mb-1">Konular:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {topics.map(topic => (
-                            <button
-                              key={topic.id}
-                              onClick={() => toggleTopicLink(topic.id)}
-                              disabled={!canEdit}
-                              className={`text-[11px] px-2.5 py-1 rounded-full transition-all ${
-                                newTopicLinks.includes(topic.id)
-                                  ? "bg-indigo-500 text-white"
-                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                              } disabled:opacity-50`}
-                            >
-                              {topic.title}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-medium text-slate-600 mb-1">Projeler:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {projects.map(project => (
-                            <button
-                              key={project.id}
-                              onClick={() => toggleProjectLink(project.id)}
-                              disabled={!canEdit}
-                              className={`text-[11px] px-2.5 py-1 rounded-full transition-all ${
-                                newProjectLinks.includes(project.id)
-                                  ? "bg-violet-500 text-white"
-                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                              } disabled:opacity-50`}
-                            >
-                              {project.title || project.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                {/* Related Topics & Projects */}
+                <div className="border-t border-slate-100 pt-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><BookOpen size={13} /> İlgili Konular</p>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {topics.map(topic => (
+                        <button
+                          key={topic.id}
+                          onClick={() => { toggleTopicLink(topic.id); setTimeout(updateNote, 50); }}
+                          disabled={!canEdit}
+                          className={`text-[11px] px-2.5 py-1 rounded-full transition-all border ${
+                            newTopicLinks.includes(topic.id)
+                              ? "bg-indigo-500 text-white border-indigo-500 shadow-sm"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
+                          } disabled:opacity-50 disabled:cursor-default`}
+                        >
+                          {topic.title}
+                        </button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* URLs */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700">Bağlantılar</label>
-                    <div className="space-y-2">
-                      {newLinks.map((link, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-2 bg-slate-100 rounded-lg group">
-                          <Globe size={12} className="text-slate-500 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-slate-700 truncate">{link.title}</p>
-                            <p className="text-[10px] text-slate-400 truncate">{link.url}</p>
-                          </div>
-                          {canEdit && (
-                            <button
-                              onClick={() => setNewLinks(newLinks.filter((_, i) => i !== idx))}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
-                            >
-                              <X size={12} className="text-red-500" />
-                            </button>
-                          )}
-                        </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><FolderKanban size={13} /> İlgili Projeler</p>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {projects.map(project => (
+                        <button
+                          key={project.id}
+                          onClick={() => { toggleProjectLink(project.id); setTimeout(updateNote, 50); }}
+                          disabled={!canEdit}
+                          className={`text-[11px] px-2.5 py-1 rounded-full transition-all border ${
+                            newProjectLinks.includes(project.id)
+                              ? "bg-violet-500 text-white border-violet-500 shadow-sm"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:text-violet-600"
+                          } disabled:opacity-50 disabled:cursor-default`}
+                        >
+                          {project.title || project.name}
+                        </button>
                       ))}
-                      {canEdit && (
-                        <div className="flex gap-1.5">
-                          <input
-                            value={newUrlTitle}
-                            onChange={e => setNewUrlTitle(e.target.value)}
-                            placeholder="Başlık"
-                            className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                          />
-                          <input
-                            value={newUrl}
-                            onChange={e => setNewUrl(e.target.value)}
-                            placeholder="URL"
-                            className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                          />
-                          <button
-                            onClick={addLink}
-                            className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Metadata */}
-                <div className="border-t border-slate-200 pt-3 text-[11px] text-slate-500 space-y-0.5">
-                  <p>Oluşturulma: {new Date(selectedNote.createdAt).toLocaleString("tr-TR")}</p>
-                  <p>Son güncelleme: {new Date(selectedNote.updatedAt).toLocaleString("tr-TR")}</p>
+                {/* URLs */}
+                <div className="border-t border-slate-100 pt-4 space-y-2">
+                  <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Globe size={13} /> Bağlantılar</p>
+                  <div className="space-y-1.5">
+                    {newLinks.map((link, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-lg group border border-slate-100 hover:border-slate-200 transition-colors">
+                        <ExternalLink size={12} className="text-indigo-400 flex-shrink-0" />
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:underline">
+                          <p className="text-xs font-medium text-indigo-600 truncate">{link.title}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{link.url}</p>
+                        </a>
+                        {canEdit && (
+                          <button
+                            onClick={() => { const nl = newLinks.filter((_, i) => i !== idx); setNewLinks(nl); setTimeout(updateNote, 50); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+                          >
+                            <X size={12} className="text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {canEdit && (
+                      <div className="flex gap-1.5 mt-2">
+                        <input
+                          value={newUrlTitle}
+                          onChange={e => setNewUrlTitle(e.target.value)}
+                          placeholder="Başlık"
+                          className="w-1/3 px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+                        />
+                        <input
+                          value={newUrl}
+                          onChange={e => setNewUrl(e.target.value)}
+                          placeholder="https://..."
+                          onKeyDown={e => { if (e.key === "Enter") addLink(); }}
+                          className="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white"
+                        />
+                        <button
+                          onClick={addLink}
+                          className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-1 text-xs font-medium"
+                        >
+                          <Plus size={14} /> Ekle
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}
                 {canEdit && (
-                  <div className="flex gap-2 pt-2 border-t border-slate-200">
+                  <div className="flex gap-2 pt-3 border-t border-slate-200">
                     <button
-                      onClick={() => {
-                        deleteNote();
-                        setSearch("");
-                      }}
-                      className="flex-1 px-4 py-2 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                      onClick={deleteNote}
+                      className="px-4 py-2 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center gap-2"
                     >
-                      <Trash2 size={14} /> Sil
+                      <Trash2 size={14} /> Notu Sil
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-slate-400">
-                <p className="text-sm">Not seçin veya yeni bir not oluşturun</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
+                <StickyNote size={48} className="text-slate-200 mb-4" />
+                <p className="text-sm font-medium text-slate-500">Not seçin veya yeni bir not oluşturun</p>
+                {!canEdit && <p className="text-xs text-amber-500 mt-2">Düzenleme için Editör veya üstü yetki gerekir</p>}
               </div>
             )}
           </div>
@@ -7121,6 +7123,11 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const writeToFirestore = useCallback((docId, data) => {
     if (!firestoreReady.current) {
       console.log("[SYNC] firestoreReady=false, yazma atlandı:", docId);
+      return;
+    }
+    // Firestore'dan ilk veri yüklenmeden yazma yapma — boş state'in kaydedilmiş veriyi ezmesini engeller
+    if (lastJson.current[docId] === undefined) {
+      console.log("[SYNC] İlk yükleme tamamlanmadı, yazma atlandı:", docId);
       return;
     }
     const json = JSON.stringify(data);
