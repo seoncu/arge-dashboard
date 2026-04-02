@@ -8239,7 +8239,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <CloudUpload size={12} className={saveIndicator === "saving" ? "animate-pulse" : ""} />
               {saveIndicator === "saving" ? "Kaydediliyor..." : "Kaydedildi"}
             </div>
-                    {/* Notes Button */}
+          )}
+          {/* Notes Button */}
           <div className="relative">
             <button onClick={() => { setShowNotes(!showNotes); setShowDeadlines(false); }}
               className={`p-2 rounded-lg transition-colors ${showNotes ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-500"}`}
@@ -8247,7 +8248,6 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <StickyNote size={18} />
             </button>
           </div>
-          )}
           {canEdit && lastSavedAt && saveIndicator === "idle" && (
             <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400" title={`Son kayıt: ${lastSavedAt.toLocaleTimeString("tr-TR")}`}>
               <CloudUpload size={11} />
