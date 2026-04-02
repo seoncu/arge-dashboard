@@ -7682,6 +7682,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   useEffect(() => { writeToFirestore("topics", topics); }, [topics, writeToFirestore]);
   useEffect(() => { writeToFirestore("projects", projects); }, [projects, writeToFirestore]);
   useEffect(() => { writeToFirestore("quicklinks", quickLinks); }, [quickLinks, writeToFirestore]);
+  useEffect(() => { writeToFirestore("notes", notes); }, [notes, writeToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
