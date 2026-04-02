@@ -6752,7 +6752,7 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
 };
 
 // ─── NotepadPanel Component ───────────────────────────────────────────────
-function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose, isMaster, isAdmin, isEditor }) {
+function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose, onSave, isMaster, isAdmin, isEditor }) {
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [search, setSearch] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -6763,6 +6763,8 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
   const [newUrlTitle, setNewUrlTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle"); // "idle" | "saving" | "saved"
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
   const filteredNotes = notes.filter(n =>
     n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -6790,6 +6792,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
     setNewLinks([]);
     setNewTopicLinks([]);
     setNewProjectLinks([]);
+    setHasUnsaved(true);
   };
 
   const updateNote = () => {
@@ -6804,6 +6807,33 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
       updatedAt: Date.now()
     } : n);
     onNotesChange(updated);
+    setHasUnsaved(true);
+    setSaveStatus("idle");
+  };
+
+  const handleSave = () => {
+    if (!canEdit) return;
+    // Önce mevcut düzenlemeyi kaydet
+    if (selectedNote) {
+      const updated = notes.map(n => n.id === selectedNote.id ? {
+        ...n,
+        title: newTitle || "Başlıksız Not",
+        content: newContent,
+        links: newLinks,
+        topicLinks: newTopicLinks,
+        projectLinks: newProjectLinks,
+        updatedAt: Date.now()
+      } : n);
+      onNotesChange(updated);
+    }
+    // Firestore'a yaz
+    setSaveStatus("saving");
+    setTimeout(() => {
+      if (onSave) onSave();
+      setSaveStatus("saved");
+      setHasUnsaved(false);
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    }, 100);
   };
 
   const deleteNote = () => {
@@ -6816,6 +6846,7 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
     setNewLinks([]);
     setNewTopicLinks([]);
     setNewProjectLinks([]);
+    setHasUnsaved(true);
   };
 
   const addLink = () => {
@@ -6874,11 +6905,28 @@ function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose
             {notes.length > 0 && <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-medium">{notes.length} not</span>}
             {!canEdit && <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium border border-amber-200">Salt okunur</span>}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <button
+                onClick={handleSave}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  saveStatus === "saving" ? "bg-amber-100 text-amber-700"
+                    : saveStatus === "saved" ? "bg-emerald-100 text-emerald-700"
+                    : hasUnsaved ? "bg-indigo-500 text-white shadow-sm hover:bg-indigo-600 animate-pulse"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                {saveStatus === "saving" ? <><Loader2 size={13} className="animate-spin" /> Kaydediliyor...</>
+                  : saveStatus === "saved" ? <><CheckCircle2 size={13} /> Kaydedildi</>
+                  : hasUnsaved ? <><CloudUpload size={13} /> Kaydet</>
+                  : <><CloudUpload size={13} /> Kaydet</>
+                }
+              </button>
+            )}
             <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors" title={isFullscreen ? "Küçült" : "Tam Ekran"}>
               {isFullscreen ? <Minimize2 size={16} className="text-slate-500" /> : <Maximize2 size={16} className="text-slate-500" />}
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors" title="Kapat (otomatik kaydeder)">
               <X size={18} className="text-slate-500" />
             </button>
           </div>
@@ -7706,7 +7754,10 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   useEffect(() => { writeToFirestore("topics", topics); }, [topics, writeToFirestore]);
   useEffect(() => { writeToFirestore("projects", projects); }, [projects, writeToFirestore]);
   useEffect(() => { writeToFirestore("quicklinks", quickLinks); }, [quickLinks, writeToFirestore]);
-  useEffect(() => { writeToFirestore("notes", notes); }, [notes, writeToFirestore]);
+  // Notes: otomatik her değişiklikte değil, kullanıcı "Kaydet" dediğinde veya panel kapandığında yazılır
+  const saveNotesToFirestore = useCallback(() => {
+    writeToFirestore("notes", notes);
+  }, [notes, writeToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_roles", roleConfigSt); }, [roleConfigSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_statuses", statusConfigSt); }, [statusConfigSt, writeConfigToFirestore]);
   useEffect(() => { writeConfigToFirestore("cfg_priorities", priorityConfigSt); }, [priorityConfigSt, writeConfigToFirestore]);
@@ -8346,7 +8397,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
         </div>
       </header>
-      {showNotes && <NotepadPanel notes={notes} onNotesChange={setNotes} topics={topics} projects={projects} canEdit={canEdit} onClose={() => setShowNotes(false)} isMaster={isMaster} isAdmin={isAdmin} isEditor={isEditor} />}
+      {showNotes && <NotepadPanel notes={notes} onNotesChange={setNotes} topics={topics} projects={projects} canEdit={canEdit} onClose={() => { saveNotesToFirestore(); setShowNotes(false); }} onSave={saveNotesToFirestore} isMaster={isMaster} isAdmin={isAdmin} isEditor={isEditor} />}
 
 
       {/* FORCE RELOAD OVERLAY */}
