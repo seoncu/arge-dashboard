@@ -6751,6 +6751,324 @@ const ArGeChatbot = ({ researchers, topics, projects }) => {
   );
 };
 
+// ─── NotepadPanel Component ───────────────────────────────────────────────
+function NotepadPanel({ notes, onNotesChange, topics, projects, canEdit, onClose, isMaster, isAdmin, isEditor }) {
+  const [selectedNoteId, setSelectedNoteId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newLinks, setNewLinks] = useState([]);
+  const [newTopicLinks, setNewTopicLinks] = useState([]);
+  const [newProjectLinks, setNewProjectLinks] = useState([]);
+  const [newUrlTitle, setNewUrlTitle] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+
+  const filteredNotes = notes.filter(n =>
+    n.title.toLowerCase().includes(search.toLowerCase()) ||
+    n.content.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedNote = selectedNoteId ? notes.find(n => n.id === selectedNoteId) : null;
+
+  const createNote = () => {
+    if (!canEdit) return;
+    const newNote = {
+      id: Date.now().toString(),
+      title: "Yeni Not",
+      content: "",
+      links: [],
+      topicLinks: [],
+      projectLinks: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    onNotesChange([...notes, newNote]);
+    setSelectedNoteId(newNote.id);
+    setNewTitle(newNote.title);
+    setNewContent("");
+    setNewLinks([]);
+    setNewTopicLinks([]);
+    setNewProjectLinks([]);
+  };
+
+  const updateNote = () => {
+    if (!canEdit || !selectedNote) return;
+    const updated = notes.map(n => n.id === selectedNote.id ? {
+      ...n,
+      title: newTitle || "Başlıksız Not",
+      content: newContent,
+      links: newLinks,
+      topicLinks: newTopicLinks,
+      projectLinks: newProjectLinks,
+      updatedAt: Date.now()
+    } : n);
+    onNotesChange(updated);
+  };
+
+  const deleteNote = () => {
+    if (!canEdit || !selectedNote) return;
+    onNotesChange(notes.filter(n => n.id !== selectedNote.id));
+    setSelectedNoteId(null);
+    setNewTitle("");
+    setNewContent("");
+    setNewLinks([]);
+    setNewTopicLinks([]);
+    setNewProjectLinks([]);
+  };
+
+  const addLink = () => {
+    if (newUrl.trim()) {
+      setNewLinks([...newLinks, { title: newUrlTitle || "Bağlantı", url: newUrl }]);
+      setNewUrlTitle("");
+      setNewUrl("");
+    }
+  };
+
+  const toggleTopicLink = (topicId) => {
+    setNewTopicLinks(newTopicLinks.includes(topicId)
+      ? newTopicLinks.filter(id => id !== topicId)
+      : [...newTopicLinks, topicId]
+    );
+  };
+
+  const toggleProjectLink = (projectId) => {
+    setNewProjectLinks(newProjectLinks.includes(projectId)
+      ? newProjectLinks.filter(id => id !== projectId)
+      : [...newProjectLinks, projectId]
+    );
+  };
+
+  useEffect(() => {
+    if (selectedNote) {
+      setNewTitle(selectedNote.title);
+      setNewContent(selectedNote.content);
+      setNewLinks(selectedNote.links || []);
+      setNewTopicLinks(selectedNote.topicLinks || []);
+      setNewProjectLinks(selectedNote.projectLinks || []);
+    }
+  }, [selectedNote]);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/10 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <StickyNote size={24} className="text-indigo-600" />
+            <h2 className="text-xl font-bold text-slate-800">Notlar</h2>
+            {notes.length > 0 && <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-medium">{notes.length}</span>}
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+            <X size={20} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left: Notes List */}
+          <div className="w-64 border-r border-slate-200 flex flex-col bg-slate-50/50 overflow-hidden">
+            <div className="p-3 border-b border-slate-200 space-y-2 flex-shrink-0">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Ara..."
+                  className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+              {canEdit && (
+                <button
+                  onClick={createNote}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500 text-white text-xs font-medium rounded-lg hover:bg-indigo-600 transition-colors"
+                >
+                  <Plus size={14} /> Yeni Not
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1 p-2">
+              {filteredNotes.length === 0 ? (
+                <p className="text-xs text-slate-400 p-2 text-center">Henüz not yok</p>
+              ) : (
+                filteredNotes.map(note => (
+                  <button
+                    key={note.id}
+                    onClick={() => setSelectedNoteId(note.id)}
+                    className={`w-full text-left p-2.5 rounded-lg transition-all text-xs ${
+                      selectedNoteId === note.id
+                        ? "bg-indigo-100 border border-indigo-300 shadow-sm"
+                        : "hover:bg-slate-200 border border-transparent"
+                    }`}
+                  >
+                    <p className="font-medium text-slate-800 truncate">{note.title}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{note.content || "İçerik yok"}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {new Date(note.updatedAt).toLocaleDateString("tr-TR")}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right: Note Editor */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {selectedNote ? (
+              <div className="flex-1 flex flex-col overflow-hidden p-6 space-y-4">
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Başlık</label>
+                  <input
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    onBlur={updateNote}
+                    disabled={!canEdit}
+                    placeholder="Not başlığı..."
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-400 text-sm"
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">İçerik</label>
+                  <textarea
+                    value={newContent}
+                    onChange={e => setNewContent(e.target.value)}
+                    onBlur={updateNote}
+                    disabled={!canEdit}
+                    placeholder="Not içeriği yazın..."
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-400 text-sm resize-none"
+                  />
+                </div>
+
+                {/* Scrollable section for links */}
+                <div className="flex-1 overflow-y-auto space-y-4">
+                  {/* Related Topics & Projects */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700">İlgili Çalışmalar</label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      <div>
+                        <p className="text-[11px] font-medium text-slate-600 mb-1">Konular:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {topics.map(topic => (
+                            <button
+                              key={topic.id}
+                              onClick={() => toggleTopicLink(topic.id)}
+                              disabled={!canEdit}
+                              className={`text-[11px] px-2.5 py-1 rounded-full transition-all ${
+                                newTopicLinks.includes(topic.id)
+                                  ? "bg-indigo-500 text-white"
+                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                              } disabled:opacity-50`}
+                            >
+                              {topic.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-slate-600 mb-1">Projeler:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {projects.map(project => (
+                            <button
+                              key={project.id}
+                              onClick={() => toggleProjectLink(project.id)}
+                              disabled={!canEdit}
+                              className={`text-[11px] px-2.5 py-1 rounded-full transition-all ${
+                                newProjectLinks.includes(project.id)
+                                  ? "bg-violet-500 text-white"
+                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                              } disabled:opacity-50`}
+                            >
+                              {project.title || project.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* URLs */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700">Bağlantılar</label>
+                    <div className="space-y-2">
+                      {newLinks.map((link, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 bg-slate-100 rounded-lg group">
+                          <Globe size={12} className="text-slate-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-slate-700 truncate">{link.title}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{link.url}</p>
+                          </div>
+                          {canEdit && (
+                            <button
+                              onClick={() => setNewLinks(newLinks.filter((_, i) => i !== idx))}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
+                            >
+                              <X size={12} className="text-red-500" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {canEdit && (
+                        <div className="flex gap-1.5">
+                          <input
+                            value={newUrlTitle}
+                            onChange={e => setNewUrlTitle(e.target.value)}
+                            placeholder="Başlık"
+                            className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                          <input
+                            value={newUrl}
+                            onChange={e => setNewUrl(e.target.value)}
+                            placeholder="URL"
+                            className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                          <button
+                            onClick={addLink}
+                            className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors flex items-center gap-1"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metadata */}
+                <div className="border-t border-slate-200 pt-3 text-[11px] text-slate-500 space-y-0.5">
+                  <p>Oluşturulma: {new Date(selectedNote.createdAt).toLocaleString("tr-TR")}</p>
+                  <p>Son güncelleme: {new Date(selectedNote.updatedAt).toLocaleString("tr-TR")}</p>
+                </div>
+
+                {/* Actions */}
+                {canEdit && (
+                  <div className="flex gap-2 pt-2 border-t border-slate-200">
+                    <button
+                      onClick={() => {
+                        deleteNote();
+                        setSearch("");
+                      }}
+                      className="flex-1 px-4 py-2 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={14} /> Sil
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-slate-400">
+                <p className="text-sm">Not seçin veya yeni bir not oluşturun</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ─── MAIN APP ─────────────────────────────────────────────
 export default function ArGeDashboard({ role, user, onLogout }) {
   const isMaster = role === "master";
@@ -6881,6 +7199,11 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const [showQuickLinks, setShowQuickLinks] = useState(false);
   const [showTableView, setShowTableView] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteSearch, setNoteSearch] = useState("");
+
   const [projectColDragOver, setProjectColDragOver] = useState(false);
   const [quickLinks, setQuickLinks] = useState(defaultQuickLinks);
   const [roleConfigSt, setRoleConfig] = useState(DEFAULT_ROLE_CONFIG);
@@ -7059,6 +7382,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         { id: "topics", setter: setTopics, isConfig: false },
         { id: "projects", setter: setProjects, isConfig: false },
         { id: "quicklinks", setter: setQuickLinks, isConfig: false },
+      { id: "notes", setter: setNotes, isConfig: false },
         { id: "cfg_roles", setter: setRoleConfig, isConfig: true },
         { id: "cfg_statuses", setter: setStatusConfig, isConfig: true },
         { id: "cfg_priorities", setter: setPriorityConfig, isConfig: true },
@@ -7103,6 +7427,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
+        setDoc(doc(db, "arge", "notes"), { items: notes, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
         setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
@@ -7143,6 +7468,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           { id: "topics", setter: setTopics, isConfig: false },
           { id: "projects", setter: setProjects, isConfig: false },
           { id: "quicklinks", setter: setQuickLinks, isConfig: false },
+          { id: "notes", setter: setNotes, isConfig: false },
           { id: "cfg_roles", setter: setRoleConfig, isConfig: true },
           { id: "cfg_statuses", setter: setStatusConfig, isConfig: true },
           { id: "cfg_priorities", setter: setPriorityConfig, isConfig: true },
@@ -7198,8 +7524,8 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     const markReady = (docId) => {
       if (!readyDocs.has(docId)) {
         readyDocs.add(docId);
-        console.log("[SYNC] Doc hazır:", docId, "(" + readyDocs.size + "/13)");
-        if (readyDocs.size >= 13) {
+        console.log("[SYNC] Doc hazır:", docId, "(" + readyDocs.size + "/14)");
+        if (readyDocs.size >= 14) {
           firestoreReady.current = true;
           setFirestoreStatus("ready");
           console.log("[SYNC] ✅ Firestore HAZIR — tüm dokümanlar yüklendi");
@@ -7255,6 +7581,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     listen("topics", setTopics, initialTopics, false);
     listen("projects", setProjects, initialProjects, false);
     listen("quicklinks", setQuickLinks, defaultQuickLinks, false);
+        listen("notes", setNotes, [], false);
     listen("cfg_roles", setRoleConfig, DEFAULT_ROLE_CONFIG, true);
     listen("cfg_statuses", setStatusConfig, DEFAULT_STATUS_CONFIG, true);
     listen("cfg_priorities", setPriorityConfig, DEFAULT_PRIORITY_CONFIG, true);
@@ -7911,6 +8238,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
               <CloudUpload size={12} className={saveIndicator === "saving" ? "animate-pulse" : ""} />
               {saveIndicator === "saving" ? "Kaydediliyor..." : "Kaydedildi"}
             </div>
+                    {/* Notes Button */}
+          <div className="relative">
+            <button onClick={() => { setShowNotes(!showNotes); setShowDeadlines(false); }}
+              className={`p-2 rounded-lg transition-colors ${showNotes ? "bg-violet-100 text-violet-600" : "hover:bg-slate-100 text-slate-500"}`}
+              title="Notlar">
+              <StickyNote size={18} />
+            </button>
+          </div>
           )}
           {canEdit && lastSavedAt && saveIndicator === "idle" && (
             <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-slate-400" title={`Son kayıt: ${lastSavedAt.toLocaleTimeString("tr-TR")}`}>
@@ -7986,6 +8321,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           </div>
         </div>
       </header>
+      {showNotes && <NotepadPanel notes={notes} onNotesChange={setNotes} topics={topics} projects={projects} canEdit={canEdit} onClose={() => setShowNotes(false)} isMaster={isMaster} isAdmin={isAdmin} isEditor={isEditor} />}
 
 
       {/* FORCE RELOAD OVERLAY */}
