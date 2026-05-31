@@ -7195,6 +7195,15 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       console.log("[SYNC] İlk yükleme tamamlanmadı, yazma atlandı:", docId);
       return;
     }
+    // ⛔ GUARD: Boş array ile dolu veriyi ezmeyi engelle
+    if (Array.isArray(data) && data.length === 0) {
+      const prev = lastJson.current[docId];
+      if (prev && prev !== "[]") {
+        console.error("[SYNC] ⛔ BOŞ ARRAY YAZMA ENGELLENDİ:", docId, "— önceki veri:", prev.length, "karakter");
+        setToast({ type: "warning", message: "⚠️ " + docId + " boş yazılmak istendi — engellendi!" });
+        return;
+      }
+    }
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
     lastJson.current[docId] = json;
@@ -7218,6 +7227,19 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     if (!firestoreReady.current) {
       console.log("[SYNC] firestoreReady=false, config yazma atlandı:", docId);
       return;
+    }
+    // ⛔ GUARD: İlk yükleme tamamlanmadan yazma
+    if (lastJson.current[docId] === undefined) {
+      console.log("[SYNC] Config ilk yükleme tamamlanmadı, yazma atlandı:", docId);
+      return;
+    }
+    // ⛔ GUARD: Boş array ile dolu config'i ezmeyi engelle
+    if (Array.isArray(data) && data.length === 0) {
+      const prev = lastJson.current[docId];
+      if (prev && prev !== "[]") {
+        console.error("[SYNC] ⛔ BOŞ CONFIG YAZMA ENGELLENDİ:", docId);
+        return;
+      }
     }
     const json = JSON.stringify(data);
     if (lastJson.current[docId] === json) return;
@@ -7311,7 +7333,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const saveBackupToFirestore = useCallback(async (triggerType) => {
     try {
       const backupData = {
-        researchers, topics, projects, quickLinks: quickLinks,
+        researchers, topics, projects, quickLinks: quickLinks, notes,
         cfg_roles: roleConfigSt, cfg_statuses: statusConfigSt,
         cfg_priorities: priorityConfigSt, cfg_ptypes: projectTypeOptionsSt,
         cfg_categories: categoryOptionsSt, cfg_degrees: eduDegreeOptionsSt,
@@ -7341,7 +7363,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       console.error("[BACKUP] ❌ Yedekleme hatası:", err.message);
       throw err;
     }
-  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user]);
+  }, [researchers, topics, projects, quickLinks, notes, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, indexTypesConfigSt, projectTypeCoeffSt, user]);
 
   // 3. JSON dosyası olarak indir + Firestore'a da yedekle
   const downloadBackupJSON = useCallback(async () => {
@@ -7357,7 +7379,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
           version: "1.0",
           projectId: "arge-dashboard",
         },
-        researchers, topics, projects, quickLinks: quickLinks,
+        researchers, topics, projects, quickLinks: quickLinks, notes,
         cfg_roles: roleConfigSt, cfg_statuses: statusConfigSt,
         cfg_priorities: priorityConfigSt, cfg_ptypes: projectTypeOptionsSt,
         cfg_categories: categoryOptionsSt, cfg_degrees: eduDegreeOptionsSt,
@@ -7377,7 +7399,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
     } catch (err) {
       setToast({ type: "error", message: "Yedekleme hatası: " + err.message });
     }
-  }, [saveBackupToFirestore, researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, indexTypesConfigSt, projectTypeCoeffSt, user]);
+  }, [saveBackupToFirestore, researchers, topics, projects, quickLinks, notes, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, indexTypesConfigSt, projectTypeCoeffSt, user]);
 
   // 4. JSON dosyasından geri yükle
   const restoreFromJSON = useCallback((file) => {
@@ -7389,6 +7411,7 @@ export default function ArGeDashboard({ role, user, onLogout }) {
         if (data.topics) setTopics(data.topics);
         if (data.projects) setProjects(data.projects);
         if (data.quickLinks) setQuickLinks(data.quickLinks);
+        if (data.notes) setNotes(data.notes);
         if (data.cfg_roles) setRoleConfig(data.cfg_roles);
         if (data.cfg_statuses) setStatusConfig(data.cfg_statuses);
         if (data.cfg_priorities) setPriorityConfig(data.cfg_priorities);
@@ -7493,20 +7516,37 @@ export default function ArGeDashboard({ role, user, onLogout }) {
   const forcePublish = useCallback(async () => {
     setSyncStatus("syncing");
     try {
-      // 1. Tüm verileri Firestore'a yaz (timeout'lu)
+      // ⛔ GUARD: Boş array ile dolu veriyi ezmeyi engelle
+      const safeWrite = (docId, data, isConfig = false) => {
+        if (Array.isArray(data) && data.length === 0) {
+          const prev = lastJson.current[docId];
+          if (prev && prev !== "[]") {
+            console.error("[PUBLISH] ⛔ Boş yazma engellendi:", docId, "— önceki:", prev.length, "karakter");
+            return Promise.resolve(); // atla, ezme
+          }
+        }
+        return isConfig
+          ? setDoc(doc(db, "arge", docId), { data, updatedAt: Date.now() })
+          : setDoc(doc(db, "arge", docId), { items: data, updatedAt: Date.now() });
+      };
+
+      // 0. Yayınlamadan ÖNCE yedek al (veri kaybına karşı)
+      try { await saveBackupToFirestore("pre_publish"); } catch (e) { console.warn("[PUBLISH] Ön-yedek hatası:", e.message); }
+
+      // 1. Tüm verileri Firestore'a yaz (timeout'lu, boş array korumalı)
       await withTimeout(Promise.all([
-        setDoc(doc(db, "arge", "researchers"), { items: researchers, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "topics"), { items: topics, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "projects"), { items: projects, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "quicklinks"), { items: quickLinks, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "notes"), { items: notes, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_roles"), { data: roleConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_statuses"), { data: statusConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_priorities"), { data: priorityConfigSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_ptypes"), { data: projectTypeOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_categories"), { data: categoryOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_degrees"), { data: eduDegreeOptionsSt, updatedAt: Date.now() }),
-        setDoc(doc(db, "arge", "cfg_edustatus"), { data: eduStatusOptionsSt, updatedAt: Date.now() }),
+        safeWrite("researchers", researchers),
+        safeWrite("topics", topics),
+        safeWrite("projects", projects),
+        safeWrite("quicklinks", quickLinks),
+        safeWrite("notes", notes),
+        safeWrite("cfg_roles", roleConfigSt, true),
+        safeWrite("cfg_statuses", statusConfigSt, true),
+        safeWrite("cfg_priorities", priorityConfigSt, true),
+        safeWrite("cfg_ptypes", projectTypeOptionsSt, true),
+        safeWrite("cfg_categories", categoryOptionsSt, true),
+        safeWrite("cfg_degrees", eduDegreeOptionsSt, true),
+        safeWrite("cfg_edustatus", eduStatusOptionsSt, true),
       ]), 15000, "forcePublish");
       // 2. Force reload sinyali gönder
       await withTimeout(setDoc(doc(db, "arge", "_force_reload"), {
@@ -7516,15 +7556,12 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       }), 8000, "forceReload");
       setSyncStatus("done");
       setLastSavedAt(new Date());
-      // Toast kaldırıldı — kullanıcıya bildirim gösterilmez, işlem sessizce tamamlanır
       setTimeout(() => setSyncStatus("idle"), 3000);
-      // 3. Otomatik yedek al (arka planda, hata görmezden gelinir)
-      saveBackupToFirestore("auto_publish").catch(() => {});
     } catch (err) {
       setSyncStatus("idle");
       setToast({ type: "error", message: "Yayınlama hatası: " + err.message });
     }
-  }, [researchers, topics, projects, quickLinks, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user, saveBackupToFirestore]);
+  }, [researchers, topics, projects, quickLinks, notes, roleConfigSt, statusConfigSt, priorityConfigSt, projectTypeOptionsSt, categoryOptionsSt, eduDegreeOptionsSt, eduStatusOptionsSt, user, saveBackupToFirestore]);
   forcePublishRef.current = forcePublish;
 
   // Otomatik senkronizasyon — her 10 saniyede Firestore SUNUCUSUNDAN güncelle
@@ -7610,6 +7647,9 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       }
     };
 
+    // Kritik veri dokümanları — boş fallback yazılmaz, sadece config dokümanlarına varsayılan yazılır
+    const CRITICAL_DOCS = new Set(["researchers", "topics", "projects", "quicklinks", "notes"]);
+
     const listen = (docId, setter, fallback, isConfig) => {
       const unsub = onSnapshot(doc(db, "arge", docId), (snap) => {
         if (snap.exists()) {
@@ -7620,11 +7660,17 @@ export default function ArGeDashboard({ role, user, onLogout }) {
             if (lastJson.current[docId] !== json) {
               lastJson.current[docId] = json;
               setter(val);
-              console.log("[SYNC] onSnapshot güncelleme:", docId);
+              console.log("[SYNC] onSnapshot güncelleme:", docId, "→", Array.isArray(val) ? val.length + " öğe" : "veri");
             }
           }
+        } else if (CRITICAL_DOCS.has(docId)) {
+          // ⛔ Kritik veri dokümanı yok — boş fallback YAZMA, sadece local state'i ayarla
+          console.warn("[SYNC] ⚠️ Kritik doküman yok:", docId, "— boş fallback Firestore'a YAZILMADI");
+          lastJson.current[docId] = JSON.stringify(fallback);
+          setter(fallback);
         } else {
-          console.log("[SYNC] Doküman yok, varsayılan yazılıyor:", docId);
+          // Config dokümanı yok — varsayılan değerleri yaz
+          console.log("[SYNC] Config dokümanı yok, varsayılan yazılıyor:", docId);
           const payload = isConfig
             ? { data: fallback, updatedAt: Date.now() }
             : { items: fallback, updatedAt: Date.now() };
@@ -7640,14 +7686,14 @@ export default function ArGeDashboard({ role, user, onLogout }) {
       unsubs.push(unsub);
     };
 
-    // Fallback: 5 saniye sonra firestoreReady'yi zorla
+    // Fallback: 15 saniye sonra firestoreReady'yi zorla (5s çok kısaydı, veri kaybına neden oluyordu)
     const readyTimeout = setTimeout(() => {
       if (!firestoreReady.current) {
-        console.warn("[SYNC] ⚠️ 5s timeout — firestoreReady zorlanıyor (" + readyDocs.size + "/13 hazır)");
+        console.warn("[SYNC] ⚠️ 15s timeout — firestoreReady zorlanıyor (" + readyDocs.size + "/14 hazır)");
         firestoreReady.current = true;
         setFirestoreStatus(readyDocs.size > 0 ? "ready" : "error");
       }
-    }, 5000);
+    }, 15000);
 
     listen("researchers", setResearchers, initialResearchers, false);
     listen("topics", setTopics, initialTopics, false);
